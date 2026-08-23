@@ -20,6 +20,9 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Mapping, Optional, Sequence
 
+from .capture_validation import capture_metadata_issues, media_issues
+from .costs import CostEvidence, CostValidationError
+
 
 CHECKSUMS_NAME = "checksums.sha256"
 KNOWN_RUN_SCHEMAS = frozenset({"run/v1"})
@@ -315,10 +318,12 @@ def validate_bundle(bundle_path: os.PathLike[str] | str,
                 diagnostics.append(_diag("checksum_mismatch", name))
 
         run_id: Optional[str] = None
+        run_manifest: dict[str, object] | None = None
         if "run.json" in info_by_name:
             try:
                 manifest = _parse_json("run.json", archive.read(info_by_name["run.json"]), diagnostics)
                 if isinstance(manifest, dict):
+                    run_manifest = manifest
                     schema = manifest.get("schema_version")
                     if not isinstance(schema, str):
                         diagnostics.append(_diag("run_schema_missing", "run.json"))
@@ -358,6 +363,198 @@ def validate_bundle(bundle_path: os.PathLike[str] | str,
                         run_id = run_id_value
             except (OSError, RuntimeError, zipfile.BadZipFile) as exc:
                 diagnostics.append(_diag("manifest_read_failed", "run.json", str(exc)))
+
+        if "cost.json" in info_by_name:
+            try:
+                cost_value = _parse_json(
+                    "cost.json",
+                    archive.read(info_by_name["cost.json"]),
+                    diagnostics,
+                )
+                if cost_value is not None:
+                    if not isinstance(cost_value, dict):
+                        diagnostics.append(
+                            _diag(
+                                "cost_evidence_invalid",
+                                "cost.json",
+                                "cost evidence must be a JSON object",
+                            )
+                        )
+                    else:
+                        try:
+                            CostEvidence.from_dict(cost_value)
+                        except CostValidationError as exc:
+                            diagnostics.append(
+                                _diag(
+                                    "cost_evidence_invalid",
+                                    "cost.json",
+                                    str(exc),
+                                )
+                            )
+            except (OSError, RuntimeError, zipfile.BadZipFile) as exc:
+                diagnostics.append(
+                    _diag("manifest_read_failed", "cost.json", str(exc))
+                )
+
+        identity_documents: dict[str, dict[str, object]] = {}
+        for name in (
+            "challenge.json",
+            "evaluation/assertions.json",
+            "evaluation/capacity-curve.json",
+            "captures/overview.json",
+        ):
+            if name not in info_by_name:
+                continue
+            try:
+                value = _parse_json(name, archive.read(info_by_name[name]), diagnostics)
+                if isinstance(value, dict):
+                    identity_documents[name] = value
+            except (OSError, RuntimeError, zipfile.BadZipFile) as exc:
+                diagnostics.append(_diag("manifest_read_failed", name, str(exc)))
+
+        capture = identity_documents.get("captures/overview.json")
+        if capture is not None:
+            capture_issues = capture_metadata_issues(
+                capture,
+                require_bundle_fields=True,
+            )
+            if capture_issues:
+                diagnostics.append(
+                    _diag(
+                        "capture_metadata_invalid",
+                        "captures/overview.json",
+                        "; ".join(capture_issues),
+                    )
+                )
+            if (
+                "captures/overview.png" in info_by_name
+                and "captures/overview.webm" in info_by_name
+            ):
+                try:
+                    media_diagnostics = media_issues(
+                        archive.read(info_by_name["captures/overview.png"]),
+                        archive.read(info_by_name["captures/overview.webm"]),
+                        viewport=(
+                            capture.get("viewport")
+                            if isinstance(capture.get("viewport"), dict)
+                            else None
+                        ),
+                    )
+                    diagnostics.extend(
+                        _diag(code, f"captures/overview.{ 'png' if 'png' in code else 'webm' }")
+                        for code in media_diagnostics
+                    )
+                except (OSError, RuntimeError, zipfile.BadZipFile) as exc:
+                    diagnostics.append(
+                        _diag("capture_media_read_failed", "captures/", str(exc))
+                    )
+
+        if run_manifest is not None and capture is not None:
+            required_identity = {
+                "selected_candidate_hash": str,
+                "challenge": str,
+                "scenario_pack": str,
+                "scenario_id": str,
+                "scenario_profile": str,
+                "seed": int,
+            }
+            missing_identity = [
+                key
+                for key, expected_type in required_identity.items()
+                if isinstance(run_manifest.get(key), bool)
+                or not isinstance(run_manifest.get(key), expected_type)
+                or (
+                    expected_type is str
+                    and not str(run_manifest.get(key, "")).strip()
+                )
+            ]
+            if missing_identity:
+                diagnostics.append(
+                    _diag(
+                        "run_capture_identity_missing",
+                        "run.json",
+                        ", ".join(missing_identity),
+                    )
+                )
+            if capture.get("artifact_hash") != run_manifest.get("selected_candidate_hash"):
+                diagnostics.append(
+                    _diag("capture_artifact_mismatch", "captures/overview.json")
+                )
+            artifact_entries = sorted(
+                name
+                for name in info_by_name
+                if name.startswith("artifact/submission/")
+            )
+            if artifact_entries:
+                artifact_digest = hashlib.sha256()
+                try:
+                    for name in artifact_entries:
+                        relative = name.removeprefix("artifact/submission/").encode(
+                            "utf-8"
+                        )
+                        data = archive.read(info_by_name[name])
+                        artifact_digest.update(len(relative).to_bytes(8, "big"))
+                        artifact_digest.update(relative)
+                        artifact_digest.update(len(data).to_bytes(8, "big"))
+                        artifact_digest.update(data)
+                    if artifact_digest.hexdigest() != run_manifest.get(
+                        "selected_candidate_hash"
+                    ):
+                        diagnostics.append(
+                            _diag("artifact_hash_mismatch", "artifact/submission/")
+                        )
+                except (OSError, RuntimeError, zipfile.BadZipFile) as exc:
+                    diagnostics.append(
+                        _diag("artifact_hash_failed", "artifact/submission/", str(exc))
+                    )
+            challenge = identity_documents.get("challenge.json", {})
+            scenario = challenge.get("scenario", {})
+            scenario = scenario if isinstance(scenario, dict) else {}
+            assertions = identity_documents.get("evaluation/assertions.json", {})
+            capacity = identity_documents.get("evaluation/capacity-curve.json", {})
+            comparisons = {
+                "challenge": (
+                    run_manifest.get("challenge"),
+                    capture.get("challenge"),
+                    challenge.get("challenge_id"),
+                ),
+                "scenario_pack": (
+                    run_manifest.get("scenario_pack"),
+                    challenge.get("scenario_pack"),
+                ),
+                "scenario_id": (
+                    run_manifest.get("scenario_id"),
+                    capture.get("scenario_id"),
+                    scenario.get("scenario_id"),
+                    assertions.get("scenario_id"),
+                    capacity.get("scenario_id"),
+                ),
+                "scenario_profile": (
+                    run_manifest.get("scenario_profile"),
+                    capture.get("scenario_profile"),
+                    scenario.get("profile"),
+                    assertions.get("scenario_profile"),
+                    capacity.get("scenario_profile"),
+                ),
+                "seed": (
+                    run_manifest.get("seed"),
+                    capture.get("seed"),
+                    scenario.get("seed"),
+                    assertions.get("seed"),
+                    capacity.get("seed"),
+                ),
+            }
+            for field, values in comparisons.items():
+                if any(value is None for value in values) or not all(
+                    value == values[0] for value in values[1:]
+                ):
+                    diagnostics.append(
+                        _diag(
+                            "capture_identity_mismatch",
+                            "captures/overview.json",
+                            field,
+                        )
+                    )
 
         refs: list[tuple[str, str]] = []
         for name, info in info_by_name.items():

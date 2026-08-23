@@ -5,7 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..experiments import Experiment
-from .contracts import ModelOffer, ProbeContext, ResolvedSUT
+from .contracts import (
+    ModelOffer,
+    ProbeContext,
+    ResolvedSUT,
+    tracks_for_cost_capabilities,
+)
 from .registry import AdapterRegistry, built_in_registry
 
 
@@ -67,14 +72,14 @@ def resolve_sut(
         )
     if not provider_probe.available:
         raise ResolutionError(f"provider unavailable: {provider_probe.message}", code="provider-unavailable")
-    if experiment.cost is not None:
-        cost_capabilities = provider.cost_capabilities()
-        if experiment.cost.policy not in cost_capabilities.policies:
-            raise ResolutionError(
-                f"provider does not support requested cost policy {experiment.cost.policy!r}",
-                code="cost-incompatible",
-            )
-
+    provider_tracks = tracks_for_cost_capabilities(provider.cost_capabilities())
+    if experiment.track not in provider_tracks:
+        advertised = ", ".join(provider_tracks) if provider_tracks else "none"
+        raise ResolutionError(
+            f"provider is incompatible with experiment track {experiment.track!r}; "
+            f"advertised track(s): {advertised}",
+            code="track-incompatible",
+        )
     offers = provider.discover_models(provider_context)
     matching = [offer for offer in offers if offer.provider_model_id == experiment.model]
     if not matching:

@@ -11,11 +11,10 @@ import json
 import tempfile
 import tomllib
 from dataclasses import dataclass, field
-from datetime import date
 from pathlib import Path
 from typing import Any, Mapping
 
-from .costs import CostValidationError, FlatSubscriptionPoolDeclaration
+from .challenges import ChallengeProfileError, scenario_pack_for
 
 
 class ExperimentError(ValueError):
@@ -41,46 +40,6 @@ class Evaluation:
 
 
 @dataclass(frozen=True)
-class Cost:
-    policy: str
-    pool_id: str
-    pool_scope: str
-    currency: str
-    service_plan: str
-    billing_period_cost_usd: str
-    benchmark_allocation_fraction: str
-    pool_cost_usd: str
-    pool_cost_source: str
-    allocation_rationale: str
-    billing_period_start: date
-    billing_period_end: date
-    closure: str
-    rounding: str = "USD-0.01-half-up"
-    charge_scope: str = "model_invocation"
-    zero_cost_evidence: str | None = None
-
-    def declaration(self) -> FlatSubscriptionPoolDeclaration:
-        return FlatSubscriptionPoolDeclaration(
-            policy=self.policy,
-            pool_id=self.pool_id,
-            pool_scope=self.pool_scope,
-            currency=self.currency,
-            service_plan=self.service_plan,
-            billing_period_cost_usd=self.billing_period_cost_usd,
-            benchmark_allocation_fraction=self.benchmark_allocation_fraction,
-            pool_cost_usd=self.pool_cost_usd,
-            pool_cost_source=self.pool_cost_source,
-            allocation_rationale=self.allocation_rationale,
-            billing_period_start=self.billing_period_start.isoformat(),
-            billing_period_end=self.billing_period_end.isoformat(),
-            closure=self.closure,
-            rounding=self.rounding,
-            charge_scope=self.charge_scope,
-            zero_cost_evidence=self.zero_cost_evidence,
-        )
-
-
-@dataclass(frozen=True)
 class Output:
     inbox: str = "results/inbox"
 
@@ -98,17 +57,14 @@ class Experiment:
     client_options: ClientOptions = field(default_factory=ClientOptions)
     budget: Budget = field(default_factory=Budget)
     evaluation: Evaluation = field(default_factory=Evaluation)
-    cost: Cost | None = None
     output: Output = field(default_factory=Output)
 
 
-_TOP = {"schema_version", "name", "challenge", "client", "provider", "model", "track", "repetitions", "client_options", "budget", "evaluation", "cost", "output"}
+_TOP = {"schema_version", "name", "challenge", "client", "provider", "model", "track", "repetitions", "client_options", "budget", "evaluation", "output"}
 _CLIENT = {"reasoning_effort", "loop", "executable"}
 _BUDGET = {"max_wall_seconds", "max_attempts"}
 _EVAL = {"scenario_pack"}
-_COST = {"policy", "pool_id", "pool_scope", "currency", "service_plan", "billing_period_cost_usd", "benchmark_allocation_fraction", "pool_cost_usd", "pool_cost_source", "allocation_rationale", "billing_period_start", "billing_period_end", "closure", "rounding", "charge_scope", "zero_cost_evidence"}
 _OUTPUT = {"inbox"}
-_CLOUD_COST = _COST - {"rounding", "charge_scope", "zero_cost_evidence"}
 
 
 def _table(raw: Mapping[str, Any], key: str, allowed: set[str]) -> dict[str, Any]:
@@ -135,45 +91,6 @@ def _positive_int(raw: Mapping[str, Any], key: str, default: int) -> int:
     return value
 
 
-def _cost(raw: Mapping[str, Any]) -> Cost:
-    missing = sorted(_CLOUD_COST - set(raw))
-    if missing:
-        raise ExperimentError("cloud experiment cost is missing required field(s): " + ", ".join(missing))
-    strings = ["policy", "pool_id", "pool_scope", "currency", "service_plan", "billing_period_cost_usd", "benchmark_allocation_fraction", "pool_cost_usd", "pool_cost_source", "allocation_rationale", "closure"]
-    values: dict[str, Any] = {}
-    for key in strings:
-        values[key] = _str(raw, key)
-    try:
-        start_value = raw["billing_period_start"]
-        end_value = raw["billing_period_end"]
-        start = start_value if isinstance(start_value, date) else date.fromisoformat(_str(raw, "billing_period_start"))
-        end = end_value if isinstance(end_value, date) else date.fromisoformat(_str(raw, "billing_period_end"))
-    except ValueError as exc:
-        raise ExperimentError("cost.billing_period_start/end must be ISO dates") from exc
-    if end < start:
-        raise ExperimentError("cost.billing_period_end must not precede billing_period_start")
-    values["rounding"] = _str(raw, "rounding", default="USD-0.01-half-up")
-    values["charge_scope"] = _str(raw, "charge_scope", default="model_invocation")
-    zero = raw.get("zero_cost_evidence")
-    if zero is not None and (not isinstance(zero, str) or not zero.strip()):
-        raise ExperimentError("cost.zero_cost_evidence must be a non-empty string")
-    values["zero_cost_evidence"] = zero
-    values["billing_period_start"] = start.isoformat()
-    values["billing_period_end"] = end.isoformat()
-    try:
-        declaration = FlatSubscriptionPoolDeclaration(**values)
-    except CostValidationError as exc:
-        raise ExperimentError(f"invalid cost declaration: {exc}") from exc
-    values.update(
-        billing_period_cost_usd=format(declaration.billing_period_cost_usd, "f"),
-        benchmark_allocation_fraction=format(declaration.benchmark_allocation_fraction, "f"),
-        pool_cost_usd=format(declaration.pool_cost_usd, "f"),
-        billing_period_start=start,
-        billing_period_end=end,
-    )
-    return Cost(**values)
-
-
 def parse_experiment(data: Mapping[str, Any]) -> Experiment:
     unknown = sorted(set(data) - _TOP)
     if unknown:
@@ -188,16 +105,24 @@ def parse_experiment(data: Mapping[str, Any]) -> Experiment:
     client = _str(data, "client")
     provider = _str(data, "provider")
     track = _str(data, "track")
-    if track not in {"cloud-subscription", "cloud-metered", "local"}:
+    if track not in {"cloud-subscription", "local"}:
         raise ExperimentError(f"unsupported track: {track!r}")
-    cost_raw = _table(data, "cost", _COST) if "cost" in data else None
-    cost = _cost(cost_raw) if cost_raw is not None else None
-    if track.startswith("cloud-") and cost is None:
-        raise ExperimentError("cloud experiments require a [cost] table with flat-subscription cost evidence")
-    if track == "cloud-metered":
-        raise ExperimentError("cloud-metered experiments require a metered cost policy; flat subscription cost is incompatible")
-    if track == "local" and cost is not None:
-        raise ExperimentError("local experiments must not declare cloud subscription cost")
+    challenge = _str(data, "challenge")
+    try:
+        expected_scenario_pack = scenario_pack_for(challenge, track)
+    except ChallengeProfileError as exc:
+        raise ExperimentError(str(exc)) from exc
+    selected_scenario_pack = _str(
+        evaluation,
+        "scenario_pack",
+        default=expected_scenario_pack,
+    )
+    if selected_scenario_pack != expected_scenario_pack:
+        raise ExperimentError(
+            f"evaluation.scenario_pack {selected_scenario_pack!r} is not "
+            f"compatible with challenge {challenge!r} on track {track!r}; "
+            f"expected {expected_scenario_pack!r}"
+        )
     loop = _str(client_options, "loop", default="controlled")
     effort = _str(client_options, "reasoning_effort", default="medium")
     executable_value = client_options.get("executable")
@@ -215,10 +140,15 @@ def parse_experiment(data: Mapping[str, Any]) -> Experiment:
     max_attempts = _positive_int(budget, "max_attempts", 2)
     if max_attempts > 2:
         raise ExperimentError("budget.max_attempts cannot exceed one repair attempt (maximum 2)")
+    if loop == "native" and max_attempts != 1:
+        raise ExperimentError(
+            "budget.max_attempts must be 1 when client_options.loop is native; "
+            "Ralph repair passes apply only to the controlled loop"
+        )
     return Experiment(
         schema,
         _str(data, "name"),
-        _str(data, "challenge"),
+        challenge,
         client,
         provider,
         _str(data, "model"),
@@ -226,14 +156,7 @@ def parse_experiment(data: Mapping[str, Any]) -> Experiment:
         repetitions,
         ClientOptions(effort, loop, executable),
         Budget(max_wall, max_attempts),
-        Evaluation(
-            _str(
-                evaluation,
-                "scenario_pack",
-                default="traffic-intersection-p0a",
-            )
-        ),
-        cost,
+        Evaluation(selected_scenario_pack),
         Output(_str(output, "inbox", default="results/inbox")),
     )
 
@@ -282,28 +205,6 @@ def render_experiment(experiment: Experiment) -> str:
         "[evaluation]",
         f"scenario_pack = {_q(e.evaluation.scenario_pack)}",
     ]
-    if e.cost is not None:
-        c = e.cost
-        entries = [
-            ("policy", c.policy),
-            ("pool_id", c.pool_id),
-            ("pool_scope", c.pool_scope),
-            ("currency", c.currency),
-            ("service_plan", c.service_plan),
-            ("billing_period_cost_usd", c.billing_period_cost_usd),
-            ("benchmark_allocation_fraction", c.benchmark_allocation_fraction),
-            ("pool_cost_usd", c.pool_cost_usd),
-            ("pool_cost_source", c.pool_cost_source),
-            ("allocation_rationale", c.allocation_rationale),
-            ("billing_period_start", c.billing_period_start.isoformat()),
-            ("billing_period_end", c.billing_period_end.isoformat()),
-            ("closure", c.closure),
-            ("rounding", c.rounding),
-            ("charge_scope", c.charge_scope),
-        ]
-        if c.zero_cost_evidence is not None:
-            entries.append(("zero_cost_evidence", c.zero_cost_evidence))
-        lines += ["", "[cost]"] + [f"{key} = {_q(str(value))}" for key, value in entries]
     lines += ["", "[output]", f"inbox = {_q(e.output.inbox)}", ""]
     return "\n".join(lines)
 
@@ -355,6 +256,4 @@ def experiment_to_dict(e: Experiment) -> dict[str, Any]:
     }
     if e.client_options.executable is not None:
         result["client_options"]["executable"] = e.client_options.executable
-    if e.cost:
-        result["cost"] = {k: (v.isoformat() if isinstance(v, date) else v) for k, v in vars(e.cost).items()}
     return result

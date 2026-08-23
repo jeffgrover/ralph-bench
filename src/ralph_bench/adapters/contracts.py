@@ -137,9 +137,45 @@ class ModelCapabilities:
 
 @dataclass(frozen=True)
 class CostCapabilities:
-    policies: tuple[str, ...] = ()
-    usage_sources: tuple[str, ...] = ()
     billing_modes: tuple[str, ...] = ()
+    evidence_statuses: tuple[str, ...] = ()
+    usage_sources: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        for field_name in (
+            "billing_modes",
+            "evidence_statuses",
+            "usage_sources",
+        ):
+            values = tuple(getattr(self, field_name))
+            if any(not isinstance(value, str) or not value.strip() for value in values):
+                raise ValueError(f"{field_name} must contain non-empty strings")
+            if len(set(values)) != len(values):
+                raise ValueError(f"{field_name} must be unique")
+            object.__setattr__(self, field_name, values)
+
+
+BILLING_MODE_TRACKS = {
+    "flat_subscription": "cloud-subscription",
+    "metered_api": "cloud-metered",
+    "local": "local",
+}
+
+
+def tracks_for_cost_capabilities(
+    capabilities: CostCapabilities,
+) -> tuple[str, ...]:
+    """Return normalized experiment tracks advertised by a provider."""
+
+    return tuple(
+        sorted(
+            {
+                BILLING_MODE_TRACKS[mode]
+                for mode in capabilities.billing_modes
+                if mode in BILLING_MODE_TRACKS
+            }
+        )
+    )
 
 
 @dataclass(frozen=True)

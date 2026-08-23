@@ -133,15 +133,15 @@ class IsolationTests(unittest.TestCase):
                     overrides={"CODEX_HOME": "/credentials"},
                 )
 
-    def test_report_claims_l1_only_when_credential_boundary_is_demonstrated(self) -> None:
+    def test_best_effort_report_remains_l0_even_with_positive_evidence(self) -> None:
         clean_environment = {"PATH": "/usr/bin", "HOME": "/scoped"}
         passed = build_isolation_report(
             environment=clean_environment,
             credential_canary=CanaryStatus.PASSED,
             agent_network=NetworkCapability.UNKNOWN,
         )
-        self.assertEqual(passed.level, IsolationLevel.L1)
-        self.assertEqual(passed.publication_class, "experimental")
+        self.assertEqual(passed.level, IsolationLevel.L0)
+        self.assertEqual(passed.publication_class, "unsealed")
         self.assertFalse(passed.filesystem_enforced)
 
         unknown = build_isolation_report(
@@ -149,7 +149,7 @@ class IsolationTests(unittest.TestCase):
             credential_canary=CanaryStatus.UNKNOWN,
         )
         self.assertEqual(unknown.level, IsolationLevel.L0)
-        self.assertEqual(unknown.publication_class, "ineligible")
+        self.assertEqual(unknown.publication_class, "unsealed")
 
         leaked = build_isolation_report(
             environment={**clean_environment, "SERVICE_AUTH_TOKEN": "fixture"},

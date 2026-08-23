@@ -47,7 +47,9 @@ source fields to be `null` plus an explicit `unavailable_reason`.
 
 Financial values use decimal strings or integer micros in interchange files,
 not binary floating point. Unknown is `null`; zero is permitted only when
-evidence establishes a real zero for that field. A report must label
+evidence establishes a real zero for that field. Every populated numeric cost
+links to at least one bundle-resident evidence reference; a source label by
+itself is not evidence. A report must label
 `provider_billed`, `openrouter_reference`, `estimated`, and `unavailable`
 separately.
 

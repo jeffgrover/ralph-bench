@@ -45,9 +45,12 @@ kernel exploit, provider-side compromise, or every covert channel.
 
 ### L0 — Unsealed
 
-- Agent runs in or alongside the source/results repository.
-- Home and filesystem visibility are largely inherited.
-- Suitable only for development diagnostics.
+- A fresh staged workspace may reduce accidental cross-run contamination, but
+  confidentiality from other host paths is not independently enforced.
+- Provider credentials remain available to the harness parent and may be
+  reachable under the harness's native sandbox semantics.
+- Suitable for development, local comparison, and explicitly unsealed result
+  sharing.
 - Not eligible for an official leaderboard.
 
 ### L1 — Staged
@@ -61,8 +64,9 @@ kernel exploit, provider-side compromise, or every covert channel.
 - Filesystem/network enforcement may still rely on platform and harness
   behavior.
 
-L1 is the P0 target. Results are labeled experimental unless policy later
-approves a specific L1 implementation.
+L1 is deferred until platform backends can be evaluated deliberately. P0 uses
+L0 and must not silently upgrade a result based only on staging or a harness's
+native sandbox label.
 
 ### L2 — Enforced
 
@@ -142,10 +146,17 @@ credential boundary that remains available to the Codex process but outside
 agent tool access. `--ephemeral` prevents session persistence; it is not by
 itself a credential-isolation guarantee.
 
-P0 must include a credential-canary probe against the actual Codex invocation.
-If the supported platform cannot demonstrate that file-based or keyring
-credentials are unavailable to the agent tool process, the live result is
-labeled L0/unsealed and ineligible rather than claiming L1 isolation.
+P0-A reuses the operator's existing Codex authentication, runs in a fresh
+workspace, filters the inherited environment, requests Codex's native
+`workspace-write` sandbox, keeps conductor-owned output outside the submission
+tree, and redacts known credential values from captured vendor streams. It
+does not run a credential canary or claim that unrelated host files, judge
+material, or credentials are unreadable to a determined agent. Every such run
+is recorded as L0/unsealed.
+
+Selection among Bubblewrap, Seatbelt/App Sandbox, WSL/Windows facilities,
+containers, and virtual machines is a later cross-platform design milestone.
+The conductor's provenance contract—not any one tool—is the durable boundary.
 
 ## Network policy
 

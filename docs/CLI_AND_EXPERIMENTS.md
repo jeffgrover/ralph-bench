@@ -55,11 +55,11 @@ client x model x provider/configuration x effort/tool policy
 
 ## Zero-argument flow
 
-The first substantive question is always the client. The following is the
-target P0 flow; the current wizard implements client/provider/model discovery,
-challenge, effort, repetition, wall-time, repair-pass, inbox, and save. The
-isolation choice, back/edit navigation, and post-save run offering remain
-target behavior until implemented:
+The first substantive question is always the client. The current P0-A flow
+implements client/provider/model discovery, challenge, effort, repetition,
+wall-time, repair-pass, inbox, save, and post-save run confirmation. An
+operator-facing isolation choice and back/edit navigation remain later UI
+work:
 
 1. **Client** — show detected compatible clients, executable paths, versions,
    and detection status.
@@ -72,7 +72,8 @@ target behavior until implemented:
 5. **Client and model controls** — reasoning/effort, tool policy, native versus
    controlled loop, and adapter-specific supported options.
 6. **Experiment basics** — ask for a concise experiment name, repetitions as
-   **Independent runs**, and a wall-time/attempt budget.
+   **Independent runs per configuration**, explain that they are aggregated
+   to measure variability, and collect a per-run wall-time ceiling.
 7. **Repair policy** — offer **Ralph repair passes** as the evaluator-controlled
    repair loop, separately from the independent repetition runs.
 8. **Scenario and isolation** — derive the scenario profile from the selected
@@ -82,11 +83,16 @@ target behavior until implemented:
 9. **Result inbox** — explain that the inbox is the local destination for
    immutable `.ralph.zip` evidence and suggest a safe path; do not imply that
    it is a live report or a cloud upload.
-10. **Review** *(target behavior)* — render the complete TOML, provenance of inferred defaults, and
-   warnings; allow the user to move back and edit any section.
-11. **Validate and save** — write atomically, never silently overwrite, and
-   report the exact path.
-12. **Run** *(target behavior)* — offer to execute the saved experiment. Cloud runs explain the
+10. **Review** — render the complete TOML before saving. Provenance-rich
+    defaults and move-back editing remain later wizard work.
+11. **Validate and save** — use one path prompt with a filename derived from
+   the experiment name, write atomically, never silently overwrite, and report
+   the exact path. Entering the path is the save confirmation; do not ask a
+   redundant yes/no question first.
+12. **Run** — offer to execute the saved experiment. The default-yes prompt
+    states the number of independent runs and maximum possible model
+    invocations. Declining leaves the TOML ready for `rb run`; confirming calls
+    the same conductor as the explicit command. Cloud runs explain the
     available billing/reference evidence; P0-A subscription runs do not show a
     cost questionnaire or request a synthetic allocation.
 
@@ -200,6 +206,11 @@ derived `scenario_pack`. `max_attempts` is always one initial attempt plus the
 permitted Ralph repair passes. See [`COST_MODEL.md`](COST_MODEL.md) for the
 future OpenRouter reference/billing semantics.
 
+`budget.max_wall_seconds` is the shared model/harness work allowance for one
+independent run, including its optional Ralph repair. Deterministic browser
+evaluation and bundle finalization have separate bounded infrastructure
+timeouts and are measured independently; they do not consume model-work time.
+
 The file contains no API keys, session tokens, or copied client credentials.
 It may refer to an environment variable or credential profile by name. Runtime
 preflight records requested and effective configuration—with secrets
@@ -247,6 +258,12 @@ P0 includes:
 - Deterministic TOML rendering, validation, atomic saving, and overwrite
   protection.
 - A non-interactive run path that never prompts after validation.
+- The zero-argument path asks once, after a successful atomic save, before any
+  generation can begin. Enter means yes; no leaves the saved experiment
+  untouched.
+- Concise run progress covers preflight, each model attempt, public checks,
+  optional repair, browser evaluation/capture, and bundle finalization. A
+  running model attempt emits at most one heartbeat per minute.
 
 P0 does not require universal discovery across every legacy client or a live
 online catalog of every provider model. Additional adapters may improve their

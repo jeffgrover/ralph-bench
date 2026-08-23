@@ -19,25 +19,175 @@ from ralph_bench.bundles import (
     safe_extract_bundle,
     validate_bundle,
 )
+from ralph_bench.capture_validation import PNG_SIGNATURE, WEBM_EBML_SIGNATURE
+from ralph_bench.costs import CostEvidence
 
 
 class BundleTests(unittest.TestCase):
     def make_staging(self, root: Path) -> None:
         values = {name: b"{}\n" for name in P0_REQUIRED_FILES if name.endswith(".json")}
+        artifact_data = b"<html></html>\n"
+        relative = b"index.html"
+        artifact_digest = hashlib.sha256()
+        artifact_digest.update(len(relative).to_bytes(8, "big"))
+        artifact_digest.update(relative)
+        artifact_digest.update(len(artifact_data).to_bytes(8, "big"))
+        artifact_digest.update(artifact_data)
+        artifact_hash = artifact_digest.hexdigest()
+        scenario_id = "busy-intersection-balanced"
+        profile = "balanced"
+        seed = 17
         values["prompt.txt"] = b"build the thing\n"
         values["events/canonical.jsonl"] = b"{\"schema_version\":\"event/v1\"}\n"
-        values["captures/overview.webm"] = b"webm"
-        values["captures/overview.png"] = b"png"
+        values["captures/overview.webm"] = WEBM_EBML_SIGNATURE + b"\x42\x82\x84webm"
+        values["captures/overview.png"] = (
+            PNG_SIGNATURE
+            + b"\x00\x00\x00\rIHDR"
+            + (2).to_bytes(4, "big")
+            + (1).to_bytes(4, "big")
+        )
         values["events/raw/client.jsonl"] = b"raw\n"
         values["attempts/attempt-001/attempt.json"] = b"{}\n"
         values["attempts/attempt-001/prompt.txt"] = b"prompt\n"
         values["attempts/attempt-001/public-checks.json"] = b"{}\n"
-        values["artifact/submission/index.html"] = b"<html></html>\n"
-        values["run.json"] = b'{"schema_version":"run/v1","run_id":"run-1"}\n'
+        values["artifact/submission/index.html"] = artifact_data
+        values["run.json"] = json.dumps(
+            {
+                "schema_version": "run/v1",
+                "run_id": "run-1",
+                "selected_candidate_hash": artifact_hash,
+                "challenge": "busy-intersection/v1",
+                "scenario_pack": "traffic-intersection-p0a",
+                "scenario_id": scenario_id,
+                "scenario_profile": profile,
+                "seed": seed,
+            }
+        ).encode("utf-8")
+        values["challenge.json"] = json.dumps(
+            {
+                "challenge_id": "busy-intersection/v1",
+                "scenario_pack": "traffic-intersection-p0a",
+                "scenario": {
+                    "scenario_id": scenario_id,
+                    "profile": profile,
+                    "seed": seed,
+                },
+            }
+        ).encode("utf-8")
+        values["evaluation/assertions.json"] = json.dumps(
+            {
+                "schema_version": "assertions/v1",
+                "scenario_id": scenario_id,
+                "scenario_profile": profile,
+                "seed": seed,
+                "assertions": [],
+            }
+        ).encode("utf-8")
+        values["evaluation/capacity-curve.json"] = json.dumps(
+            {
+                "schema_version": "capacity-curve/v1",
+                "scenario_id": scenario_id,
+                "scenario_profile": profile,
+                "seed": seed,
+                "stages": [],
+            }
+        ).encode("utf-8")
+        values["captures/overview.json"] = json.dumps(
+            {
+                "schema_version": "capture/v1",
+                "viewport": {"width": 2, "height": 1},
+                "scenario_id": scenario_id,
+                "scenario_profile": profile,
+                "seed": seed,
+                "simulated_horizon_ms": 100,
+                "simulation_interval_ms": {"start": 0, "end": 100, "step": 10},
+                "simulation_phase": "full-scenario-replay",
+                "playback_step_ms": 10,
+                "playback_delay_ms": 1,
+                "playback_rate": 10,
+                "duration_ms": 10,
+                "frame_rate_fps": 25,
+                "capture_worker": {
+                    "id": "fixture",
+                    "protocol": "browser-worker/v1",
+                    "version": "1",
+                },
+                "browser": "chromium",
+                "browser_version": "fixture",
+                "playwright_version": "fixture",
+                "artifact_hash": artifact_hash,
+                "challenge": "busy-intersection/v1",
+                "evidence_refs": ["events/raw/client.jsonl"],
+            }
+        ).encode("utf-8")
+        values["cost.json"] = (
+            json.dumps(
+                CostEvidence.subscription_unmetered(
+                    requested_model="gpt-5.6-luna"
+                ).as_dict()
+            ).encode("utf-8")
+            + b"\n"
+        )
         for name, data in values.items():
             path = root / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(data)
+
+    def test_invalid_capture_media_and_identity_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            stage = base / "stage"
+            self.make_staging(stage)
+            (stage / "captures/overview.png").write_bytes(b"not-png")
+            with self.assertRaises(BundleValidationError) as caught:
+                finalize_bundle(stage, base / "invalid-png.ralph.zip")
+            self.assertIn("invalid_png", {item.code for item in caught.exception.diagnostics})
+
+            self.make_staging(base / "webm-stage")
+            (base / "webm-stage/captures/overview.webm").write_bytes(b"not-webm")
+            with self.assertRaises(BundleValidationError) as caught:
+                finalize_bundle(base / "webm-stage", base / "invalid-webm.ralph.zip")
+            self.assertIn("invalid_webm", {item.code for item in caught.exception.diagnostics})
+
+            self.make_staging(base / "metadata-stage")
+            metadata_path = base / "metadata-stage/captures/overview.json"
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            del metadata["frame_rate_fps"]
+            metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
+            with self.assertRaises(BundleValidationError) as caught:
+                finalize_bundle(base / "metadata-stage", base / "metadata.ralph.zip")
+            self.assertIn(
+                "capture_metadata_invalid",
+                {item.code for item in caught.exception.diagnostics},
+            )
+
+            self.make_staging(base / "artifact-stage")
+            artifact_capture_path = base / "artifact-stage/captures/overview.json"
+            artifact_capture = json.loads(
+                artifact_capture_path.read_text(encoding="utf-8")
+            )
+            artifact_capture["artifact_hash"] = "b" * 64
+            artifact_capture_path.write_text(
+                json.dumps(artifact_capture), encoding="utf-8"
+            )
+            with self.assertRaises(BundleValidationError) as caught:
+                finalize_bundle(base / "artifact-stage", base / "artifact.ralph.zip")
+            self.assertIn(
+                "capture_artifact_mismatch",
+                {item.code for item in caught.exception.diagnostics},
+            )
+
+            self.make_staging(base / "identity-stage")
+            capture_path = base / "identity-stage/captures/overview.json"
+            capture = json.loads(capture_path.read_text(encoding="utf-8"))
+            capture["seed"] = 29
+            capture_path.write_text(json.dumps(capture), encoding="utf-8")
+            with self.assertRaises(BundleValidationError) as caught:
+                finalize_bundle(base / "identity-stage", base / "mismatch.ralph.zip")
+            self.assertIn(
+                "capture_identity_mismatch",
+                {item.code for item in caught.exception.diagnostics},
+            )
 
     def test_finalize_is_byte_deterministic_and_validates(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -177,15 +327,13 @@ class BundleTests(unittest.TestCase):
             self.make_staging(stage)
             (stage / "cost.json").write_text(
                 json.dumps(
-                    {
-                        "evidence_references": ["events/raw/missing.jsonl#attempt-1"],
-                        "chargeable_attempts": [
-                            {
-                                "generation_started_evidence":
-                                    "events/raw/also-missing.jsonl#attempt-1"
-                            }
-                        ],
-                    }
+                    CostEvidence.subscription_unmetered(
+                        requested_model="gpt-5.6-luna",
+                        evidence_references=(
+                            "events/raw/missing.jsonl#attempt-1",
+                            "events/raw/also-missing.jsonl#attempt-1",
+                        ),
+                    ).as_dict()
                 ),
                 encoding="utf-8",
             )
@@ -197,6 +345,41 @@ class BundleTests(unittest.TestCase):
             ]
             self.assertEqual(len(missing), 2)
             self.assertTrue(all(item.path == "cost.json" for item in missing))
+
+    def test_invalid_cost_evidence_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            stage = base / "stage"
+            self.make_staging(stage)
+            (stage / "cost.json").write_text(
+                '{"schema_version":"cost/v1","status":"unavailable"}',
+                encoding="utf-8",
+            )
+            with self.assertRaises(BundleValidationError) as caught:
+                finalize_bundle(stage, base / "invalid-cost.ralph.zip")
+            self.assertIn(
+                "cost_evidence_invalid",
+                {item.code for item in caught.exception.diagnostics},
+            )
+
+    def test_invalid_cost_mode_and_currency_are_rejected(self) -> None:
+        for field, value in (("billing_mode", "made_up"), ("currency", "EUR")):
+            with self.subTest(field=field):
+                with tempfile.TemporaryDirectory() as temp:
+                    base = Path(temp)
+                    stage = base / "stage"
+                    self.make_staging(stage)
+                    cost = CostEvidence.subscription_unmetered().as_dict()
+                    cost[field] = value
+                    (stage / "cost.json").write_text(
+                        json.dumps(cost), encoding="utf-8"
+                    )
+                    with self.assertRaises(BundleValidationError) as caught:
+                        finalize_bundle(stage, base / "invalid-cost.ralph.zip")
+                    self.assertIn(
+                        "cost_evidence_invalid",
+                        {item.code for item in caught.exception.diagnostics},
+                    )
 
     def test_staging_symlink_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

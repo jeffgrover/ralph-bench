@@ -2,6 +2,15 @@
 
 from .chatgpt import ChatGPTProviderAdapter
 from .codex import CodexHarnessAdapter
+from .codex_execution import (
+    CodexAttemptExecutor,
+    CodexExecutionError,
+    CodexStreamSummary,
+    ProcessExecutionResult,
+    SubprocessExecutor,
+    credential_secret_values,
+    parse_codex_jsonl,
+)
 from .contracts import (
     AdapterDescriptor,
     ConnectionProbe,
@@ -28,6 +37,9 @@ __all__ = [
     "AdapterRegistry",
     "ChatGPTProviderAdapter",
     "CodexHarnessAdapter",
+    "CodexAttemptExecutor",
+    "CodexExecutionError",
+    "CodexStreamSummary",
     "ConnectionProbe",
     "CostCapabilities",
     "GenericModelAdapter",
@@ -41,10 +53,14 @@ __all__ = [
     "ProbeContext",
     "ProbeResult",
     "ProcessResult",
+    "ProcessExecutionResult",
     "ProcessRunner",
     "ProviderAdapter",
     "ResolutionError",
     "ResolvedSUT",
+    "SubprocessExecutor",
     "built_in_registry",
+    "credential_secret_values",
+    "parse_codex_jsonl",
     "resolve_sut",
 ]

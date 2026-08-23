@@ -46,7 +46,9 @@ class CodexHarnessAdapter:
         "Codex CLI",
         capabilities=("jsonl-events", "ephemeral", "explicit-model", "sandbox"),
         detection="executable",
-        limitations=("execution is not enabled by the P0-A contract slice",),
+        limitations=(
+            "P0-A uses portable L0 staged-workspace protection; strong isolation is deferred",
+        ),
     )
 
     def __init__(

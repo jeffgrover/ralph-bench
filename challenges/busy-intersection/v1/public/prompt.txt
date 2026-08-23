@@ -1,0 +1,49 @@
+Build an original, polished browser experience for a living four-way signalized
+Busy Intersection. The submission is a static offline artifact whose entry
+point is index.html. Do not use a backend or a network dependency; copy every
+runtime dependency you use into the submission.
+
+The scene must have four connected approaches and exits, straight/left/right
+movements, visible signal phases, four pedestrian crossings with compatible
+walk phases, continuous lane-following and turning, bounded vehicle spacing,
+braking and queues, and evaluator-supplied vehicle and pedestrian demand.
+Include pause, reset, simulation-speed controls and a useful default view.
+
+Expose this evaluator bridge from the browser:
+
+window.__RALPH_BENCH__ = {
+  apiVersion: "traffic/v1",
+  describeNetwork(),
+  loadScenario(scenario),
+  reset(seed),
+  advance(simulatedMilliseconds),
+  snapshot(),
+  drainEvents()
+};
+
+The evaluator owns demand, seeds, timing, safety checks and authoritative
+metrics. Every requested trip must remain accounted for as requested, admitted,
+active, completed, or explicitly rejected. Do not silently discard, replace,
+shorten, teleport, or move trips. Snapshots and events must describe the same
+simulation state used by visible playback; summary counters alone are not
+authoritative.
+
+The evaluator checks the connected movement graph, compatible lanes and paths,
+vehicle spacing and collisions, red-light entry, vehicle/pedestrian conflicts,
+teleportation or invalid disappearance, trip reconciliation, bounded service,
+queue storage, completion and recovery after demand is removed. It may inspect
+your artifact at standardized desktop dimensions and record an animated
+overview. Keep lane geometry, signal state, queue boundaries and critical
+distinctions legible.
+
+Completion evidence is physical, not a summary counter: for every completed
+trip, emit ordered trip.admitted, vehicle.entered, vehicle.exited and
+trip.completed events, and expose at least two snapshots with a changed
+vehicle position on its declared movement. A trip status of completed without
+this lifecycle and trajectory evidence is invalid.
+
+You may choose a confident 2D, 2.5D or 3D direction. Make the composition,
+typography, palette, motion, controls and information hierarchy intentional.
+Visual polish is reviewed separately from traffic validity and throughput; no
+palette, framework, camera rig, class name or reference architecture is
+prescribed.

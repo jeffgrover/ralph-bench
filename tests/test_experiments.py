@@ -8,31 +8,55 @@ from ralph_bench.experiments import ExperimentError, load_experiment, parse_expe
 
 
 def cloud_raw(**overrides):
-    value = {"schema_version": "experiment/v1", "name": "demo", "challenge": "busy-intersection/v1", "client": "codex-cli", "provider": "openai-chatgpt", "model": "gpt-5.6-luna", "track": "cloud-subscription", "cost": {"policy": "flat-subscription-attempt-pool/v1", "pool_id": "pool", "pool_scope": "experiment", "currency": "USD", "service_plan": "chatgpt-plus", "billing_period_cost_usd": "20.00", "benchmark_allocation_fraction": "1.0", "pool_cost_usd": "20.00", "pool_cost_source": "operator_attested_period_charge", "allocation_rationale": "pilot", "billing_period_start": "2026-08-01", "billing_period_end": "2026-08-31", "closure": "all_expected_runs_terminal"}}
+    value = {"schema_version": "experiment/v1", "name": "demo", "challenge": "busy-intersection/v1", "client": "codex-cli", "provider": "openai-chatgpt", "model": "gpt-5.6-luna", "track": "cloud-subscription"}
     value.update(overrides)
     return value
 
 
 class ExperimentTests(unittest.TestCase):
-    def test_unknown_field_and_missing_cloud_cost_are_specific(self):
+    def test_unknown_field_is_specific_and_subscription_cost_is_optional(self):
         with self.assertRaisesRegex(ExperimentError, "unknown experiment field"):
             parse_experiment({**cloud_raw(), "surprise": True})
-        with self.assertRaisesRegex(ExperimentError, "require.*cost"):
-            parse_experiment({k: v for k, v in cloud_raw().items() if k != "cost"})
+        experiment = parse_experiment({k: v for k, v in cloud_raw().items() if k != "cost"})
+        self.assertNotIn("[cost]", render_experiment(experiment))
 
-    def test_shared_cost_declaration_rejects_edges_and_accepts_explicit_zero(self):
-        for field, value in (("benchmark_allocation_fraction", "NaN"), ("benchmark_allocation_fraction", "1.1"), ("pool_cost_usd", "19.99")):
-            bad = cloud_raw()
-            bad["cost"] = {**bad["cost"], field: value}
-            with self.assertRaisesRegex(ExperimentError, "invalid cost declaration"):
-                parse_experiment(bad)
-        zero = cloud_raw()
-        zero["cost"] = {**zero["cost"], "billing_period_cost_usd": "0", "benchmark_allocation_fraction": "0", "pool_cost_usd": "0", "zero_cost_evidence": "free plan attested"}
-        self.assertEqual(parse_experiment(zero).cost.pool_cost_usd, "0.00")
+    def test_cost_table_is_rejected_in_p0a(self):
+        with self.assertRaisesRegex(ExperimentError, "unknown experiment field.*cost"):
+            parse_experiment({**cloud_raw(), "cost": {"status": "unavailable"}})
 
-    def test_cloud_metered_and_flat_subscription_are_not_combined(self):
-        with self.assertRaisesRegex(ExperimentError, "cloud-metered"):
+    def test_only_p0a_tracks_are_accepted(self):
+        with self.assertRaisesRegex(ExperimentError, "unsupported track"):
             parse_experiment({**cloud_raw(), "track": "cloud-metered"})
+
+    def test_challenge_and_scenario_profile_must_match(self):
+        with self.assertRaisesRegex(ExperimentError, "not compatible"):
+            parse_experiment(
+                {
+                    **cloud_raw(),
+                    "evaluation": {"scenario_pack": "traffic-city-p0b"},
+                }
+            )
+        with self.assertRaisesRegex(ExperimentError, "no scenario profile"):
+            parse_experiment(
+                {**cloud_raw(), "challenge": "five-by-five-rush/v1"}
+            )
+
+    def test_native_loop_cannot_request_ralph_repair_attempts(self):
+        with self.assertRaisesRegex(ExperimentError, "must be 1.*native"):
+            parse_experiment(
+                {
+                    **cloud_raw(),
+                    "client_options": {"loop": "native"},
+                }
+            )
+        experiment = parse_experiment(
+            {
+                **cloud_raw(),
+                "client_options": {"loop": "native"},
+                "budget": {"max_attempts": 1},
+            }
+        )
+        self.assertEqual(experiment.budget.max_attempts, 1)
 
     def test_deterministic_round_trip_and_non_overwriting_atomic_save(self):
         experiment = parse_experiment(cloud_raw())

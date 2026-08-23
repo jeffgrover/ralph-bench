@@ -1,0 +1,21 @@
+{
+  "schema_version": "scenario-pack/v1",
+  "scenario_pack": "traffic-intersection-p0a",
+  "challenge": "busy-intersection/v1",
+  "protocol": "traffic/v1",
+  "production_profile": "balanced",
+  "seeds": [17, 29, 43],
+  "stages": [
+    {"id": "warmup", "start_ms": 0, "end_ms": 60000, "offered_trips_per_hour": 240, "pedestrian_requests_per_hour": 60, "qualifying": true, "cooldown": false},
+    {"id": "balanced-1", "start_ms": 60000, "end_ms": 180000, "offered_trips_per_hour": 600, "pedestrian_requests_per_hour": 120, "qualifying": true, "cooldown": false},
+    {"id": "balanced-2", "start_ms": 180000, "end_ms": 300000, "offered_trips_per_hour": 900, "pedestrian_requests_per_hour": 180, "qualifying": true, "cooldown": false},
+    {"id": "balanced-3", "start_ms": 300000, "end_ms": 420000, "offered_trips_per_hour": 1200, "pedestrian_requests_per_hour": 240, "qualifying": true, "cooldown": false},
+    {"id": "balanced-4", "start_ms": 420000, "end_ms": 540000, "offered_trips_per_hour": 1500, "pedestrian_requests_per_hour": 300, "qualifying": true, "cooldown": false},
+    {"id": "cooldown", "start_ms": 540000, "end_ms": 660000, "offered_trips_per_hour": 0, "pedestrian_requests_per_hour": 0, "qualifying": false, "cooldown": true}
+  ],
+  "notes": [
+    "The evaluator owns trip IDs, origins, destinations, timing, and pedestrian demand.",
+    "Exact private thresholds and hidden scenario variation are not public challenge inputs.",
+    "The fixed stages are deterministic pilot calibration inputs, not a composite score."
+  ]
+}

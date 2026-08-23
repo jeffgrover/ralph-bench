@@ -4,16 +4,27 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import replace
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 import json
 from pathlib import Path
+import re
 import sys
 from typing import Callable, Sequence
 
 from .adapters import AdapterRegistry, built_in_registry, resolve_sut
-from .adapters.contracts import ProbeContext, ProbeResult
+from .adapters.contracts import (
+    ProbeContext,
+    ProbeResult,
+    tracks_for_cost_capabilities,
+)
 from .adapters.resolver import ResolutionError
 from .bundles import validate_bundle
+from .browser_runtime import (
+    BrowserRuntimeError,
+    find_chromium,
+    find_playwright_browsers_path,
+)
+from .challenges import challenge_ids_for, scenario_pack_for
+from .conductor import ConductorError, EvaluationRunSummary, execute_experiment
 from .experiments import (
     ExperimentError,
     load_experiment,
@@ -21,10 +32,18 @@ from .experiments import (
     render_experiment,
     save_experiment,
 )
+from .preview import PreviewError, open_bundle_preview
 
 
 class WizardCancelled(Exception):
     """The operator cancelled authoring before a file was created."""
+
+
+def _default_experiment_path(name: str) -> Path:
+    """Derive a safe, legible project-local filename from an experiment name."""
+
+    slug = re.sub(r"[^a-z0-9]+", "-", name.casefold()).strip("-")
+    return Path("experiments") / f"{slug or 'experiment'}.toml"
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -32,8 +51,12 @@ def _parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command")
     configure = sub.add_parser("configure", help="author and validate an experiment")
     configure.add_argument("path", nargs="?", type=Path)
-    run = sub.add_parser("run", help="validate an experiment and prepare execution")
+    run = sub.add_parser("run", help="execute a validated experiment")
     run.add_argument("path", type=Path)
+    preview = sub.add_parser(
+        "preview", help="open a bundle's evaluator-recorded simulation overview"
+    )
+    preview.add_argument("path", type=Path)
     doctor = sub.add_parser("doctor", help="perform read-only adapter diagnostics")
     doctor.add_argument("--json", action="store_true", help="emit machine-readable diagnostics")
     bundle = sub.add_parser("bundle", help="inspect immutable result bundles")
@@ -68,6 +91,8 @@ class Wizard:
         self.output = output_fn
         self.registry = registry or built_in_registry()
         self.probe_context = probe_context or ProbeContext()
+        self.saved_path: Path | None = None
+        self.saved_experiment = None
 
     def _ask(self, prompt: str, default: str | None = None) -> str:
         suffix = f" [{default}]" if default is not None else ""
@@ -89,14 +114,18 @@ class Wizard:
             raise ExperimentError(f"{prompt} must be positive")
         return value
 
-    def _ask_decimal(self, prompt: str) -> Decimal:
-        answer = self._ask(prompt)
+    def _ask_repair_passes(self, default: int = 1) -> int:
+        """Ask for the permitted controlled Ralph repairs per run."""
+        prompt = "Ralph repair passes per independent run"
+        answer = self._ask(prompt, str(default))
         try:
-            value = Decimal(answer)
-        except (InvalidOperation, ValueError) as exc:
-            raise ExperimentError(f"{prompt} must be a decimal") from exc
-        if not value.is_finite():
-            raise ExperimentError(f"{prompt} must be finite")
+            value = int(answer)
+        except ValueError as exc:
+            raise ExperimentError(f"{prompt} must be an integer") from exc
+        if value < 0:
+            raise ExperimentError(f"{prompt} cannot be negative")
+        if value > 1:
+            raise ExperimentError(f"{prompt} cannot exceed 1 in P0-A")
         return value
 
     def _select(
@@ -109,7 +138,8 @@ class Wizard:
     ) -> str:
         self.output(title)
         for index, (identifier, label) in enumerate(values, 1):
-            self.output(f"  {index}. {label} ({identifier})")
+            display = label if label == identifier else f"{label} ({identifier})"
+            self.output(f"  {index}. {display}")
         if not values:
             if allow_manual:
                 return self._ask("  Manual value")
@@ -149,6 +179,8 @@ class Wizard:
         return choices, probes
 
     def run(self, destination: Path | None = None) -> int:
+        self.saved_path = None
+        self.saved_experiment = None
         try:
             harness_values, harness_probes = self._client_choices()
             default_client = next(
@@ -208,6 +240,26 @@ class Wizard:
             )
             if not provider_probe.available:
                 raise ExperimentError(provider_probe.message or "provider is unavailable")
+            cost_capabilities = provider_adapter.cost_capabilities()
+            advertised_tracks = tracks_for_cost_capabilities(cost_capabilities)
+            p0_tracks = tuple(
+                track
+                for track in advertised_tracks
+                if track in {"cloud-subscription", "local"}
+            )
+            if not p0_tracks:
+                raise ExperimentError(
+                    "selected provider does not advertise a P0-A-compatible "
+                    "billing track"
+                )
+            track = (
+                p0_tracks[0]
+                if len(p0_tracks) == 1
+                else self._select(
+                    "Execution track:",
+                    [(value, value) for value in p0_tracks],
+                )
+            )
             offers = provider_adapter.discover_models(provider_context)
             model_values = [
                 (
@@ -235,10 +287,20 @@ class Wizard:
                 self.registry.get("model", "model/generic"),
             )
 
-            name = self._ask(
-                "Experiment name", "codex-chatgpt-luna-intersection"
+            name = self._ask("Experiment name", "codex-luna")
+            challenge_ids = challenge_ids_for(track)
+            challenge = self._select(
+                "Challenge:",
+                [(value, value) for value in challenge_ids],
+                "busy-intersection/v1"
+                if "busy-intersection/v1" in challenge_ids
+                else None,
             )
-            challenge = self._ask("Challenge", "busy-intersection/v1")
+            scenario_pack = scenario_pack_for(challenge, track)
+            self.output(
+                f"  Evaluation profile: {scenario_pack} "
+                "(derived from challenge and execution track)"
+            )
             effort_schema = model_adapter.option_schema().get("reasoning_effort", {})
             effort_values = (
                 effort_schema.get("values", ())
@@ -254,67 +316,22 @@ class Wizard:
                 if effort_values
                 else self._ask("Reasoning effort", "medium")
             )
-            repetitions = self._ask_positive_int("Repetitions", 1)
+            repetitions = self._ask_positive_int(
+                "Independent runs per configuration "
+                "(aggregate results and measure variability)",
+                1,
+            )
             max_wall_seconds = self._ask_positive_int(
-                "Maximum wall seconds per run", 1200
+                "Maximum model-work time per independent run, shared by the "
+                "initial attempt and repair (seconds)",
+                1200,
             )
-            max_attempts = self._ask_positive_int("Maximum attempts", 2)
-            scenario_pack = self._ask(
-                "Evaluation scenario pack", "traffic-intersection-p0a"
-            )
+            repair_passes = self._ask_repair_passes()
+            # The persisted budget counts the initial attempt as well as each
+            # controlled repair pass. Keep that schema meaning out of the
+            # authoring prompt so operators can reason in Ralph terms.
+            max_attempts = repair_passes + 1
             inbox = self._ask("Result inbox", "results/inbox")
-
-            self.output(
-                "Subscription cost policy (all financial values are explicit operator inputs):"
-            )
-            period_cost = self._ask_decimal("  Billing-period cost USD")
-            allocation_fraction = self._ask_decimal(
-                "  Benchmark allocation fraction (0 through 1)"
-            )
-            if period_cost < 0:
-                raise ExperimentError("billing-period cost cannot be negative")
-            if allocation_fraction < 0 or allocation_fraction > 1:
-                raise ExperimentError("benchmark allocation fraction must be between 0 and 1")
-            computed_pool = (period_cost * allocation_fraction).quantize(
-                Decimal("0.01"), rounding=ROUND_HALF_UP
-            )
-            self.output(
-                "  Computed experiment pool: "
-                f"${format(computed_pool, 'f')} = ${format(period_cost, 'f')} "
-                f"× {format(allocation_fraction, 'f')}"
-            )
-            pool_cost = self._ask(
-                "  Resulting experiment pool cost USD", format(computed_pool, "f")
-            )
-            cost: dict[str, object] = {
-                "policy": "flat-subscription-attempt-pool/v1",
-                "pool_id": self._ask("  Pool ID", f"{name}-pool"),
-                "pool_scope": "experiment",
-                "currency": "USD",
-                "service_plan": self._ask("  Service plan"),
-                "billing_period_cost_usd": format(period_cost, "f"),
-                "benchmark_allocation_fraction": format(allocation_fraction, "f"),
-                "pool_cost_usd": pool_cost,
-                "pool_cost_source": self._ask(
-                    "  Pool cost source", "operator_attested_period_charge"
-                ),
-                "allocation_rationale": self._ask(
-                    "  Allocation rationale", "dedicated_benchmark_period"
-                ),
-                "billing_period_start": self._ask(
-                    "  Billing period start (YYYY-MM-DD)"
-                ),
-                "billing_period_end": self._ask(
-                    "  Billing period end (YYYY-MM-DD)"
-                ),
-                "closure": "all_expected_runs_terminal",
-            }
-            try:
-                entered_pool = Decimal(pool_cost)
-            except InvalidOperation:
-                entered_pool = Decimal("NaN")
-            if entered_pool.is_finite() and entered_pool == 0:
-                cost["zero_cost_evidence"] = self._ask("  Zero-cost plan evidence")
 
             client_options: dict[str, object] = {
                 "reasoning_effort": effort,
@@ -329,7 +346,7 @@ class Wizard:
                 "client": client,
                 "provider": provider,
                 "model": model,
-                "track": "cloud-subscription",
+                "track": track,
                 "repetitions": repetitions,
                 "client_options": client_options,
                 "budget": {
@@ -337,22 +354,22 @@ class Wizard:
                     "max_attempts": max_attempts,
                 },
                 "evaluation": {"scenario_pack": scenario_pack},
-                "cost": cost,
                 "output": {"inbox": inbox},
             }
             experiment = parse_experiment(raw)
-            self.output(
-                f"  Cost review: period ${experiment.cost.billing_period_cost_usd}, "
-                f"fraction {experiment.cost.benchmark_allocation_fraction}, "
-                f"pool ${experiment.cost.pool_cost_usd}"
-            )
+            if track == "local":
+                self.output("  Cost: not applicable — local execution track")
+            elif "unavailable" in cost_capabilities.evidence_statuses:
+                self.output("  Cost: subscription — per-run USD unavailable")
+            else:
+                self.output("  Cost: captured from run-side provider evidence")
             self.output("Experiment review:")
             self.output(render_experiment(experiment))
-            confirmation = self._ask("Save this experiment? (yes/no)", "yes")
-            if confirmation.lower() not in {"y", "yes"}:
-                raise WizardCancelled
             path = destination or Path(
-                self._ask("Save path", "experiments/experiment.toml")
+                self._ask(
+                    "Experiment file (enter path to save, or cancel)",
+                    str(_default_experiment_path(name)),
+                )
             )
             save_experiment(experiment, path)
         except WizardCancelled:
@@ -362,7 +379,116 @@ class Wizard:
             self.output(f"Invalid experiment; no experiment file was written: {exc}")
             return 2
         self.output(f"Saved validated experiment: {path}")
+        self.saved_path = path
+        self.saved_experiment = experiment
         return 0
+
+
+def _confirm_run(
+    experiment,
+    input_fn: Callable[[str], str],
+    output_fn: Callable[[str], None],
+) -> bool | None:
+    maximum = experiment.repetitions * experiment.budget.max_attempts
+    prompt = (
+        "Run this evaluation now? "
+        f"({experiment.repetitions} independent run(s), up to "
+        f"{maximum} model invocation(s)) (yes/no) [yes]: "
+    )
+    while True:
+        try:
+            answer = input_fn(prompt).strip().casefold()
+        except (EOFError, KeyboardInterrupt):
+            output_fn("Evaluation was not started; the experiment file remains saved.")
+            return None
+        if answer in {"", "y", "yes"}:
+            return True
+        if answer in {"n", "no"}:
+            return False
+        output_fn("Please answer yes or no.")
+
+
+def _confirm_preview(
+    input_fn: Callable[[str], str],
+    output_fn: Callable[[str], None],
+) -> bool:
+    prompt = (
+        "Open the final run's recorded simulation overview? "
+        "(yes/no) [yes]: "
+    )
+    while True:
+        try:
+            answer = input_fn(prompt).strip().casefold()
+        except (EOFError, KeyboardInterrupt):
+            output_fn("Recorded overview was not opened.")
+            return False
+        if answer in {"", "y", "yes"}:
+            return True
+        if answer in {"n", "no"}:
+            return False
+        output_fn("Please answer yes or no.")
+
+
+def _run_experiment_path(
+    path: Path,
+    *,
+    registry: AdapterRegistry,
+    probe_context: ProbeContext,
+    output_fn: Callable[[str], None],
+    input_stream=None,
+    input_fn: Callable[[str], str] = input,
+    evaluation_runner: Callable[..., EvaluationRunSummary] | None = None,
+) -> int:
+    try:
+        experiment = load_experiment(path)
+        sut = resolve_sut(experiment, registry, context=probe_context)
+    except (OSError, ExperimentError, ResolutionError) as exc:
+        output_fn(f"Invalid experiment or unavailable SUT: {exc}")
+        return 2
+    output_fn(
+        f"Validated experiment {experiment.name!r} as "
+        f"{sut.harness_id} × {sut.provider_id} × {sut.model_id}."
+    )
+    runner = evaluation_runner or execute_experiment
+    try:
+        if evaluation_runner is None:
+            summary = runner(
+                experiment,
+                sut,
+                registry,
+                output_fn=output_fn,
+                input_stream=input_stream,
+            )
+        else:
+            summary = runner(
+                experiment,
+                sut,
+                registry,
+                output_fn=output_fn,
+            )
+    except KeyboardInterrupt:
+        output_fn("Evaluation interrupted; active child processes were terminated.")
+        return 130
+    except (ConductorError, OSError, RuntimeError, ValueError) as exc:
+        output_fn(f"Evaluation infrastructure failed: {exc}")
+        return 3
+    output_fn(
+        f"Produced {len(summary.runs)} validated result bundle(s); "
+        f"{summary.passed} full pass(es)."
+    )
+    if (
+        summary.runs
+        and input_stream is not None
+        and getattr(input_stream, "isatty", lambda: False)()
+        and _confirm_preview(input_fn, output_fn)
+    ):
+        try:
+            preview = open_bundle_preview(summary.runs[-1].bundle)
+        except PreviewError as exc:
+            output_fn(f"Could not open recorded overview: {exc}")
+        else:
+            output_fn(f"Opened recorded simulation overview: {preview.media_path}")
+    return 0
 
 
 def main(
@@ -373,6 +499,7 @@ def main(
     stdin=None,
     registry: AdapterRegistry | None = None,
     probe_context: ProbeContext | None = None,
+    evaluation_runner: Callable[..., EvaluationRunSummary] | None = None,
 ) -> int:
     parser = _parser()
     args = parser.parse_args(list(argv) if argv is not None else None)
@@ -386,12 +513,35 @@ def main(
                 "use `rb configure <file>` or `rb run <file>`."
             )
             return 2
-        return Wizard(
+        wizard = Wizard(
             input_fn,
             output_fn,
             registry=registry,
             probe_context=probe_context,
-        ).run()
+        )
+        authored = wizard.run()
+        if authored != 0:
+            return authored
+        if wizard.saved_path is None or wizard.saved_experiment is None:
+            output_fn("Evaluation was not started because no experiment was saved.")
+            return 3
+        confirmed = _confirm_run(wizard.saved_experiment, input_fn, output_fn)
+        if confirmed is None:
+            return 130
+        if not confirmed:
+            output_fn(
+                f"Evaluation was not started; run `rb run {wizard.saved_path}` when ready."
+            )
+            return 0
+        return _run_experiment_path(
+            wizard.saved_path,
+            registry=registry,
+            probe_context=probe_context,
+            output_fn=output_fn,
+            input_stream=stdin,
+            input_fn=input_fn,
+            evaluation_runner=evaluation_runner,
+        )
     if args.command == "configure":
         if args.path is None:
             if not stdin.isatty():
@@ -421,37 +571,70 @@ def main(
             probe_context=probe_context,
         ).run(args.path)
     if args.command == "run":
+        return _run_experiment_path(
+            args.path,
+            registry=registry,
+            probe_context=probe_context,
+            output_fn=output_fn,
+            input_stream=stdin,
+            input_fn=input_fn,
+            evaluation_runner=evaluation_runner,
+        )
+    if args.command == "preview":
         try:
-            experiment = load_experiment(args.path)
-            sut = resolve_sut(experiment, registry, context=probe_context)
-        except (OSError, ExperimentError, ResolutionError) as exc:
-            output_fn(f"Invalid experiment or unavailable SUT: {exc}")
+            preview = open_bundle_preview(args.path)
+        except PreviewError as exc:
+            output_fn(f"Could not open recorded overview: {exc}")
             return 2
-        output_fn(
-            f"Validated experiment {experiment.name!r} as "
-            f"{sut.harness_id} × {sut.provider_id} × {sut.model_id}."
-        )
-        output_fn(
-            "Execution is not implemented in this P0-A CLI slice; "
-            "no model invocation was attempted."
-        )
-        return 3
+        output_fn(f"Opened recorded simulation overview: {preview.media_path}")
+        return 0
     if args.command == "doctor":
         harness = registry.get("harness", "codex-cli")
         result = harness.detect(probe_context)
+        dependency_checks: dict[str, dict[str, object]] = {}
+        try:
+            chromium = find_chromium()
+            dependency_checks["chromium"] = {
+                "available": True,
+                "executable": chromium.name,
+            }
+        except BrowserRuntimeError as exc:
+            dependency_checks["chromium"] = {
+                "available": False,
+                "message": str(exc),
+            }
+        try:
+            find_playwright_browsers_path()
+            dependency_checks["playwright_video"] = {"available": True}
+        except BrowserRuntimeError as exc:
+            dependency_checks["playwright_video"] = {
+                "available": False,
+                "message": str(exc),
+            }
+        available = result.available and all(
+            bool(check["available"]) for check in dependency_checks.values()
+        )
         payload = {
             "client": "codex-cli",
-            "status": result.status,
-            "available": result.available,
+            "status": "ok" if available else "unavailable",
+            "available": available,
             "message": result.message,
             "version": result.version,
+            "dependencies": dependency_checks,
         }
         output_fn(
             json.dumps(payload, sort_keys=True)
             if args.json
-            else f"Codex CLI: {result.status} ({result.message})"
+            else (
+                f"Codex CLI: {result.status}; "
+                + "; ".join(
+                    f"{ {'chromium': 'Chromium', 'playwright_video': 'Playwright video'}[name] }: "
+                    f"{'ok' if check['available'] else 'unavailable'}"
+                    for name, check in dependency_checks.items()
+                )
+            )
         )
-        return 0 if result.available else 1
+        return 0 if available else 1
     if args.command == "bundle" and args.bundle_command == "validate":
         result = validate_bundle(args.path)
         payload = {

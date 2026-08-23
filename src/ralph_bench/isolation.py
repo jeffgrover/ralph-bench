@@ -296,6 +296,21 @@ class IsolationReport:
     limitations: tuple[str, ...]
     schema_version: str = ISOLATION_SCHEMA_VERSION
 
+    def to_metadata(self) -> dict[str, object]:
+        return {
+            "schema_version": self.schema_version,
+            "level": self.level.value,
+            "implementation": self.implementation,
+            "publication_class": self.publication_class,
+            "staged_assets_only": self.staged_assets_only,
+            "environment_allowlisted": self.environment_allowlisted,
+            "filesystem_enforced": self.filesystem_enforced,
+            "credential_canary": self.credential_canary.value,
+            "agent_network": self.agent_network.value,
+            "environment_keys": list(self.environment_keys),
+            "limitations": list(self.limitations),
+        }
+
 
 def build_isolation_report(
     *,
@@ -306,11 +321,8 @@ def build_isolation_report(
 ) -> IsolationReport:
     secret_keys = secret_environment_keys(environment)
     allowlisted = not secret_keys
-    can_claim_staged = allowlisted and (
-        not requires_credentials or credential_canary is CanaryStatus.PASSED
-    )
     limitations = [
-        "native-process filesystem containment is not enforced",
+        "benchmark-owned filesystem confidentiality is not independently enforced",
         "provider and agent-tool network channels are not independently enforced",
     ]
     if secret_keys:
@@ -318,9 +330,9 @@ def build_isolation_report(
     if requires_credentials and credential_canary is not CanaryStatus.PASSED:
         limitations.append("credential isolation was not demonstrated")
     return IsolationReport(
-        level=IsolationLevel.L1 if can_claim_staged else IsolationLevel.L0,
+        level=IsolationLevel.L0,
         implementation=STAGED_IMPLEMENTATION,
-        publication_class="experimental" if can_claim_staged else "ineligible",
+        publication_class="unsealed",
         staged_assets_only=True,
         environment_allowlisted=allowlisted,
         filesystem_enforced=False,

@@ -40,10 +40,13 @@ runs record cost as unavailable and preserve time, token, and attempt
 evidence. Missing cost is never turned into zero.
 
 The P0-A flow uses concise experiment names, labels repetitions as
-**Independent runs**, labels evaluator-controlled retries as **Ralph repair
+**Independent runs per configuration** and explains their aggregation and
+variability purpose, labels evaluator-controlled retries as **Ralph repair
 passes**, derives the scenario profile from the selected challenge and track,
-and explains that the result inbox stores immutable `.ralph.zip` evidence.
-There is no cost questionnaire in this path.
+and explains that the result inbox stores immutable `.ralph.zip` evidence. It
+uses one derived experiment-path prompt as the save action rather than a
+redundant yes/no prompt followed by a path prompt. There is no cost
+questionnaire in this path.
 
 ## Consequences
 

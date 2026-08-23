@@ -1,0 +1,46 @@
+{
+  "schema_version": "challenge/v1",
+  "challenge_id": "busy-intersection/v1",
+  "protocol": "traffic/v1",
+  "entrypoint": "index.html",
+  "runtime": {
+    "static": true,
+    "network": false,
+    "backend": false,
+    "supported_viewport": {"width": 1440, "height": 900}
+  },
+  "infrastructure": {
+    "approaches": ["north", "east", "south", "west"],
+    "maximum_lanes_per_approach": 3,
+    "stop_line_regions": "one bounded stop-line region per approach",
+    "crossing_regions": ["north-crossing", "east-crossing", "south-crossing", "west-crossing"],
+    "vehicle_dimensions_m": {"length": 4.8, "width": 1.9},
+    "road_speed_mps": 13.4,
+    "grade_separation": false
+  },
+  "required_scope": [
+    "four connected approaches and exits",
+    "straight, left-turn, and right-turn movements",
+    "visible signal phases and compatible pedestrian walk phases",
+    "continuous lane-following, bounded spacing, braking, and queuing",
+    "evaluator-supplied vehicle and pedestrian demand",
+    "pause, reset, simulation speed, and basic visible status",
+    "useful default view"
+  ],
+  "critical_checks": [
+    "connected-valid-movement-graph",
+    "lane-and-path-adherence",
+    "no-overlap",
+    "no-red-entry",
+    "no-vehicle-pedestrian-conflict",
+    "no-teleportation-or-invalid-disappearance",
+    "requested-trip-reconciliation",
+    "browser-runtime-stability"
+  ],
+  "evaluator_bridge": {
+    "global": "window.__RALPH_BENCH__",
+    "api_version": "traffic/v1",
+    "methods": ["describeNetwork", "loadScenario", "reset", "advance", "snapshot", "drainEvents"]
+  },
+  "creative_latitude": "Choose a coherent 2D, 2.5D, or 3D visual identity. Do not trade away traffic legibility, safety, or offline reproducibility for decoration."
+}

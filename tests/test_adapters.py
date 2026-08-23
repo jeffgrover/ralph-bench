@@ -73,6 +73,14 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(calls, [("codex", "--version"), ("codex", "login", "status")])
         self.assertIn("static P0 descriptor", " ".join(sut.warnings))
 
+        cost_capabilities = ChatGPTProviderAdapter().cost_capabilities()
+        self.assertEqual(
+            cost_capabilities.billing_modes, ("flat_subscription",)
+        )
+        self.assertEqual(
+            cost_capabilities.evidence_statuses, ("unavailable",)
+        )
+
     def test_probe_context_detaches_metadata_and_rejects_invalid_timeout(self):
         metadata = {"credential_available": True}
         context = ProbeContext(metadata=metadata)
@@ -152,6 +160,33 @@ class AdapterTests(unittest.TestCase):
                 context=ProbeContext(process_runner=process),
             )
         self.assertEqual(raised.exception.issue.code, "connection-incompatible")
+
+    def test_provider_billing_mode_must_match_experiment_track(self):
+        class MeteredProvider(ChatGPTProviderAdapter):
+            def cost_capabilities(self):
+                return CostCapabilities(
+                    billing_modes=("metered_api",),
+                    evidence_statuses=("complete",),
+                )
+
+        registry = built_in_registry()
+        registry.providers["provider/openai-chatgpt"] = MeteredProvider()
+
+        def process(argv, timeout):
+            return ProcessResult(
+                0,
+                "codex-cli 0.149.0\n"
+                if argv[-1] == "--version"
+                else "Logged in using ChatGPT\n",
+            )
+
+        with self.assertRaises(ResolutionError) as raised:
+            resolve_sut(
+                parse_experiment(cloud_raw()),
+                registry,
+                context=ProbeContext(process_runner=process),
+            )
+        self.assertEqual(raised.exception.issue.code, "track-incompatible")
 
 
 if __name__ == "__main__":

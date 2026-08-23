@@ -42,7 +42,7 @@ several production variants.
 | SUT composition | Typed harness, provider, and model adapters; registry; capability resolution | Codex + ChatGPT + Luna | Other live clients, providers, models, and third-party loading |
 | Configuration | Requested/materialized/effective/cleanup lifecycle and ownership | Read-only ChatGPT entitlement plus scoped Codex invocation | Mutable LM Studio lifecycle and other native renderers |
 | Agent loop | Preserved attempts and structured feedback boundary | Evaluator-controlled loop, at most two attempts | Native-loop comparison and alternate repair strategies |
-| Isolation | Versioned capability/taint report and conductor-owned evidence | One L1 staged-workspace implementation | L2/L3 containers, provider proxying, universal network control |
+| Isolation | Versioned capability/taint report and conductor-owned evidence | Portable L0 staged-workspace protection with explicit limitations | Selection and implementation of OS/container/VM-backed L1/L2 protection |
 | Storage | Immutable bundle/store boundary | Local `.ralph.zip` inbox | Google Drive and other remote stores |
 | Browser | Versioned browser observation/capture boundary | One pinned Chromium/Playwright worker | Other browsers, capture backends, and viewpoints |
 | Challenge | Versioned challenge plug-in boundary and shared `traffic/v1` | Busy Intersection | Live 5x5 Rush evaluator and other challenge families |
@@ -140,9 +140,9 @@ rb build --source results/inbox --output site
 
 Zero-argument `rb` starts with client selection, then uses bounded, read-only
 adapter probes for compatible providers and models. It previews and validates
-the TOML, saves atomically, and may offer to run it *(target behavior; the
-current wizard saves but does not offer execution)*. Explicit commands remain
-suitable for unattended use.
+the TOML, saves atomically, and asks whether to run the saved experiment. The
+default-yes confirmation states the independent-run count and maximum possible
+model invocations. Explicit commands remain suitable for unattended use.
 
 An illustrative P0-A experiment is:
 
@@ -180,6 +180,11 @@ attempt plus the permitted Ralph repair passes. The versioned cost contract
 uses generic `actual_cost_usd` and `reference_cost_usd` fields with required
 matching source fields; OpenRouter is identified by source/provenance when it
 provides the canonical reference snapshot.
+
+`budget.max_wall_seconds` is the shared model/harness work allowance for one
+independent run, including its optional repair. Browser judging and bundle
+finalization use separate bounded infrastructure timeouts and are measured
+outside that model-work allowance.
 
 See:
 
@@ -257,15 +262,17 @@ files or hang.
 
 **Estimate:** 4–5 engineering days.
 
-### WP1 — Conductor, attempts, configuration, and staged isolation
+### WP1 — Conductor, attempts, configuration, and staged protection
 
 Build the run state machine, unique repetitions, at most two preserved
 attempts, phase timing, configuration ownership/cleanup, process termination,
-one L1 staged-workspace implementation, redaction, and canary evidence.
+portable L0 staged-workspace protection and redaction. Strong isolation
+backend selection is deliberately excluded.
 
 **Exit:** failure, timeout, and cancellation preserve evidence and execute
-cleanup; fixture agents cannot reach source, prior results, judge material, or
-conductor-owned evidence through the supported staged paths.
+cleanup; only public inputs are intentionally delivered, and every result is
+clearly marked L0/unsealed without claiming host-file or credential
+confidentiality.
 
 **Estimate:** 5–7 engineering days.
 
@@ -443,7 +450,7 @@ The skeleton is protected by tests that cross its seams:
 | Reference price is mistaken for actual spend | Require exact model mapping, frozen pricing snapshot, token evidence, and an explicit OpenRouter-equivalent label. |
 | Agent fabricates traffic telemetry | Reconcile evaluator-issued trips, snapshots, events, geometry, and browser observations. |
 | Fast-forward diverges from visible behavior | Require one simulation state/update path and equivalence fixtures. |
-| L1 isolation is overstated | Publish capability/canary evidence; label the live result L0/unsealed if credential or filesystem boundaries cannot be demonstrated. |
+| Best-effort protection is mistaken for isolation | Publish L0/unsealed provenance prominently; make strong-backend selection a separate reviewed milestone. |
 | Visual polish gets deferred as “just reporting” | Require one coherent site shell and one animated artifact preview in the P0-A exit criteria. |
 | City work destabilizes the core | Finish/freeze P0-A contracts, then require P0-B to plug in without city branches. |
 | Vendor CLI/events change | Pin and record the tested Codex version, preserve raw streams, and maintain parser fixtures. |
@@ -457,7 +464,7 @@ The skeleton is protected by tests that cross its seams:
 - [x] Busy Intersection is the only complete P0-A evaluator.
 - [x] The 5x5 Rush contract/fixture is P0-A; full city implementation is P0-B.
 - [x] Cloud cost evidence is preserved; P0-A does not allocate subscription fees.
-- [x] One controlled repair attempt, one L1 staged implementation, one browser,
+- [x] One controlled repair attempt, one portable L0 staged implementation, one browser,
       one animated capture, one local inbox, and one small static site define the
       concrete P0-A breadth.
 - [x] Google Drive, quota-burden reporting, frontier judging, other live SUTs,

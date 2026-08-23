@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Ralph Bench operator inputs and generated evidence
+/experiments/*.toml
+/results/

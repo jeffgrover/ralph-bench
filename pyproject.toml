@@ -8,6 +8,9 @@ version = "0.1.0"
 description = "Reproducible benchmark harness for agentic coding systems"
 readme = "README.md"
 requires-python = ">=3.11"
+dependencies = [
+    "playwright>=1.62.0",
+]
 
 [project.scripts]
 rb = "ralph_bench.cli:main"

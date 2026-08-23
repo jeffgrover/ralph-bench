@@ -16,7 +16,11 @@ class ChatGPTProviderAdapter:
         "provider/openai-chatgpt",
         "provider",
         "ChatGPT (subscription)",
-        capabilities=("chatgpt-subscription", "flat-subscription-attempt-pool/v1"),
+        capabilities=(
+            "chatgpt-subscription",
+            "billing-mode/flat-subscription",
+            "cost-evidence/unavailable",
+        ),
         detection="harness-auth",
         limitations=("authentication is observed through the selected harness",),
     )
@@ -59,11 +63,11 @@ class ChatGPTProviderAdapter:
         )
 
     def option_schema(self) -> dict[str, object]:
-        return {"subscription_profile": {"type": "named-reference", "secret": False}}
+        return {}
 
     def cost_capabilities(self) -> CostCapabilities:
         return CostCapabilities(
-            ("flat-subscription-attempt-pool/v1",),
-            ("conductor-invocation-event",),
-            ("flat-subscription",),
+            billing_modes=("flat_subscription",),
+            evidence_statuses=("unavailable",),
+            usage_sources=("codex-events",),
         )
