@@ -35,6 +35,7 @@ OpenRouter billing/reference support is the next provider slice.
 
 - [Vision](docs/VISION.md)
 - [P0 implementation plan](docs/P0_PLAN.md)
+- [Prioritized next steps](docs/NEXT_STEPS.md)
 - [`rb` CLI and experiment authoring](docs/CLI_AND_EXPERIMENTS.md)
 - [Configuration ownership and lifecycle](docs/CONFIGURATION_MODEL.md)
 - [Polymorphic harness, provider, and model adapters](docs/ADAPTER_MODEL.md)
@@ -89,7 +90,7 @@ The first P0-A contract spine is implemented and tested:
 - Provider billing capabilities select compatible tracks, while the shared
   challenge/track scenario-profile registry derives and validates the
   persisted scenario pack in both the wizard and experiment parser.
-- The conductor attempt loop, staged-workspace isolation, canonical events,
+- The conductor attempt loop, staged-workspace protection, canonical events,
   unavailable-subscription cost evidence, and deterministic bundle finalizer
   are connected as one live path.
 - Each Codex run uses a fresh staged workspace, a sanitized child environment,

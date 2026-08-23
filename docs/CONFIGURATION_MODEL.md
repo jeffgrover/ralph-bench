@@ -215,8 +215,11 @@ Raw user config files and credential stores are never bundled.
 - `rb` discovers and authors normalized intent.
 - `rb doctor` performs read-only client/provider diagnostics and explains what
   can and cannot be configured or observed.
-- `rb run <file>` resolves, previews when interactive policy requires it,
-  materializes, executes, and cleans up.
+- `rb run <file>` resolves, materializes, executes, and cleans up. After an
+  interactive run it may open evaluator-recorded media; this is a derived
+  result preview, not configuration preview or candidate execution.
+- `rb preview <bundle>` validates immutable evidence and opens its recorded
+  overview independently of experiment configuration.
 
 The wizard does not directly edit provider or client configuration. This keeps
 authoring safe and allows a generated experiment to be inspected before any

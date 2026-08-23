@@ -264,6 +264,14 @@ P0 includes:
 - Concise run progress covers preflight, each model attempt, public checks,
   optional repair, browser evaluation/capture, and bundle finalization. A
   running model attempt emits at most one heartbeat per minute.
+- In an interactive terminal, a single `c` key requests a bounded local status
+  summary without Enter or another inference call. The summary reports only
+  structural evidence: event/tool/error counts, latest-event age, workspace
+  file/byte counts, and stderr size. It never prints model prose.
+- After bundles are finalized, an interactive run asks whether to open the
+  final run's evaluator-recorded WebM overview; Enter means yes. Batch and
+  redirected runs never pause. `rb preview <bundle.ralph.zip>` validates the
+  bundle and provides the same view later without executing candidate HTML.
 
 P0 does not require universal discovery across every legacy client or a live
 online catalog of every provider model. Additional adapters may improve their

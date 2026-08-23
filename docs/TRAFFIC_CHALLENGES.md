@@ -477,6 +477,43 @@ responsibility is to preserve and present the evidence exceptionally well.
 Private material must not be present in the agent workspace or public Git
 repository.
 
+### Fair-shot boundary
+
+Private judging may test generalization and performance; it must not hide a
+correctness contract. Before surrendering an attempt, a capable model should
+be able to detect basic contract misunderstandings and debug its artifact in a
+representative real-browser run.
+
+The public pack should therefore provide:
+
+- Complete versioned API and event schemas, with small valid examples.
+- A deterministic smoke scenario that exercises every required lifecycle and
+  movement shape without revealing the scored load schedule.
+- A runnable conformance tool that checks bridge shape, reconciliation,
+  ordering, basic physical continuity, offline readiness, and browser/runtime
+  errors.
+- Access to useful console/log evidence in a documented, bounded format.
+- Stable assertion identifiers and failure details describing the observed
+  contract violation.
+
+The public tool is a contract debugger, not a score oracle. Passing it does not
+reveal or guarantee scored capacity, expose private cases, or substitute for
+robust design. The model does not receive an interactive query channel into the
+private judge.
+
+The private judge may vary seeds, mixes, timings, demand intensity, failure
+windows, and capacity search. It must not require an undocumented field,
+lifecycle transition, coordinate convention, or tool behavior. Hidden values
+should decide robustness and score, not whether the model could have known how
+to be correct.
+
+Diagnostics should say what was observed and which public contract was
+violated, but should not prescribe an algorithm, data model, class structure,
+traffic-control policy, rendering technology, layout, or visual style. Public
+examples are conformance examples, not reference implementations. The same
+tool access, feedback categories, attempt count, and model-work budget apply to
+every comparable SUT.
+
 ## Threshold calibration
 
 Exact vehicle counts, stage durations, speed limits, storage sizes, delay

@@ -17,3 +17,4 @@ retained as historical decisions; the current cost decision is ADR 0011.
 | [0009](0009-one-real-implementation-per-p0-seam.md) | Keep proven contracts while building one real P0 implementation per seam. |
 | [0010](0010-require-cloud-cost-evidence.md) | Require cost evidence for every cloud run; superseded by ADR 0011. |
 | [0011](0011-cloud-cost-evidence-and-openrouter-references.md) | Preserve cloud cost evidence, use OpenRouter references explicitly, and defer subscription allocation. |
+| [0012](0012-defer-strong-isolation-backends.md) | Use portable L0 protection in P0 and defer strong isolation-tool selection. |

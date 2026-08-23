@@ -237,8 +237,9 @@ P0 should include tests that:
 - Verify private evaluation starts only after the agent stops.
 - Scan normalized tool events for paths outside allowed roots.
 - Detect secrets intentionally placed in fixture configuration.
-- Confirm a Codex fixture agent cannot read the selected ChatGPT credential
-  store/cache or receive tokens through its tool environment.
+- For a future L1/L2 backend, confirm a Codex fixture agent cannot read the
+  selected ChatGPT credential store/cache or receive tokens through its tool
+  environment. P0 L0 does not run or claim this proof.
 
 Successful audits increase confidence but do not upgrade L1 to L2 without
 enforced controls.
@@ -247,7 +248,8 @@ enforced controls.
 
 The reporter displays isolation and metric-quality badges prominently.
 
-- L0 results appear only in development/legacy views.
+- L0 results may appear in a clearly labeled unsealed/experimental view, but
+  never in an official ranking.
 - L1 results may appear in an experimental view.
 - Official ranking is proposed to require L2 plus complete evidence.
 - Any exception must be an explicit, versioned publication policy rather than

@@ -71,8 +71,9 @@ P0-A is complete when all of the following are true:
   and offers Luna. It does not ask for a subscription allocation or cost
   questionnaire.
 - Every repetition and attempt has a unique identity and is never overwritten.
-- A controlled public-check loop permits at most one repair attempt and
-  preserves both candidates and their resource use.
+- A controlled acceptance loop permits at most one repair attempt, gives the
+  model public conformance and browser/runtime diagnostics without prescribing
+  a solution, and preserves both candidates and their resource use.
 - The agent receives a fresh staged workspace containing only public inputs;
   isolation limits and canary results are recorded honestly.
 - A Codex + ChatGPT + Luna run invokes Busy Intersection and preserves complete
