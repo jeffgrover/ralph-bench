@@ -16,6 +16,17 @@ Both challenges use the proposed `traffic/v1` evaluator protocol and optimize
 for sustainable valid vehicle throughput under fixed safety, fairness,
 physical, infrastructure, spillback, and recovery constraints.
 
+## Repository identity
+
+- The canonical GitHub repository owner is the personal account `jeffgrover`.
+- Do not commit or push this project using the work account `jeff-grover` or a
+  work email address.
+- Before committing or pushing, verify that the repository-local author identity
+  and active GitHub authentication both resolve to the personal account. Stop
+  and ask the user if either identity is uncertain.
+- Do not rewrite existing published history to change attribution without the
+  user's explicit approval.
+
 ## Authoritative planning documents
 
 Read these before P0 implementation:
