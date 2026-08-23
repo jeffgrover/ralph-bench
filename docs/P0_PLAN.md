@@ -28,11 +28,14 @@ P0 is complete when all of the following are true:
   interactive wizard state.
 - The conductor produces one normalized configuration plan; provider setup and
   client-native rendering have separate ownership and transactional cleanup.
+- Harness, provider, and model implementations are independently registered
+  typed adapters composed into a `ResolvedSUT`; compatible additions do not
+  require conductor or wizard vendor branches.
 - Repetitions receive unique run IDs and never overwrite one another.
 - Agent work occurs in a staged workspace outside the source, results,
   references, and private judge-pack directories.
 - Every run records an explicit isolation level and metric provenance.
-- A fixture runner and generic command runner support deterministic tests.
+- A fixture harness and generic command harness support deterministic tests.
 - One real harness completes both a local-provider and cloud-provider run.
 - The Busy Intersection and The 5x5 Rush use the same traffic evaluator API.
 - The evaluator, not the artifact, supplies the trip demand schedule.
@@ -70,6 +73,8 @@ See [`CLI_AND_EXPERIMENTS.md`](CLI_AND_EXPERIMENTS.md) for the discovery,
 defaulting, security, and reproducibility contract.
 See [`CONFIGURATION_MODEL.md`](CONFIGURATION_MODEL.md) for the centralized
 provider/client ownership and requested-to-effective lifecycle.
+See [`ADAPTER_MODEL.md`](ADAPTER_MODEL.md) for the polymorphic protocols,
+registry, capability negotiation, and conformance contracts.
 
 An experiment specification may expand into several runs:
 
@@ -118,10 +123,13 @@ ralph-bench/
 │   ├── metrics.py
 │   ├── acceptance.py
 │   ├── bundles.py
+│   ├── adapters/
+│   │   ├── registry.py
+│   │   ├── harnesses/
+│   │   ├── providers/
+│   │   └── models/
 │   ├── challenges/
-│   ├── providers/
-│   ├── reporting/
-│   └── runners/
+│   └── reporting/
 ├── browser/
 ├── challenges/
 │   ├── busy-intersection/
@@ -143,9 +151,11 @@ local path.
 
 - **Experiment:** A declarative request that expands into one or more runs.
 - **Client:** The user-facing agentic coding application. Internally it is
-  invoked through a runner adapter.
+  invoked through a `HarnessAdapter`.
 - **SUT:** Model, client/harness, provider/configuration, and effort/tool
   policy.
+- **ResolvedSUT:** A versioned composition of one harness, provider, and model
+  adapter plus negotiated protocols, capabilities, and normalized options.
 - **Run:** One SUT invocation for one challenge repetition. One immutable
   result bundle is produced per run.
 - **Attempt:** One agent work interval within a run. A controlled repair loop
@@ -163,9 +173,10 @@ local path.
 ```mermaid
 flowchart TB
     CLI["rb CLI and wizard"] --> EXP["Validated experiment TOML"]
-    EXP --> CON["Conductor"]
+    EXP --> RES["Adapter registry and SUT resolver"]
+    RES --> CON["Conductor"]
     CON --> ISO["Workspace/isolation adapter"]
-    ISO --> RUN["Runner adapter"]
+    ISO --> RUN["Harness adapter"]
     RUN --> ATT["Attempt output"]
     ATT --> PUB["Public checks"]
     PUB -->|repairable feedback| RUN
@@ -191,11 +202,15 @@ hidden check results, or reporter output.
 
 - Initial schemas for experiment, run manifest, event, assertion, metric,
   failure, and bundle inventory.
+- Typed harness/provider/model protocols, adapter descriptors, built-in
+  registry, generic model adapter, and capability resolver.
 - `rb` console entry point and a terminal-I/O-independent wizard state machine.
 - Deterministic TOML rendering, semantic validation, atomic save, and overwrite
   protection.
 - Fake client/provider probes covering complete, partial, failed, stale, and
   manual discovery paths.
+- Fake harness/provider/model composition matrix and reusable adapter
+  conformance suites.
 - A fixed clock/ID injection mechanism for deterministic tests.
 - Minimal passing, failing, malformed, and adversarial fixture artifacts.
 - Terminology encoded consistently in types and filenames.
@@ -204,11 +219,13 @@ hidden check results, or reporter output.
 
 - Schemas round-trip representative fixtures.
 - Wizard output round-trips through the same parser and validator as `rb run`.
+- New compatible fake adapters compose without changes to conductor or wizard
+  code; duplicate IDs and incompatible contract versions fail at startup.
 - Cancellation leaves no partial experiment and no-TTY invocation never hangs.
 - Unknown schema versions fail clearly.
 - Tests need no browser or provider.
 
-**Estimate:** 4–6 engineering days.
+**Estimate:** 6–9 engineering days.
 
 ### WP1 — Run identity, conductor, and attempts
 
@@ -231,7 +248,7 @@ hidden check results, or reporter output.
 
 **Estimate:** 3–5 engineering days.
 
-### WP2 — Staged isolation and runner boundary
+### WP2 — Staged isolation and harness boundary
 
 **Deliverables**
 
@@ -239,9 +256,9 @@ hidden check results, or reporter output.
 - Ephemeral home/config paths where supported.
 - Environment allowlist and redaction.
 - Client detection/discovery capability contract with read-only bounded probes.
-- Scoped native client configuration renderer and fake transactional provider
+- Scoped native harness configuration renderer and fake transactional provider
   adapter with strict ownership contract tests.
-- Fixture runner and generic command runner.
+- Fixture harness and generic command harness.
 - Recorded isolation capability/limitations.
 
 **Exit criteria**
@@ -379,11 +396,13 @@ hidden check results, or reporter output.
 - Local OpenAI-compatible provider configuration, proposed initially as LM
   Studio.
 - One centralized LM Studio provider adapter for discovery, approved runtime
-  changes, effective-setting read-back, and restoration; client adapters only
+  changes, effective-setting read-back, and restoration; harness adapters only
   consume its resolved connection plan.
 - Read-only LM Studio model discovery and one cloud-provider/model discovery
   path without sending a generation request.
 - One metered cloud-provider configuration.
+- One real model descriptor/adapter path plus conservative handling of an
+  unknown manually entered model.
 - Raw vendor evidence plus canonical external timing.
 - End-to-end smoke experiments for both challenge tiers.
 
@@ -435,8 +454,10 @@ The recommended implementation checkpoints are:
 
 - Prompt-state transitions, back/edit/cancel, and intelligent default
   precedence.
-- Configuration-plan precedence, provider/client ownership, rollback,
+- Configuration-plan precedence, provider/harness ownership, rollback,
   requested/effective mismatch, and idempotent repeated setup/cleanup.
+- Registry/descriptor validation, capability negotiation, adapter composition,
+  generic-model fallback, and shared conformance suites.
 - Client/provider/model discovery success, timeout, stale result, and manual
   fallback.
 - TOML rendering, round-trip validation, atomic save, and overwrite behavior.
@@ -460,7 +481,7 @@ The recommended implementation checkpoints are:
 
 ### Integration tests
 
-- Fixture runner through bundle finalization.
+- Fixture harness through bundle finalization.
 - Public check feedback through a second controlled attempt.
 - Browser evaluator through deterministic fast-forward and capture.
 - Bundle ingest through static page generation.
@@ -475,9 +496,10 @@ The recommended implementation checkpoints are:
 
 - Google Drive or other remote artifact stores.
 - Strong OS-level sandbox support on every platform.
-- Every runner from the legacy benchmark.
+- Every harness from the legacy benchmark.
 - Universal provider/model discovery for every client; adapters may expose
   partial capability and manual entry honestly.
+- Arbitrary third-party adapter loading or a complete model catalog.
 - A legacy corpus importer.
 - A frontier-model qualitative judge.
 - A polished public design system.
@@ -500,7 +522,8 @@ The recommended implementation checkpoints are:
 | A client cannot enumerate providers/models reliably | Use capability-labeled layered probes with timeouts, show provenance/freshness, and preserve manual entry. |
 | Wizard convenience undermines reproducibility | Make validated TOML the execution boundary; never consult remembered wizard state during explicit runs. |
 | Discovery leaks credentials or incurs cloud cost | Permit only read-only, non-generation probes; redact diagnostics and store credential references rather than values. |
-| Client adapters reintroduce incompatible provider setup | Enforce typed ownership: provider adapters configure providers once; client adapters receive a resolved connection plan and write only scoped client state. |
+| Harness adapters reintroduce incompatible provider setup | Enforce typed ownership: provider adapters configure providers once; harness adapters receive a resolved connection plan and write only scoped client state. |
+| Adapter support grows into a harness-provider-model cross-product | Register the three axes independently, negotiate typed capabilities, and require new compatible adapters to pass composition tests without core changes. |
 
 ## Estimated effort
 
@@ -519,13 +542,15 @@ Before implementation begins, approve or amend these proposed choices:
       and deterministic explicit commands.
 - [ ] Validated TOML as the boundary between interactive authoring and run
       execution; read-only layered discovery with manual fallback.
-- [ ] Centralized transactional configuration lifecycle with provider/client
+- [ ] Centralized transactional configuration lifecycle with provider/harness
       ownership, effective-setting evidence, and verified cleanup.
+- [ ] Independent polymorphic harness/provider/model adapter families, a
+      built-in registry, capability resolver, and conformance suites.
 - [ ] Immutable `.ralph.zip` bundle per run.
 - [ ] Separate public challenge packs and private judge packs.
 - [ ] Staged isolation in P0 with stronger OS sandboxes deferred.
-- [ ] Fixture runner, generic command runner, then OpenCode as first real
-      adapter.
+- [ ] Fixture harness, generic command harness, then OpenCode as the first real
+      harness adapter.
 - [ ] LM Studio as the first local provider path.
 - [ ] Busy Intersection completed before city-specific evaluator work.
 - [ ] No single composite overall score in P0.

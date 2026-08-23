@@ -19,6 +19,7 @@ is approved until the documents below are reviewed.
 - [P0 implementation plan](docs/P0_PLAN.md)
 - [`rb` CLI and experiment authoring](docs/CLI_AND_EXPERIMENTS.md)
 - [Configuration ownership and lifecycle](docs/CONFIGURATION_MODEL.md)
+- [Polymorphic harness, provider, and model adapters](docs/ADAPTER_MODEL.md)
 - [Traffic challenge specifications](docs/TRAFFIC_CHALLENGES.md)
 - [Measurement model](docs/MEASUREMENT_MODEL.md)
 - [Immutable result bundle](docs/RESULT_BUNDLE.md)

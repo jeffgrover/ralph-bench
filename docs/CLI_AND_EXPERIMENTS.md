@@ -38,10 +38,14 @@ than guessing.
 ## Vocabulary
 
 The user-facing term is **client**: Codex CLI, OpenCode, Gemini CLI, or another
-agentic coding application. Internally, a client is executed through a runner
-adapter. The experiment format uses `client`; implementation types may retain
-names such as `RunnerAdapter` where that describes their responsibility more
-precisely.
+agentic coding application. Internally, a client is represented by a
+`HarnessAdapter`. The experiment format uses `client` because that is the
+operator's choice; the core uses harness to distinguish it from API clients.
+
+Harnesses, providers, and models are independently registered and composed by
+the capability resolver described in [`ADAPTER_MODEL.md`](ADAPTER_MODEL.md).
+The wizard consumes the same registry and must not maintain its own vendor
+catalog or compatibility branches.
 
 The system under test remains the complete combination:
 
@@ -114,7 +118,7 @@ provider/model listing command. P0 should define structured probe results for:
 
 The probe order is:
 
-1. A client adapter's documented, read-only discovery command or API.
+1. A selected adapter's documented, read-only discovery command or API.
 2. A provider's documented model-list endpoint, scoped through the selected
    client configuration where necessary.
 3. Read-only inspection of the client's relevant configuration references.
@@ -137,7 +141,7 @@ Probe implementations must:
   because authoring-time discovery can become stale.
 
 Provider discovery is implemented once by the provider adapter and reused by
-compatible clients. In particular, each client adapter must not grow its own
+compatible clients. In particular, each harness adapter must not grow its own
 LM Studio probing or configuration strategy.
 
 ## Experiment file
@@ -206,6 +210,8 @@ P0 includes:
 - Client-first zero-argument authoring.
 - Fake discovery adapters covering success, partial discovery, timeouts, and
   manual fallback.
+- The built-in harness/provider/model registry and capability resolver as the
+  only source of wizard choices and option schemas.
 - Real discovery for the first client, LM Studio, and the selected cloud path.
 - Deterministic TOML rendering, validation, atomic saving, and overwrite
   protection.

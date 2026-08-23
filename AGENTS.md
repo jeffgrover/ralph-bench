@@ -35,6 +35,7 @@ Read these before P0 implementation:
 - `docs/P0_PLAN.md`
 - `docs/CLI_AND_EXPERIMENTS.md`
 - `docs/CONFIGURATION_MODEL.md`
+- `docs/ADAPTER_MODEL.md`
 - `docs/TRAFFIC_CHALLENGES.md`
 - `docs/MEASUREMENT_MODEL.md`
 - `docs/RESULT_BUNDLE.md`
@@ -53,16 +54,25 @@ not silently resolve an unapproved product decision through implementation.
   it starts a client-first experiment wizard; explicit commands remain
   available for deterministic automation.
 - Use `client` in the user-facing experiment format and interface. Internally,
-  client execution may be implemented by runner adapters.
+  client execution is implemented by a `HarnessAdapter`.
+- Treat harnesses, providers, and models as separate typed polymorphic adapter
+  families composed into a `ResolvedSUT` through capability negotiation. Do not
+  add cross-product runners or scatter vendor-name branches through the
+  conductor, wizard, or reporter.
+- Most model adapters should be declarative descriptors; unknown models use a
+  conservative generic adapter. Do not require a code class per model ID or
+  invent capabilities for an unrecognized model.
+- P0 uses an explicit built-in adapter registry and shared conformance suites.
+  Arbitrary third-party adapter loading is post-P0.
 - Discovery must be read-only, non-billable, bounded, provenance-labeled, and
   able to degrade to manual provider/model entry. It must never copy secrets
   into an experiment file.
 - The wizard and `rb run` must share the same schema and semantic validation.
   Saved TOML is authoritative for execution; remembered wizard state is not.
 - The conductor centrally owns configuration resolution and lifecycle. Provider
-  adapters own provider setup/observation; client adapters own scoped native
+  adapters own provider setup/observation; harness adapters own scoped native
   client configuration. Do not configure a provider independently inside each
-  client adapter or silently inherit user-global configuration.
+  harness adapter or silently inherit user-global configuration.
 - Preserve requested, materialized, effective, and cleanup configuration as
   distinct redacted evidence. Setup must register rollback, and cleanup must be
   attempted after success, failure, cancellation, and timeout.
@@ -94,15 +104,15 @@ not silently resolve an unapproved product decision through implementation.
 ## P0 implementation posture
 
 - Implement the Busy Intersection vertical slice before city-specific logic.
-- Begin with deterministic fixture artifacts and runners before invoking a real
-  model.
-- Add a generic command runner, then one real harness path; OpenCode is the
+- Begin with deterministic fixture artifacts and harness adapters before
+  invoking a real model.
+- Add a generic command harness, then one real harness path; OpenCode is the
   proposed first adapter pending approval.
 - P0 targets staged L1 isolation and must label its limitations honestly.
 - Exact traffic thresholds belong in versioned private judge packs and require
   fixture/reference/pilot calibration.
 - Google Drive, legacy result import, frontier-model qualitative judging, and
-  broad runner migration are post-P0 work.
+  broad legacy-harness migration are post-P0 work.
 
 ## Engineering guidance
 

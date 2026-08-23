@@ -12,10 +12,14 @@ files, and some from pre-existing machine state. That made runs harder to
 repeat, adapters harder to reason about, and cleanup difficult to verify.
 
 Ralph Bench treats configuration as a first-class conductor responsibility.
-`rb` collects one normalized experiment intent. Provider and client adapters
+`rb` collects one normalized experiment intent. Provider and harness adapters
 translate only the portions they own into scoped native configuration. The run
 bundle records what was requested, what was materialized, and what was actually
 observed.
+
+These adapters participate in the independent polymorphic families defined in
+[`ADAPTER_MODEL.md`](ADAPTER_MODEL.md). Configuration ownership constrains how
+they compose; it does not hard-code particular harness/provider/model triples.
 
 ## Design goals
 
@@ -81,15 +85,15 @@ A provider adapter owns provider/runtime behavior, including where supported:
 - Provider authentication references and connection metadata.
 - Read-back of effective settings and restoration of prior mutable state.
 
-For LM Studio, one adapter—not every client adapter—owns LM Studio probing and
+For LM Studio, one adapter—not every harness adapter—owns LM Studio probing and
 any approved runtime changes. If LM Studio does not expose a reliable API for a
 setting, Ralph Bench records that limitation and requires an explicit external
 precondition or manual confirmation. It does not pretend the setting was
 applied.
 
-### Client adapter
+### Harness adapter (user-facing client)
 
-A client adapter owns only its client-native boundary:
+A harness adapter owns only its client-native boundary:
 
 - Client executable/version detection.
 - Supported provider connection shapes and client controls.
@@ -101,7 +105,7 @@ A client adapter owns only its client-native boundary:
 - Removing scoped client material and verifying that external state was not
   changed.
 
-A client adapter must not configure LM Studio, choose a different model, write
+A harness adapter must not configure LM Studio, choose a different model, write
 another client's files, or silently fall back to a user-global provider.
 
 ### Conductor
@@ -192,7 +196,7 @@ collapse into one opaque `configure()` side effect.
 Each result bundle records redacted, nonsecret evidence for:
 
 - Authored experiment and canonical hash.
-- Client/provider adapter versions and capability results.
+- Harness/provider/model adapter versions and capability results.
 - Requested normalized configuration.
 - Generated file hashes and redacted semantic content where useful.
 - Environment key names and redacted command shape.
@@ -219,13 +223,13 @@ state-changing action.
 
 ## P0 tests
 
-- Two different clients targeting the same fake LM Studio provider produce one
-  provider plan and separate scoped client configurations.
+- Two different harness adapters targeting the same fake LM Studio provider
+  produce one provider plan and separate scoped client configurations.
 - Repeated setup/run/cleanup cycles leave identical external fixture state.
 - A failed provider apply invokes registered rollback and preserves evidence.
 - A timeout/cancellation still invokes cleanup.
-- A client cannot write through the provider adapter boundary in contract
-  tests.
+- A harness adapter cannot write through the provider adapter boundary in
+  contract tests.
 - User-global fixture settings are not inherited unless explicitly referenced.
 - Requested/effective mismatches remain visible and are classified correctly.
 - Secret canaries never appear in TOML, rendered config evidence, logs, or
@@ -238,5 +242,5 @@ The normalized plan/lifecycle, fake transactional adapters, evidence, and tests
 are approximately **3–5 engineering days** and overlap with conductor and
 isolation work. Robust LM Studio lifecycle support depends on its documented
 runtime APIs and is approximately **2–4 additional days** after a discovery
-spike. Each client adapter still needs its own scoped renderer, but does not
+spike. Each harness adapter still needs its own scoped renderer, but does not
 reimplement provider orchestration.

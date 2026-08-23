@@ -112,7 +112,7 @@ Configuration follows the centralized lifecycle defined in
 - The validated experiment is the single source of requested intent.
 - The conductor resolves and orders configuration actions.
 - A provider adapter exclusively owns provider/runtime setup and observation;
-  a client adapter exclusively owns its scoped native client configuration.
+  a harness adapter exclusively owns its scoped native client configuration.
 - Prefer explicit per-run config paths and environment overlays inside an
   ephemeral HOME/XDG/config directory.
 - Do not silently inherit user-global client configuration. Copy or broker only
@@ -127,7 +127,7 @@ Configuration follows the centralized lifecycle defined in
 Client/provider idempotence includes preflight state, a reviewable action plan,
 effective configuration, cleanup, and post-run verification. In particular,
 LM Studio lifecycle behavior is implemented once by its provider adapter, not
-separately by every client adapter.
+separately by every harness adapter.
 
 ## Network policy
 

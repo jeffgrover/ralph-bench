@@ -11,3 +11,4 @@ status remains **Proposed** until the planning packet is approved.
 | [0004](0004-controlled-and-native-loops.md) | Keep controlled and native agent loops as distinct tracks. |
 | [0005](0005-rb-guided-experiment-authoring.md) | Use `rb` with client-first guided experiment authoring. |
 | [0006](0006-centralized-configuration-lifecycle.md) | Centralize provider/client configuration ownership and cleanup. |
+| [0007](0007-polymorphic-sut-adapters.md) | Compose harness, provider, and model adapter families polymorphically. |

@@ -38,8 +38,8 @@ honestly.
 - The common workflow can begin with one short command and no memorized flags.
 - Generated experiments remain inspectable, editable, versionable, and
   suitable for unattended reruns.
-- Client adapters need a capability/discovery boundary in addition to
-  execution.
+- Harness, provider, and model adapters need capability/discovery boundaries
+  in addition to execution.
 - P0 requires a testable interactive state machine, TOML writer, and fake
   probes before real client integration.
 - Universal provider/model enumeration is not promised; manual entry is part

@@ -65,6 +65,8 @@ the bundle.
 │   ├── software.json
 │   ├── client.json
 │   ├── provider.json
+│   ├── model.json
+│   ├── sut-resolution.json
 │   ├── configuration.json
 │   ├── isolation.json
 │   └── redaction.json
@@ -87,6 +89,8 @@ The manifest should include:
   - model
   - client/harness and version
   - provider and service tier
+  - harness/provider/model adapter IDs and versions
+  - negotiated protocol/capability versions
   - requested/effective configuration summary
   - effort and tool policy
 - Run validity and outcome.
@@ -105,6 +109,11 @@ generated configuration hashes, environment key names, command shape,
 requested/effective mismatches, restoration results, and confidence. It never
 contains raw credentials, copied user-global configuration, or an archived
 scoped home.
+
+`provenance/sut-resolution.json` records the independently selected adapter
+descriptors, provider model offer, canonical or generic model match,
+capability-negotiation evidence, namespaced options, and structured warnings.
+Reports use these explicit identity fields rather than adapter class names.
 
 ## Canonical events
 

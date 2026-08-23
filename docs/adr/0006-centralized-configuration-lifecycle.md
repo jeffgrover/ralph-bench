@@ -18,8 +18,8 @@ configuration strategies or silently inheriting unrelated user settings.
 
 The conductor owns a single normalized configuration lifecycle. A validated
 experiment describes requested intent. A provider adapter exclusively owns
-provider/runtime setup and observation. A client adapter exclusively renders
-its scoped native connection and client controls. The conductor resolves,
+provider/runtime setup and observation. A harness adapter exclusively renders
+its scoped native client connection and controls. The conductor resolves,
 orders, verifies, records, and cleans up those actions transactionally.
 
 Interactive discovery informs the experiment but does not mutate configuration
@@ -27,7 +27,7 @@ or become an implicit execution input. User-global configuration is not
 silently inherited. Requested, materialized, effective, and cleanup states are
 recorded separately with secrets redacted.
 
-For LM Studio specifically, client adapters consume a resolved provider
+For LM Studio specifically, harness adapters consume a resolved provider
 endpoint/model plan; they do not independently configure LM Studio.
 
 ## Consequences
@@ -44,7 +44,7 @@ endpoint/model plan; they do not independently configure LM Studio.
 
 ## Rejected alternatives
 
-### Let each client adapter configure its provider
+### Let each harness adapter configure its provider
 
 Locally convenient but duplicates provider behavior, creates inconsistent
 defaults, and reproduces the legacy mishmash.

@@ -85,10 +85,20 @@ never performs billable generation work or stores secrets.
 
 The conductor resolves one normalized experiment into provider and client
 actions. Provider adapters configure and observe providers such as LM Studio;
-client adapters render only their own scoped native configuration. Requested,
-materialized, effective, and cleanup states remain distinct evidence. Ralph
-Bench does not reproduce a collection of harness-specific provider setup paths
+harness adapters render only their own scoped native client configuration.
+Requested, materialized, effective, and cleanup states remain distinct
+evidence. Ralph Bench does not reproduce a collection of harness-specific
+provider setup paths
 or silently depend on user-global configuration.
+
+### Harnesses, providers, and models compose polymorphically
+
+Each SUT axis implements its own typed adapter contract and advertises
+versioned capabilities. A resolver composes compatible harness, provider, and
+model implementations into one explicit SUT plan. The conductor, wizard, and
+reporter operate on those contracts rather than vendor-name branches or a
+cross-product of bespoke runners. Model support is primarily declarative, with
+a conservative generic path for unknown models.
 
 ### Challenge contracts stay small
 
