@@ -12,3 +12,4 @@ status remains **Proposed** until the planning packet is approved.
 | [0005](0005-rb-guided-experiment-authoring.md) | Use `rb` with client-first guided experiment authoring. |
 | [0006](0006-centralized-configuration-lifecycle.md) | Centralize provider/client configuration ownership and cleanup. |
 | [0007](0007-polymorphic-sut-adapters.md) | Compose harness, provider, and model adapter families polymorphically. |
+| [0008](0008-p0-codex-chatgpt-luna-sut.md) | Use Codex CLI, ChatGPT access, and Luna for the P0 live SUT. |

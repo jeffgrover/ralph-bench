@@ -126,8 +126,26 @@ Configuration follows the centralized lifecycle defined in
 
 Client/provider idempotence includes preflight state, a reviewable action plan,
 effective configuration, cleanup, and post-run verification. In particular,
-LM Studio lifecycle behavior is implemented once by its provider adapter, not
-separately by every harness adapter.
+a future LM Studio lifecycle would be implemented once by its provider adapter,
+not separately by every harness adapter.
+
+### P0 Codex and ChatGPT authentication
+
+The P0 live SUT reuses operator-managed ChatGPT authentication for Codex CLI.
+`rb` may execute `codex login status` and use the existing supported credential
+mechanism, but it must not copy an auth cache into the challenge workspace,
+print tokens, or archive credential files.
+
+The benchmarked agent's tool shell must not be able to read ChatGPT tokens or
+the Codex authentication cache. Prefer an OS credential store or an enforced
+credential boundary that remains available to the Codex process but outside
+agent tool access. `--ephemeral` prevents session persistence; it is not by
+itself a credential-isolation guarantee.
+
+P0 must include a credential-canary probe against the actual Codex invocation.
+If the supported platform cannot demonstrate that file-based or keyring
+credentials are unavailable to the agent tool process, the live result is
+labeled L0/unsealed and ineligible rather than claiming L1 isolation.
 
 ## Network policy
 
@@ -206,6 +224,8 @@ P0 should include tests that:
 - Verify private evaluation starts only after the agent stops.
 - Scan normalized tool events for paths outside allowed roots.
 - Detect secrets intentionally placed in fixture configuration.
+- Confirm a Codex fixture agent cannot read the selected ChatGPT credential
+  store/cache or receive tokens through its tool environment.
 
 Successful audits increase confidence but do not upgrade L1 to L2 without
 enforced controls.

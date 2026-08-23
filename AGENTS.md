@@ -106,8 +106,20 @@ not silently resolve an unapproved product decision through implementation.
 - Implement the Busy Intersection vertical slice before city-specific logic.
 - Begin with deterministic fixture artifacts and harness adapters before
   invoking a real model.
-- Add a generic command harness, then one real harness path; OpenCode is the
-  proposed first adapter pending approval.
+- The only required live P0 SUT is Codex CLI with ChatGPT-managed OpenAI access
+  and `gpt-5.6-luna`, classified as `cloud-subscription`. Reasoning effort is an
+  explicit experiment setting.
+- Use `codex exec` non-interactively with JSONL evidence, an explicit model and
+  sandbox, ephemeral session state, and isolated or ignored user configuration.
+  Pin and record the tested Codex CLI version.
+- Authentication is operator-managed. Probe it read-only with
+  `codex login status`; never copy, print, archive, or silently replace ChatGPT
+  credentials.
+- Treat ChatGPT-backed cost as subscription/unmetered and USD as unavailable,
+  never zero or estimated from API list pricing.
+- OpenCode, LM Studio, API-key-metered OpenAI, local models, and all other live
+  harness/provider/model integrations are TBD and post-P0 unless the plan is
+  amended.
 - P0 targets staged L1 isolation and must label its limitations honestly.
 - Exact traffic thresholds belong in versioned private judge packs and require
   fixture/reference/pilot calibration.
@@ -135,6 +147,9 @@ P0 tests must cover:
 
 - Client detection, partial/failed discovery, intelligent defaults, wizard
   navigation, TOML round-tripping, cancellation, and non-interactive behavior.
+- Codex CLI version/auth preflight fixtures, JSONL normalization, explicit Luna
+  selection, ChatGPT credential-canary isolation, and subscription/unmetered
+  cost provenance.
 - Schema/version handling and run state transitions.
 - Unique IDs and non-overwriting repetitions.
 - Attempt preservation and controlled feedback.

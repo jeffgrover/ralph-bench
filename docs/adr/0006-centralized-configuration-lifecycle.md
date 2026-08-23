@@ -27,12 +27,13 @@ or become an implicit execution input. User-global configuration is not
 silently inherited. Requested, materialized, effective, and cleanup states are
 recorded separately with secrets redacted.
 
-For LM Studio specifically, harness adapters consume a resolved provider
-endpoint/model plan; they do not independently configure LM Studio.
+For a future mutable provider such as LM Studio, harness adapters consume a
+resolved provider endpoint/model plan; they do not independently configure the
+provider.
 
 ## Consequences
 
-- Adding a client does not add another LM Studio lifecycle implementation.
+- Adding a client does not add another provider lifecycle implementation.
 - Runs have one inspectable requested configuration and explicit effective
   evidence.
 - Scoped configuration and cleanup become testable adapter contracts.

@@ -84,7 +84,7 @@ never performs billable generation work or stores secrets.
 ### Configuration has one owner and one lifecycle
 
 The conductor resolves one normalized experiment into provider and client
-actions. Provider adapters configure and observe providers such as LM Studio;
+actions. Provider adapters configure and observe the services they own;
 harness adapters render only their own scoped native client configuration.
 Requested, materialized, effective, and cleanup states remain distinct
 evidence. Ralph Bench does not reproduce a collection of harness-specific
@@ -167,6 +167,11 @@ Hardware, operating system, runtime versions, and local inference settings are
 recorded as the execution environment. Local time comparisons require a
 matching environment cohort; cloud comparisons retain provider and service-tier
 context.
+
+The proposed live P0 composition is Codex CLI with ChatGPT-managed OpenAI
+access and `gpt-5.6-luna`. It is an unmetered cloud-subscription cohort, not a
+per-run-cost cohort. All other real harness, provider, and model integrations
+remain TBD while fake adapters prove the generic composition contracts.
 
 ## Core workflow
 

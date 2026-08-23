@@ -85,11 +85,12 @@ A provider adapter owns provider/runtime behavior, including where supported:
 - Provider authentication references and connection metadata.
 - Read-back of effective settings and restoration of prior mutable state.
 
-For LM Studio, one adapter—not every harness adapter—owns LM Studio probing and
-any approved runtime changes. If LM Studio does not expose a reliable API for a
-setting, Ralph Bench records that limitation and requires an explicit external
-precondition or manual confirmation. It does not pretend the setting was
-applied.
+For a future mutable provider such as LM Studio, one adapter—not every harness
+adapter—would own provider probing and any approved runtime changes. If a
+provider does not expose a reliable API for a setting, Ralph Bench records that
+limitation and requires an explicit external precondition or manual
+confirmation. It does not pretend the setting was applied. LM Studio is not a
+required live P0 integration.
 
 ### Harness adapter (user-facing client)
 
@@ -105,8 +106,8 @@ A harness adapter owns only its client-native boundary:
 - Removing scoped client material and verifying that external state was not
   changed.
 
-A harness adapter must not configure LM Studio, choose a different model, write
-another client's files, or silently fall back to a user-global provider.
+A harness adapter must not configure its provider, choose a different model,
+write another client's files, or silently fall back to a user-global provider.
 
 ### Conductor
 
@@ -217,13 +218,13 @@ Raw user config files and credential stores are never bundled.
 - `rb run <file>` resolves, previews when interactive policy requires it,
   materializes, executes, and cleans up.
 
-The wizard does not directly edit LM Studio or client configuration. This keeps
+The wizard does not directly edit provider or client configuration. This keeps
 authoring safe and allows a generated experiment to be inspected before any
 state-changing action.
 
 ## P0 tests
 
-- Two different harness adapters targeting the same fake LM Studio provider
+- Two different harness adapters targeting the same fake mutable provider
   produce one provider plan and separate scoped client configurations.
 - Repeated setup/run/cleanup cycles leave identical external fixture state.
 - A failed provider apply invokes registered rollback and preserves evidence.
@@ -240,7 +241,8 @@ state-changing action.
 
 The normalized plan/lifecycle, fake transactional adapters, evidence, and tests
 are approximately **3–5 engineering days** and overlap with conductor and
-isolation work. Robust LM Studio lifecycle support depends on its documented
-runtime APIs and is approximately **2–4 additional days** after a discovery
-spike. Each harness adapter still needs its own scoped renderer, but does not
-reimplement provider orchestration.
+isolation work. The P0 ChatGPT-managed provider is primarily an authentication,
+entitlement, and provenance adapter rather than a mutable runtime. Each harness
+adapter still needs its own scoped renderer, but does not reimplement provider
+orchestration. Robust support for mutable providers such as LM Studio remains
+future work with a separate estimate after discovery.

@@ -264,6 +264,11 @@ Cost provenance values include:
 Only comparable metered or transparently derived costs enter a cost ranking.
 Subscription-backed runs remain visible in a separate or unmetered cohort.
 
+The live P0 SUT uses Codex CLI with ChatGPT-managed subscription access. Its
+cost provenance is `subscription_unmetered`; per-run USD is `unavailable`, not
+zero and not an estimate derived from OpenAI Platform API pricing. P0 still
+tests metered-cost schemas and reporting with fixtures for future providers.
+
 ## Attempts and resource-to-green
 
 Record for every attempt:

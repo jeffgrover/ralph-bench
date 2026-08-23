@@ -15,7 +15,7 @@ uses intelligent but visible defaults, writes a validated TOML experiment,
 and offers to run it. The saved TOML—not wizard memory—is the reproducible
 input to the conductor.
 
-The wizard authors normalized intent; it does not directly edit LM Studio or
+The wizard authors normalized intent; it does not directly edit provider or
 client-native configuration. Runtime materialization follows the centralized
 ownership and rollback contract in
 [`CONFIGURATION_MODEL.md`](CONFIGURATION_MODEL.md).
@@ -142,7 +142,7 @@ Probe implementations must:
 
 Provider discovery is implemented once by the provider adapter and reused by
 compatible clients. In particular, each harness adapter must not grow its own
-LM Studio probing or configuration strategy.
+provider probing or configuration strategy.
 
 ## Experiment file
 
@@ -151,20 +151,17 @@ first adapters exercise them. The intended shape is:
 
 ```toml
 schema_version = "experiment/v1"
-name = "local-intersection-opencode"
+name = "codex-chatgpt-luna-intersection"
 challenge = "busy-intersection/v1"
-client = "opencode"
-provider = "lmstudio"
-model = "model-id"
-track = "local"
+client = "codex-cli"
+provider = "openai-chatgpt"
+model = "gpt-5.6-luna"
+track = "cloud-subscription"
 repetitions = 3
 
 [client_options]
 reasoning_effort = "high"
 loop = "controlled"
-
-[provider_options]
-base_url = "http://127.0.0.1:1234/v1"
 
 [budget]
 max_wall_seconds = 1200
@@ -212,7 +209,10 @@ P0 includes:
   manual fallback.
 - The built-in harness/provider/model registry and capability resolver as the
   only source of wizard choices and option schemas.
-- Real discovery for the first client, LM Studio, and the selected cloud path.
+- Real Codex CLI detection, read-only ChatGPT authentication preflight through
+  `codex login status`, and the `gpt-5.6-luna` model descriptor.
+- A provider choice labeled **ChatGPT (subscription)** with unmetered cost
+  provenance and no implied per-run USD value.
 - Deterministic TOML rendering, validation, atomic saving, and overwrite
   protection.
 - A non-interactive run path that never prompts after validation.
@@ -228,6 +228,9 @@ discovery capabilities incrementally without changing the experiment schema.
 - With none detected, manual client/executable entry remains possible.
 - Provider and model probe failures degrade to labeled manual entry.
 - No discovery fixture performs a generation request or writes client config.
+- A signed-in Codex fixture resolves ChatGPT subscription plus Luna; a
+  signed-out fixture gives `codex login` guidance without reading credentials.
+- ChatGPT subscription selection renders USD cost as unavailable, never zero.
 - Back/edit produces the same validated document as entering final answers
   directly.
 - Canceling leaves no partial TOML file.
@@ -243,8 +246,7 @@ discovery capabilities incrementally without changing the experiment schema.
 ## Estimate
 
 A skeletal, well-tested wizard with fake probes and deterministic TOML output
-is approximately **2–3 engineering days**. Real detection and discovery for
-the first client, LM Studio, and one cloud path adds approximately **2–4 days**,
-depending on what those clients expose reliably. Supporting each additional
-client is likely **0.5–2 days** for basic detection/configuration and more when
-provider/model discovery needs client-specific parsing.
+is approximately **2–3 engineering days**. Codex detection, authentication
+preflight, and ChatGPT/Luna resolution add approximately **1–2 days**. Each
+future client is likely **0.5–2 days** for basic detection/configuration and
+more when provider/model discovery needs client-specific parsing.

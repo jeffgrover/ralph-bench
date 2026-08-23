@@ -89,6 +89,7 @@ The manifest should include:
   - model
   - client/harness and version
   - provider and service tier
+  - authentication mode and billing/cost provenance, without account secrets
   - harness/provider/model adapter IDs and versions
   - negotiated protocol/capability versions
   - requested/effective configuration summary
@@ -114,6 +115,11 @@ scoped home.
 descriptors, provider model offer, canonical or generic model match,
 capability-negotiation evidence, namespaced options, and structured warnings.
 Reports use these explicit identity fields rather than adapter class names.
+
+For the P0 ChatGPT-backed path, provider evidence records that Codex reported
+ChatGPT-managed authentication and that billing is subscription/unmetered. It
+does not archive authentication caches, tokens, account identifiers, or infer a
+per-run USD amount from Platform API prices.
 
 ## Canonical events
 

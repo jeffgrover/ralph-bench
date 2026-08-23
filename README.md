@@ -10,6 +10,16 @@ The initial challenge family uses visible traffic simulations at two scales:
 - **Busy Intersection** for local and smaller models.
 - **The 5x5 Rush** for frontier and cloud-class models.
 
+The proposed P0 live system under test is:
+
+```text
+Codex CLI x ChatGPT-managed OpenAI access x gpt-5.6-luna
+```
+
+It is a cloud-subscription/unmetered path. Other real harnesses, providers, and
+models remain TBD; deterministic fake adapters preserve polymorphic contract
+coverage during P0.
+
 The repository is currently in the planning stage. No implementation contract
 is approved until the documents below are reviewed.
 

@@ -2,7 +2,7 @@
 
 **Status:** Proposed
 **Date:** 2026-08-23
-**Target:** One end-to-end local path and one end-to-end cloud path
+**Target:** One live Codex CLI + ChatGPT + Luna path and deterministic fixtures
 
 ## P0 objective
 
@@ -10,6 +10,10 @@ Build a greenfield vertical slice that can run the Busy Intersection and The
 5x5 Rush, evaluate a candidate artifact under externally controlled traffic
 load, preserve immutable evidence, and generate a skeletal static comparison
 site.
+
+The only required live P0 SUT is Codex CLI with ChatGPT-managed OpenAI access
+and `gpt-5.6-luna`. Other real harness/provider/model integrations are TBD.
+Fake adapters and deterministic artifacts still prove the generic contracts.
 
 P0 is an architectural proof, not the final benchmark release. It must make
 the correct contracts difficult to undo later: run identity, attempts,
@@ -36,7 +40,11 @@ P0 is complete when all of the following are true:
   references, and private judge-pack directories.
 - Every run records an explicit isolation level and metric provenance.
 - A fixture harness and generic command harness support deterministic tests.
-- One real harness completes both a local-provider and cloud-provider run.
+- Codex CLI with ChatGPT-managed access and `gpt-5.6-luna` can invoke both
+  challenge packs and preserve complete evidence whether the artifact passes
+  or fails.
+- The run records ChatGPT subscription/unmetered cost provenance; per-run USD
+  cost is unavailable rather than zero.
 - The Busy Intersection and The 5x5 Rush use the same traffic evaluator API.
 - The evaluator, not the artifact, supplies the trip demand schedule.
 - Every requested trip is accounted for.
@@ -81,9 +89,10 @@ An experiment specification may expand into several runs:
 ```toml
 schema_version = "experiment/v1"
 challenge = "busy-intersection/v1"
-client = "opencode"
-model = "model-id"
-provider = "lmstudio"
+client = "codex-cli"
+model = "gpt-5.6-luna"
+provider = "openai-chatgpt"
+track = "cloud-subscription"
 repetitions = 3
 
 [budget]
@@ -386,37 +395,38 @@ hidden check results, or reporter output.
 
 **Estimate:** 4–7 engineering days.
 
-### WP9 — First real local and cloud paths
+### WP9 — Codex CLI + ChatGPT + Luna live path
 
 **Deliverables**
 
-- One real harness adapter, proposed initially as OpenCode.
-- Client-first interactive discovery for that harness, including honest manual
-  fallback for capabilities it cannot enumerate.
-- Local OpenAI-compatible provider configuration, proposed initially as LM
-  Studio.
-- One centralized LM Studio provider adapter for discovery, approved runtime
-  changes, effective-setting read-back, and restoration; harness adapters only
-  consume its resolved connection plan.
-- Read-only LM Studio model discovery and one cloud-provider/model discovery
-  path without sending a generation request.
-- One metered cloud-provider configuration.
-- One real model descriptor/adapter path plus conservative handling of an
-  unknown manually entered model.
-- Raw vendor evidence plus canonical external timing.
-- End-to-end smoke experiments for both challenge tiers.
+- Codex CLI harness adapter with pinned version detection and read-only
+  `codex login status` preflight.
+- ChatGPT-managed OpenAI provider adapter representing authentication,
+  entitlement, service, and subscription/unmetered billing provenance.
+- `gpt-5.6-luna` model descriptor with explicit configurable reasoning effort.
+- Client-first wizard path that detects Codex, verifies authentication method,
+  offers the supported Luna model, and explains how to run `codex login` when
+  needed without handling credentials itself.
+- Non-interactive `codex exec` invocation with JSONL, ephemeral session state,
+  explicit model/sandbox, and isolated or ignored user configuration.
+- Preserved raw stdout JSONL and stderr plus normalized events, token usage,
+  tool activity, turn outcome, and canonical external timing.
+- End-to-end live attempts for both challenge tiers, regardless of pass/fail.
+- Fixture-only coverage for metered cost, mutable providers, unknown models,
+  and additional compatible adapter compositions.
 
 **Exit criteria**
 
-- One local and one cloud bundle validate and render.
-- Zero-argument `rb` can author, validate, save, and launch both smoke
-  experiments without exposing credentials.
+- One Codex/ChatGPT/Luna bundle for each challenge validates and renders; a
+  model failure remains a valid integration result when evidence is complete.
+- Zero-argument `rb` can author, validate, save, and launch the live SUT without
+  exposing credentials or inheriting unrelated Codex configuration.
 - Provider-reported and evaluator-derived metrics have explicit provenance.
-- Harness configuration is scoped and restored or uses an ephemeral home.
-- Repeating either smoke experiment does not accumulate config or depend on
-  prior global client state.
+- Cost is classified `subscription_unmetered` with USD unavailable.
+- Repeating the smoke experiment does not accumulate session/config state or
+  depend on user model defaults.
 
-**Estimate:** 6–10 engineering days.
+**Estimate:** 3–5 engineering days plus live model run time.
 
 ### WP10 — Hardening and approval evidence
 
@@ -488,15 +498,19 @@ The recommended implementation checkpoints are:
 
 ### End-to-end smoke tests
 
-- One real local model/harness/provider run.
-- One real cloud model/harness/provider run.
-- At least two repetitions proving no overwrite and valid aggregation.
+- Codex CLI + ChatGPT-managed access + `gpt-5.6-luna` invokes Busy
+  Intersection and The 5x5 Rush and produces complete bundles whether the model
+  succeeds or fails.
+- At least two repetitions of one live experiment prove no overwrite and valid
+  aggregation.
 
 ## P0 non-goals
 
 - Google Drive or other remote artifact stores.
 - Strong OS-level sandbox support on every platform.
 - Every harness from the legacy benchmark.
+- Any additional real harness/provider/model composition, including OpenCode,
+  LM Studio, local models, and API-key-metered OpenAI.
 - Universal provider/model discovery for every client; adapters may expose
   partial capability and manual entry honestly.
 - Arbitrary third-party adapter loading or a complete model catalog.
@@ -524,6 +538,10 @@ The recommended implementation checkpoints are:
 | Discovery leaks credentials or incurs cloud cost | Permit only read-only, non-generation probes; redact diagnostics and store credential references rather than values. |
 | Harness adapters reintroduce incompatible provider setup | Enforce typed ownership: provider adapters configure providers once; harness adapters receive a resolved connection plan and write only scoped client state. |
 | Adapter support grows into a harness-provider-model cross-product | Register the three axes independently, negotiate typed capabilities, and require new compatible adapters to pass composition tests without core changes. |
+| ChatGPT authentication is valid but Luna is unavailable to the account | Probe auth method and effective model at runtime, classify entitlement/availability separately, and never infer access from login alone. |
+| The Codex agent tool shell can read ChatGPT credentials | Require a tested credential-store boundary and canary probe; otherwise label the live smoke L0/unsealed and ineligible. |
+| Codex CLI flags or JSONL events change | Pin and record the tested CLI version, preserve raw output, and maintain fixture-backed parser contracts. |
+| Subscription usage is mistaken for zero-cost work | Classify it as unmetered with USD unavailable and exclude it from metered-cost ranking. |
 
 ## Estimated effort
 
@@ -549,9 +567,10 @@ Before implementation begins, approve or amend these proposed choices:
 - [ ] Immutable `.ralph.zip` bundle per run.
 - [ ] Separate public challenge packs and private judge packs.
 - [ ] Staged isolation in P0 with stronger OS sandboxes deferred.
-- [ ] Fixture harness, generic command harness, then OpenCode as the first real
-      harness adapter.
-- [ ] LM Studio as the first local provider path.
+- [ ] Codex CLI + ChatGPT-managed OpenAI access + `gpt-5.6-luna` as the only
+      required live P0 SUT; reasoning effort remains experiment-configurable.
+- [ ] OpenCode, LM Studio, local models, API-key-metered OpenAI, and all other
+      real integrations deferred as TBD.
 - [ ] Busy Intersection completed before city-specific evaluator work.
 - [ ] No single composite overall score in P0.
 - [ ] Google Drive, qualitative model judging, and legacy import deferred.

@@ -21,10 +21,14 @@ HarnessAdapter x ProviderAdapter x ModelAdapter -> ResolvedSUT
 The desired structure is compositional:
 
 ```text
-OpenCode + LM Studio + Qwen profile
+Codex CLI + ChatGPT-managed access + Luna profile
 Codex CLI + OpenAI + GPT profile
+OpenCode + LM Studio + Qwen profile
 generic command harness + OpenAI-compatible provider + generic model profile
 ```
+
+Only the first composition is required live in P0. The others illustrate the
+contract and remain TBD.
 
 It must not produce cross-product implementations such as
 `OpenCodeLmStudioQwenRunner`.
@@ -66,8 +70,9 @@ owns:
 - Usage, rate-limit, latency, and cost evidence normalization where available.
 - Provider restoration and cleanup.
 
-LM Studio is one provider adapter. Harness adapters consume its resolved
-connection binding; they do not each implement LM Studio behavior.
+A future LM Studio integration would be one provider adapter. Harness adapters
+would consume its resolved connection binding rather than each implementing LM
+Studio behavior.
 
 ### Model adapter
 
@@ -204,9 +209,9 @@ The experiment schema has normalized option sections plus namespaced adapter
 extensions:
 
 ```toml
-client = "opencode"
-provider = "lmstudio"
-model = "qwen3-coder-30b"
+client = "codex-cli"
+provider = "openai-chatgpt"
+model = "gpt-5.6-luna"
 
 [client_options]
 reasoning_effort = "high"
@@ -217,7 +222,7 @@ context_length = 32768
 [model_options]
 temperature = 0.2
 
-[extensions."harness/opencode"]
+[extensions."harness/codex-cli"]
 # Only fields declared by the selected adapter's versioned schema are allowed.
 ```
 
@@ -288,9 +293,10 @@ adapter class names.
 ## P0 boundary and estimate
 
 P0 includes the three protocols, built-in registry, typed descriptors,
-capability resolver, generic model adapter, fake composition matrix, and one
-real harness/provider/model path. Arbitrary third-party loading and a complete
-model catalog are post-P0.
+capability resolver, generic model adapter, fake composition matrix, and the
+Codex CLI + ChatGPT-managed access + `gpt-5.6-luna` live path. Arbitrary
+third-party loading, a complete model catalog, and every other real composition
+are post-P0/TBD.
 
 The foundational registry, contracts, resolver, fakes, and conformance tests
 are approximately **3–5 engineering days**. This substantially overlaps the
