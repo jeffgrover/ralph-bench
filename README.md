@@ -16,9 +16,13 @@ The proposed P0 live system under test is:
 Codex CLI x ChatGPT-managed OpenAI access x gpt-5.6-luna
 ```
 
-It is a cloud-subscription/unmetered path. Other real harnesses, providers, and
-models remain TBD; deterministic fake adapters preserve polymorphic contract
-coverage during P0.
+It is a cloud-subscription path with mandatory, explicitly allocated cost.
+Other real harnesses, providers, and models remain TBD; deterministic fake
+adapters preserve polymorphic contract coverage during P0.
+
+P0-A completes one Busy Intersection vertical slice through every durable
+boundary. The 5x5 Rush is retained as a contract/fixture in P0-A and becomes
+the P0-B challenge-generalization milestone.
 
 The repository is currently in the planning stage. No implementation contract
 is approved until the documents below are reviewed.
@@ -32,6 +36,7 @@ is approved until the documents below are reviewed.
 - [Polymorphic harness, provider, and model adapters](docs/ADAPTER_MODEL.md)
 - [Traffic challenge specifications](docs/TRAFFIC_CHALLENGES.md)
 - [Measurement model](docs/MEASUREMENT_MODEL.md)
+- [Cloud and subscription cost model](docs/COST_MODEL.md)
 - [Immutable result bundle](docs/RESULT_BUNDLE.md)
 - [Isolation and provenance model](docs/ISOLATION_MODEL.md)
 - [Architecture decisions](docs/adr/README.md)
@@ -40,7 +45,7 @@ is approved until the documents below are reviewed.
 
 ```bash
 rb
-rb run experiments/local-intersection.toml
+rb run experiments/cloud-intersection.toml
 rb build --source results/inbox --output site
 ```
 

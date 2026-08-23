@@ -37,6 +37,7 @@ the bundle.
 ├── challenge.json
 ├── prompt.txt
 ├── metrics.json
+├── cost.json
 ├── failures.json
 ├── events/
 │   ├── canonical.jsonl
@@ -58,7 +59,7 @@ the bundle.
 ├── captures/
 │   ├── overview.webm
 │   ├── overview.png
-│   └── interchange.webm
+│   └── interchange.webm       # optional P0-B city profile
 ├── provenance/
 │   ├── environment.json
 │   ├── hardware.json
@@ -76,6 +77,17 @@ the bundle.
 Files that do not apply may be absent only when the schema explicitly permits
 it. Absence must not be confused with a measured zero.
 
+### P0-A bundle profile
+
+The layout above is the durable namespace, not a requirement to implement
+every future evidence variant immediately. P0-A requires one complete profile:
+run/experiment/challenge manifests, prompt, metrics/cost/failures, raw and
+canonical harness evidence, preserved attempts, the selected artifact,
+assertions and the bounded capacity curve, one animated overview plus poster,
+consolidated provenance, inventory, and checksums. Extra viewpoints, encrypted
+public/private tiers, remote transport records, and exhaustive internal schemas
+are deferred.
+
 ## `run.json`
 
 The manifest should include:
@@ -89,7 +101,8 @@ The manifest should include:
   - model
   - client/harness and version
   - provider and service tier
-  - authentication mode and billing/cost provenance, without account secrets
+  - authentication mode, billing mode, cost policy/status, and provenance,
+    without account secrets
   - harness/provider/model adapter IDs and versions
   - negotiated protocol/capability versions
   - requested/effective configuration summary
@@ -117,9 +130,14 @@ capability-negotiation evidence, namespaced options, and structured warnings.
 Reports use these explicit identity fields rather than adapter class names.
 
 For the P0 ChatGPT-backed path, provider evidence records that Codex reported
-ChatGPT-managed authentication and that billing is subscription/unmetered. It
-does not archive authentication caches, tokens, account identifiers, or infer a
-per-run USD amount from Platform API prices.
+ChatGPT-managed authentication and that billing uses a flat subscription. It
+does not archive authentication caches, tokens, or account identifiers.
+`cost.json` preserves the declared experiment-scoped pool cost/period, expected
+run membership and digest, chargeable-attempt evidence, provisional/incomplete
+status, and any separately labeled raw cash, credit, token, or API list-price-
+equivalent evidence. The disposable catalog derives final allocated
+subscription USD after it validates complete pool membership. See
+[`COST_MODEL.md`](COST_MODEL.md).
 
 ## Canonical events
 
@@ -167,8 +185,20 @@ P0 may retain full snapshots for simplicity.
 files, hidden tests, credentials, or reporter output. Its complete tree hash is
 recorded in `run.json` and the checksum inventory.
 
-The artifact must remain runnable from the bundle after safe extraction with
-the versioned public runtime assets defined by the challenge.
+The artifact must remain runnable after safe extraction with no network. P0-A
+requires every runtime dependency actually used by the candidate—including
+challenge-supplied browser libraries—to be copied into
+`artifact/submission/`. A manifest lists their source challenge version and
+digests; the reporter does not fetch or reconstruct missing dependencies.
+
+## Capture evidence
+
+Every capture record identifies the evaluated artifact tree hash, challenge,
+scenario/profile, seed, simulation interval and phase, playback rate, duration,
+frame rate, viewport, browser/Playwright versions, and capture-worker version.
+The overview poster and animation must be produced from the same evaluated
+artifact and requested scenario. Media is human-review evidence, not an
+authoritative traffic counter.
 
 ## Evaluation evidence
 
@@ -190,7 +220,9 @@ visibility types rather than post-finalization mutation.
 ## Metrics and failures
 
 Every metric record includes ID/version, numeric value, unit, provenance,
-quality label, scenario/attempt scope, and evidence references.
+quality label, scenario/attempt scope, and evidence references. Cost fields use
+decimal strings or integer micros and explicit nulls so missing evidence cannot
+collapse to floating-point zero.
 
 Every failure record includes stable taxonomy code, severity, stage, detector,
 human-readable summary, and evidence references. Natural-language flags alone
@@ -259,7 +291,18 @@ bundle inbox -> validate -> catalog/cache -> derived site
 
 The catalog is rebuildable. Deleting it must not lose authoritative evidence.
 The reporter may copy or transform selected captures and artifacts into `site/`
-but never edits the bundle.
+but never edits the bundle. `rb build` closes a P0 subscription pool only when
+all expected terminal run IDs are present exactly once with matching pool
+declarations, complete non-contradictory charge evidence and cost provenance,
+and a nonzero chargeable-attempt total. It then produces a versioned derived
+catalog/report value from immutable `cost.json` inputs; it does not rewrite
+source bundles.
+
+Candidate HTML/JavaScript is untrusted. The derived static site must not inject
+or execute it in the report DOM. P0-A embeds only trusted evaluator-produced
+poster/video media and offers the self-contained artifact as an explicit
+download. Running it is outside the static report security boundary. Malicious
+markup/script/navigation fixtures must remain inert in report generation.
 
 ## Future transport
 

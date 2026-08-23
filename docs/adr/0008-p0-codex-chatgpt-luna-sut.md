@@ -24,6 +24,8 @@ References:
 - [Codex authentication](https://learn.chatgpt.com/docs/auth)
 - [Codex models](https://learn.chatgpt.com/docs/models)
 - [Codex non-interactive mode](https://learn.chatgpt.com/docs/non-interactive-mode)
+- [ChatGPT and Codex pricing](https://learn.chatgpt.com/docs/pricing)
+- [GPT-5.6 Luna API pricing](https://developers.openai.com/api/docs/models/gpt-5.6-luna)
 
 ### Planning-host observation
 
@@ -80,34 +82,47 @@ and provider lifecycle contracts during P0.
 
 ## Cost interpretation
 
-ChatGPT subscription-backed Codex usage does not provide an attributable
-per-run USD charge. P0 records wall time, usage fields exposed by Codex, and the
-subscription/unmetered cost provenance. USD cost is `unavailable`, not zero,
-and this SUT does not enter a metered-cost leaderboard.
+ChatGPT subscription-backed Codex usage has a real flat plan cost even when it
+does not expose an attributable per-request invoice line. Cost is mandatory for
+the live P0 path.
 
-This narrows the live integration proof; it does not remove the cloud-cost
-schema or fixture coverage required for future metered providers.
+P0 uses `flat-subscription-attempt-pool/v1`. The operator declares the USD
+amount one experiment should bear and its billing-period provenance. Once all
+expected run bundles are present, the catalog allocates that amount by
+chargeable model-attempt count. All generated attempts and failures consume
+weight even when per-run credit debits are unavailable.
+
+Allocated subscription USD is the primary comparison value. Marginal cash,
+provider credits, and a Luna API list-price equivalent are reserved as separate
+nullable fields with provenance; the live P0 path does not require the
+per-token equivalent view. Missing evidence is never numeric zero, and an open
+or incomplete pool cannot enter a final cost ranking. See
+[`COST_MODEL.md`](../COST_MODEL.md) and [ADR 0010](0010-require-cloud-cost-evidence.md).
 
 ## Challenge coverage
 
-The live SUT must be able to invoke both P0 challenge packs and produce complete
-evidence for each. P0 does not require Luna to pass both challenges: a valid,
-diagnosable benchmark failure is still an end-to-end integration success.
-Deterministic artifacts remain the acceptance basis for evaluator behavior.
+P0-A requires the live SUT to invoke Busy Intersection and produce complete
+evidence whether the artifact passes or fails. The 5x5 Rush remains a
+versioned descriptor/topology fixture in P0-A and becomes a live challenge in
+P0-B. Deterministic artifacts remain the acceptance basis for evaluator
+behavior.
 
 ## Consequences
 
 - P0 has one concrete real integration instead of three simultaneous unknowns.
 - Codex JSONL provides a documented event/usage source for the first adapter.
 - ChatGPT authentication avoids requiring a Platform API key for the live P0
-  smoke path, while creating an explicitly unmetered result cohort.
+  smoke path while exercising flat-subscription cost allocation.
 - P0 does not prove real LM Studio lifecycle, local hardware cohorting, or
-  metered cloud cost collection; those remain architecture-and-fixture tested.
+  metered API billing collection; those remain architecture-and-fixture tested.
 - The `rb` wizard has one detected real client/provider/model path in P0 and
   should clearly label all other entries unsupported/TBD rather than implying
   partial production support.
 - The exact ChatGPT plan entitlement, rate limits, and model availability are
   runtime observations and must not be inferred from authentication alone.
+- The exact USD amount assigned to the experiment pool and its billing-period
+  provenance are operator-confirmed, never inferred from authentication or a
+  marketing plan label.
 
 ## Rejected alternatives
 

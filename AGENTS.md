@@ -38,9 +38,11 @@ Read these before P0 implementation:
 - `docs/ADAPTER_MODEL.md`
 - `docs/TRAFFIC_CHALLENGES.md`
 - `docs/MEASUREMENT_MODEL.md`
+- `docs/COST_MODEL.md`
 - `docs/RESULT_BUNDLE.md`
 - `docs/ISOLATION_MODEL.md`
-- `docs/adr/`
+- `docs/adr/`, especially ADR 0009 (P0 seam breadth) and ADR 0010 (mandatory
+  cloud cost)
 
 The documents and ADRs are marked `Proposed` until the user approves them. Do
 not silently resolve an unapproved product decision through implementation.
@@ -99,6 +101,10 @@ not silently resolve an unapproved product decision through implementation.
   labeled and separate.
 - Missing, estimated, provider-reported, and evaluator-measured values are not
   interchangeable; metric provenance is required.
+- Every cloud experiment requires a supported cost policy. Keep provider-billed
+  cash, marginal cash, allocated subscription cost, provider credits, and
+  list-price equivalents as separate nullable values; unknown must never
+  become numeric zero.
 - Do not introduce a single composite overall score during P0.
 
 ## P0 implementation posture
@@ -115,16 +121,20 @@ not silently resolve an unapproved product decision through implementation.
 - Authentication is operator-managed. Probe it read-only with
   `codex login status`; never copy, print, archive, or silently replace ChatGPT
   credentials.
-- Treat ChatGPT-backed cost as subscription/unmetered and USD as unavailable,
-  never zero or estimated from API list pricing.
+- Treat ChatGPT-backed access as a flat subscription with mandatory allocated
+  USD cost under `flat-subscription-attempt-pool/v1`. API list-price equivalent
+  is a separate diagnostic, never the subscription bill.
+- P0-A completes Busy Intersection. Keep a 5x5 Rush descriptor/topology fixture
+  on the shared challenge boundary, but defer its live evaluator and model run
+  to P0-B.
 - OpenCode, LM Studio, API-key-metered OpenAI, local models, and all other live
   harness/provider/model integrations are TBD and post-P0 unless the plan is
   amended.
 - P0 targets staged L1 isolation and must label its limitations honestly.
 - Exact traffic thresholds belong in versioned private judge packs and require
   fixture/reference/pilot calibration.
-- Google Drive, legacy result import, frontier-model qualitative judging, and
-  broad legacy-harness migration are post-P0 work.
+- Google Drive, quota-burden reporting, legacy result import, frontier-model
+  qualitative judging, and broad legacy-harness migration are post-P0 work.
 
 ## Engineering guidance
 
@@ -148,8 +158,8 @@ P0 tests must cover:
 - Client detection, partial/failed discovery, intelligent defaults, wizard
   navigation, TOML round-tripping, cancellation, and non-interactive behavior.
 - Codex CLI version/auth preflight fixtures, JSONL normalization, explicit Luna
-  selection, ChatGPT credential-canary isolation, and subscription/unmetered
-  cost provenance.
+  selection, ChatGPT credential-canary isolation, and flat-subscription cost
+  allocation/provenance.
 - Schema/version handling and run state transitions.
 - Unique IDs and non-overwriting repetitions.
 - Attempt preservation and controlled feedback.

@@ -222,6 +222,12 @@ The wizard does not directly edit provider or client configuration. This keeps
 authoring safe and allows a generated experiment to be inspected before any
 state-changing action.
 
+Cloud cost policy is also resolved before execution, but it is not hidden
+provider configuration. The experiment references a non-secret billing profile
+or records explicit plan/pool inputs; the provider adapter supplies typed usage
+and billing evidence, and the cost-policy engine performs allocation. No
+adapter may infer a zero charge or silently select an accounting fraction.
+
 ## P0 tests
 
 - Two different harness adapters targeting the same fake mutable provider

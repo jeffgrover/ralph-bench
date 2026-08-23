@@ -2,575 +2,461 @@
 
 **Status:** Proposed
 **Date:** 2026-08-23
-**Target:** One live Codex CLI + ChatGPT + Luna path and deterministic fixtures
+**P0-A target:** One complete Busy Intersection vertical slice through every
+durable system boundary
 
-## P0 objective
+## Objective
 
-Build a greenfield vertical slice that can run the Busy Intersection and The
-5x5 Rush, evaluate a candidate artifact under externally controlled traffic
-load, preserve immutable evidence, and generate a skeletal static comparison
-site.
+Build the smallest Ralph Bench that is already shaped like the intended
+product: guided experiment authoring, polymorphic SUT resolution, controlled
+execution, staged isolation, deterministic browser evaluation, immutable
+evidence, mandatory cloud cost, and a visually coherent derived report.
 
-The only required live P0 SUT is Codex CLI with ChatGPT-managed OpenAI access
-and `gpt-5.6-luna`. Other real harness/provider/model integrations are TBD.
-Fake adapters and deterministic artifacts still prove the generic contracts.
+The abstractions are not speculative. The legacy evaluator already proves the
+need for separate harness/provider/model behavior, normalized metrics and
+events, provider lifecycle ownership, unique run identity, immutable evidence,
+and report-time aggregation. P0 narrows the number of concrete implementations
+without removing those known seams.
 
-P0 is an architectural proof, not the final benchmark release. It must make
-the correct contracts difficult to undo later: run identity, attempts,
-isolation metadata, challenge boundaries, canonical events, measurements,
-bundle immutability, and report separation.
+The only required live P0-A SUT is:
 
-## Definition of done
+```text
+Harness:  Codex CLI
+Provider: ChatGPT-managed OpenAI access
+Model:    gpt-5.6-luna
+Track:    cloud-subscription
+```
 
-P0 is complete when all of the following are true:
+The only complete P0-A challenge evaluator is Busy Intersection. The 5x5 Rush
+remains a versioned challenge contract and fixture in P0-A, then becomes the
+P0-B generalization milestone.
 
-- The installed command is `rb`; `rb` with no arguments starts a client-first
-  interactive experiment wizard in a terminal.
-- The wizard safely discovers compatible providers/models where supported,
-  degrades to manual entry, and writes a validated TOML specification.
-- `rb run` can execute a versioned experiment specification without consulting
-  interactive wizard state.
-- The conductor produces one normalized configuration plan; provider setup and
-  client-native rendering have separate ownership and transactional cleanup.
-- Harness, provider, and model implementations are independently registered
-  typed adapters composed into a `ResolvedSUT`; compatible additions do not
-  require conductor or wizard vendor branches.
-- Repetitions receive unique run IDs and never overwrite one another.
-- Agent work occurs in a staged workspace outside the source, results,
-  references, and private judge-pack directories.
-- Every run records an explicit isolation level and metric provenance.
-- A fixture harness and generic command harness support deterministic tests.
-- Codex CLI with ChatGPT-managed access and `gpt-5.6-luna` can invoke both
-  challenge packs and preserve complete evidence whether the artifact passes
-  or fails.
-- The run records ChatGPT subscription/unmetered cost provenance; per-run USD
-  cost is unavailable rather than zero.
-- The Busy Intersection and The 5x5 Rush use the same traffic evaluator API.
-- The evaluator, not the artifact, supplies the trip demand schedule.
-- Every requested trip is accounted for.
-- Automated evaluation can advance simulation time deterministically.
-- Traffic load rises through held stages until a defined failure boundary.
-- The result includes breakdown capacity, peak sustainable throughput,
-  ordinary-load delay, queue/spillback evidence, and recovery behavior.
-- A controlled repair attempt can receive structured public-check feedback.
-- Execution emits a versioned, checksummed `.ralph.zip` bundle.
-- `rb bundle validate` rejects malformed, unsafe, incomplete, or tampered
-  bundles.
-- `rb build` consumes bundles and writes a separate static site without
-  modifying source evidence.
-- The site exposes the runnable artifact, standardized capture, acceptance
-  evidence, performance curve, failures, resource usage, and provenance.
-- Unit and integration tests run without a model account or inference server.
+## Skeleton rule: preserve the seam, implement one path
+
+Every extension seam justified by prior experience remains typed and tested.
+P0-A gives it one real implementation plus fakes or fixtures rather than
+several production variants.
+
+| Seam | Durable contract built now | One P0-A implementation | Deferred breadth |
+|---|---|---|---|
+| SUT composition | Typed harness, provider, and model adapters; registry; capability resolution | Codex + ChatGPT + Luna | Other live clients, providers, models, and third-party loading |
+| Configuration | Requested/materialized/effective/cleanup lifecycle and ownership | Read-only ChatGPT entitlement plus scoped Codex invocation | Mutable LM Studio lifecycle and other native renderers |
+| Agent loop | Preserved attempts and structured feedback boundary | Evaluator-controlled loop, at most two attempts | Native-loop comparison and alternate repair strategies |
+| Isolation | Versioned capability/taint report and conductor-owned evidence | One L1 staged-workspace implementation | L2/L3 containers, provider proxying, universal network control |
+| Storage | Immutable bundle/store boundary | Local `.ralph.zip` inbox | Google Drive and other remote stores |
+| Browser | Versioned browser observation/capture boundary | One pinned Chromium/Playwright worker | Other browsers, capture backends, and viewpoints |
+| Challenge | Versioned challenge plug-in boundary and shared `traffic/v1` | Busy Intersection | Live 5x5 Rush evaluator and other challenge families |
+| Load search | Evaluator-owned demand, held stages, failure and recovery semantics | One bounded deterministic stage schedule, no bracket refinement | Multiple production profiles and adaptive refinement |
+| Cost | Typed cost vector, policy, provenance, and completeness | Flat ChatGPT subscription attempt-pool allocation | Live API billing, invoice imports, token/quota normalization |
+| Reporting | Read-only bundle view model | One polished index and one run-detail page | Rich explorer, full Pareto interaction, alternate themes |
+| Media | Standard capture record tied to artifact hash | One animated overview plus poster | Multi-angle and side-by-side synchronized playback |
+
+Fakes are not substitute production integrations. They are conformance tools
+that prove the conductor, wizard, and reporter depend on contracts rather than
+vendor-name branches.
+
+See [ADR 0009](adr/0009-one-real-implementation-per-p0-seam.md).
+
+## P0-A definition of done
+
+P0-A is complete when all of the following are true:
+
+- The installed command is `rb`; zero arguments in a TTY start a client-first
+  guided experiment wizard.
+- The wizard and `rb run` share one versioned TOML parser and semantic
+  validator. An explicit run never consults wizard history.
+- Harness, provider, and model adapters compose into a `ResolvedSUT`; adding a
+  compatible fake adapter requires no conductor or wizard branch.
+- The real wizard path detects Codex, checks ChatGPT authentication read-only,
+  offers Luna, and requires a valid subscription cost policy.
+- Every repetition and attempt has a unique identity and is never overwritten.
+- A controlled public-check loop permits at most one repair attempt and
+  preserves both candidates and their resource use.
+- The agent receives a fresh staged workspace containing only public inputs;
+  isolation limits and canary results are recorded honestly.
+- A Codex + ChatGPT + Luna run invokes Busy Intersection and preserves complete
+  evidence whether the model passes or fails.
+- Cloud cost evidence records pool membership and chargeable attempts; once all
+  expected bundles are present, the derived catalog contains non-null allocated
+  subscription USD. Raw usage/provenance remains separate, and missing cost is
+  never zero. An experiment with no chargeable model invocation remains
+  diagnostic and cost-incomplete.
+- Busy Intersection exposes `traffic/v1`; evaluator-driven stepping and visible
+  playback use the same simulation state.
+- Evaluator-owned demand rises through held stages until the first sustained
+  failure, then stops for cooldown/recovery.
+- Requested, admitted, active, completed, rejected, backlogged, and lost trips
+  reconcile.
+- Results include the last sustainable offered load, peak valid throughput,
+  ordinary-load delay, first failure, queue evidence, and recovery outcome.
+- The evaluator produces one standardized animated overview and poster image
+  tied to the evaluated artifact hash.
+- Execution finalizes one versioned, redacted, checksummed `.ralph.zip` bundle
+  per run; `rb bundle validate` rejects malformed, unsafe, incomplete, or
+  tampered input.
+- `rb build` reads validated bundles from a local inbox and writes a separate,
+  deterministic static site with a coherent visual system.
+- The site separates local and cloud cohorts and clearly presents acceptance,
+  traffic performance, cost/time, attempts, failures, artifact/capture, and
+  provenance.
+- A versioned 5x5 Rush descriptor and topology fixture traverse the same
+  challenge boundary without city branches in the conductor.
+- Unit and fixture integration tests run without a model account, inference
+  server, or private judge pack.
+
+Passing the traffic challenge is not required to prove the live integration;
+a complete, diagnosable model failure is a valid smoke result. Deterministic
+fixture artifacts are authoritative for evaluator acceptance tests.
+
+## P0-B definition
+
+P0-B implements The 5x5 Rush over the P0-A seams:
+
+- Public city challenge pack and private P0-B profiles.
+- Grid/freeway topology, complete ramp connectivity, OD routing, merging, and
+  signal-network validation.
+- Ramp spillback, grid blockage, freeway collapse, fairness, and recovery
+  checks.
+- Overview and interchange captures.
+- The same live Codex + ChatGPT + Luna SUT applied to one city run, whether
+  passing or failing.
+
+P0-B succeeds only if this work plugs into the challenge, browser, metrics,
+bundle, cost, and reporting contracts without adding city-specific branches to
+the conductor.
 
 ## Intended CLI
 
 ```bash
 rb
-rb configure experiments/local-intersection.toml
-rb run experiments/local-intersection.toml
-rb run experiments/cloud-city.toml
+rb configure experiments/cloud-intersection.toml
+rb run experiments/cloud-intersection.toml
 rb bundle validate results/inbox/<run-id>.ralph.zip
 rb build --source results/inbox --output site
 ```
 
-Zero-argument `rb` starts with client selection, then probes the selected
-client for providers and models without sending generation requests. It guides
-the remaining choices, previews and validates the TOML, saves it atomically,
-and offers to run it. Explicit commands remain suitable for unattended use.
-See [`CLI_AND_EXPERIMENTS.md`](CLI_AND_EXPERIMENTS.md) for the discovery,
-defaulting, security, and reproducibility contract.
-See [`CONFIGURATION_MODEL.md`](CONFIGURATION_MODEL.md) for the centralized
-provider/client ownership and requested-to-effective lifecycle.
-See [`ADAPTER_MODEL.md`](ADAPTER_MODEL.md) for the polymorphic protocols,
-registry, capability negotiation, and conformance contracts.
+Zero-argument `rb` starts with client selection, then uses bounded, read-only
+adapter probes for compatible providers and models. It previews and validates
+the TOML, saves atomically, and may offer to run it. Explicit commands remain
+suitable for unattended use.
 
-An experiment specification may expand into several runs:
+An illustrative P0-A experiment is:
 
 ```toml
 schema_version = "experiment/v1"
+name = "codex-chatgpt-luna-intersection"
 challenge = "busy-intersection/v1"
 client = "codex-cli"
-model = "gpt-5.6-luna"
 provider = "openai-chatgpt"
+model = "gpt-5.6-luna"
 track = "cloud-subscription"
 repetitions = 3
+
+[client_options]
+reasoning_effort = "high"
+loop = "controlled"
 
 [budget]
 max_wall_seconds = 1200
 max_attempts = 2
 
 [evaluation]
-scenario_pack = "traffic-local-p0"
+scenario_pack = "traffic-intersection-p0a"
+
+[cost]
+policy = "flat-subscription-attempt-pool/v1"
+pool_id = "chatgpt-luna-intersection-pilot-01"
+pool_scope = "experiment"
+currency = "USD"
+service_plan = "chatgpt-plus"
+billing_period_cost_usd = "20.00"
+benchmark_allocation_fraction = "1.0"
+pool_cost_usd = "20.00"
+pool_cost_source = "operator_attested_period_charge"
+allocation_rationale = "dedicated_benchmark_period"
+billing_period_start = "2026-08-01"
+billing_period_end = "2026-08-31"
+closure = "all_expected_runs_terminal"
+
+[output]
+inbox = "results/inbox"
 ```
 
-Exact field names remain provisional until schemas are implemented and tested.
+Financial values are examples, not inferred defaults. The operator supplies
+and confirms the actual plan/accounting inputs. Exact field names remain
+provisional until fixtures exercise the schemas.
 
-## Proposed implementation stack
+See:
 
-- Python 3.11+ orchestration with type hints and a standard-library-first core.
-- JSON Schema-compatible JSON documents for durable interchange contracts.
-- Node.js plus Playwright for browser observation and capture.
-- Static HTML/CSS/JavaScript output suitable for GitHub Pages.
-- No database requirement in P0; a rebuildable local ingest cache may use
-  SQLite from the Python standard library if needed.
-
-## Proposed repository layout
-
-```text
-ralph-bench/
-├── pyproject.toml
-├── ralph_bench/
-│   ├── cli.py
-│   ├── interactive.py
-│   ├── discovery.py
-│   ├── configuration.py
-│   ├── experiments.py
-│   ├── execution.py
-│   ├── isolation.py
-│   ├── attempts.py
-│   ├── events.py
-│   ├── metrics.py
-│   ├── acceptance.py
-│   ├── bundles.py
-│   ├── adapters/
-│   │   ├── registry.py
-│   │   ├── harnesses/
-│   │   ├── providers/
-│   │   └── models/
-│   ├── challenges/
-│   └── reporting/
-├── browser/
-├── challenges/
-│   ├── busy-intersection/
-│   └── five-by-five-rush/
-├── schemas/
-├── experiments/
-├── tests/
-│   ├── fixtures/
-│   └── artifacts/
-├── docs/
-└── site/
-```
-
-Private scenario packs, hidden checks, and reference implementations are not
-stored in the public repository. P0 may load them from a separately configured
-local path.
-
-## Domain terminology
-
-- **Experiment:** A declarative request that expands into one or more runs.
-- **Client:** The user-facing agentic coding application. Internally it is
-  invoked through a `HarnessAdapter`.
-- **SUT:** Model, client/harness, provider/configuration, and effort/tool
-  policy.
-- **ResolvedSUT:** A versioned composition of one harness, provider, and model
-  adapter plus negotiated protocols, capabilities, and normalized options.
-- **Run:** One SUT invocation for one challenge repetition. One immutable
-  result bundle is produced per run.
-- **Attempt:** One agent work interval within a run. A controlled repair loop
-  may create more than one attempt.
-- **Candidate:** The artifact state produced at the end of an attempt.
-- **Scenario:** Evaluator-owned traffic demand, seed, timing, and profile used
-  to test the final candidate.
-- **Challenge pack:** Public prompt, constraints, starter assets, evaluator API,
-  and public checks.
-- **Judge pack:** Private scenarios, hidden checks, thresholds, and capture
-  instructions.
+- [`CLI_AND_EXPERIMENTS.md`](CLI_AND_EXPERIMENTS.md)
+- [`CONFIGURATION_MODEL.md`](CONFIGURATION_MODEL.md)
+- [`ADAPTER_MODEL.md`](ADAPTER_MODEL.md)
+- [`COST_MODEL.md`](COST_MODEL.md)
 
 ## Architecture boundary
 
 ```mermaid
 flowchart TB
-    CLI["rb CLI and wizard"] --> EXP["Validated experiment TOML"]
+    CLI["rb wizard or explicit command"] --> EXP["Validated experiment TOML"]
     EXP --> RES["Adapter registry and SUT resolver"]
     RES --> CON["Conductor"]
-    CON --> ISO["Workspace/isolation adapter"]
-    ISO --> RUN["Harness adapter"]
-    RUN --> ATT["Attempt output"]
-    ATT --> PUB["Public checks"]
-    PUB -->|repairable feedback| RUN
+    CON --> ISO["Staged workspace"]
+    ISO --> RUN["Harness execution"]
+    RUN --> PUB["Public checks"]
+    PUB -->|one authorized repair| RUN
     PUB --> FIN["Final candidate"]
-    FIN --> PRIV["Private evaluation process"]
-    PRIV --> MET["Canonical metrics and failures"]
-    CON --> EVT["External event and timing capture"]
+    FIN --> PRIV["Private browser and traffic evaluation"]
+    PRIV --> MET["Assertions, throughput, and failures"]
+    CON --> EVT["Raw events and evaluator timing"]
+    CON --> CE["Run cost and pool-membership evidence"]
     MET --> BUN["Bundle finalizer"]
     EVT --> BUN
+    CE --> BUN
     BUN --> ZIP["Immutable .ralph.zip"]
-    ZIP --> ING["Validator/ingestor"]
-    ING --> SITE["Static reporter"]
+    ZIP --> ING["Validator and catalog"]
+    ING --> COST["Closed-pool cost derivation"]
+    COST --> SITE["Derived static site"]
 ```
 
-The agent process must not write authoritative metrics, final bundle metadata,
-hidden check results, or reporter output.
+The agent process never owns authoritative timing, private checks, traffic
+metrics, cost allocation, bundle identity/checksums, or reporter output.
 
-## Work packages
+## Proposed implementation stack
 
-### WP0 — Contracts and executable fixtures
+- Python 3.11+ typed orchestration with a standard-library-first core.
+- Versioned JSON/TOML boundary documents; typed internal objects need not each
+  become public JSON Schemas.
+- Node.js plus one lockfile-pinned Playwright package/browser revision for
+  observation/capture; record the executable digest and downgrade a mismatched
+  runtime to experimental rather than silently treating it as canonical.
+- Static HTML/CSS/JavaScript output suitable for GitHub Pages.
+- No database requirement; the bundle catalog is rebuildable.
 
-**Deliverables**
+## Boundary schemas in P0-A
 
-- Initial schemas for experiment, run manifest, event, assertion, metric,
-  failure, and bundle inventory.
-- Typed harness/provider/model protocols, adapter descriptors, built-in
-  registry, generic model adapter, and capability resolver.
-- `rb` console entry point and a terminal-I/O-independent wizard state machine.
-- Deterministic TOML rendering, semantic validation, atomic save, and overwrite
-  protection.
-- Fake client/provider probes covering complete, partial, failed, stale, and
-  manual discovery paths.
-- Fake harness/provider/model composition matrix and reusable adapter
-  conformance suites.
-- A fixed clock/ID injection mechanism for deterministic tests.
-- Minimal passing, failing, malformed, and adversarial fixture artifacts.
-- Terminology encoded consistently in types and filenames.
+P0-A versions only durable interchange boundaries:
 
-**Exit criteria**
+- `experiment/v1`
+- run/bundle manifest and inventory
+- canonical event envelope
+- assertion, metric, failure, and cost envelopes
+- `traffic/v1` bridge payloads needed by Busy Intersection
 
-- Schemas round-trip representative fixtures.
-- Wizard output round-trips through the same parser and validator as `rb run`.
-- New compatible fake adapters compose without changes to conductor or wizard
-  code; duplicate IDs and incompatible contract versions fail at startup.
-- Cancellation leaves no partial experiment and no-TTY invocation never hangs.
-- Unknown schema versions fail clearly.
-- Tests need no browser or provider.
+Challenge-private implementation objects, wizard screens, internal state
+transitions, and every vendor payload do not each receive a public schema.
+Vendor streams are retained raw and normalized at their adapter boundary.
 
-**Estimate:** 6–9 engineering days.
+## Work packages and estimates
 
-### WP1 — Run identity, conductor, and attempts
+### WP0 — Contract spine, registry, and guided authoring
 
-**Deliverables**
+Build boundary types/schemas, typed adapter families, built-in registry,
+capability resolution, deterministic IDs/clocks, fake composition tests, the
+terminal-I/O-independent wizard state machine, and deterministic TOML
+round-tripping.
 
-- Experiment expansion and unique run IDs.
-- Run state machine with explicit terminal reasons.
-- Attempt directories and controlled feedback lifecycle.
-- Independent monotonic wall-clock phase timing.
-- Normalized configuration plan, registered rollback actions, and distinct
-  requested/materialized/effective/cleanup evidence.
-- Process limits and cleanup behavior.
+**Exit:** a compatible fake adapter composes without core changes; invalid
+versions/combinations fail clearly; cancel/no-TTY paths do not leave partial
+files or hang.
 
-**Exit criteria**
+**Estimate:** 4–5 engineering days.
 
-- Repetitions never collide.
-- Interrupted runs retain diagnosable partial evidence.
-- Failed attempts are preserved rather than overwritten.
-- Configuration cleanup executes and is reported after every terminal path.
+### WP1 — Conductor, attempts, configuration, and staged isolation
 
-**Estimate:** 3–5 engineering days.
+Build the run state machine, unique repetitions, at most two preserved
+attempts, phase timing, configuration ownership/cleanup, process termination,
+one L1 staged-workspace implementation, redaction, and canary evidence.
 
-### WP2 — Staged isolation and harness boundary
+**Exit:** failure, timeout, and cancellation preserve evidence and execute
+cleanup; fixture agents cannot reach source, prior results, judge material, or
+conductor-owned evidence through the supported staged paths.
 
-**Deliverables**
+**Estimate:** 5–7 engineering days.
 
-- Workspace materialization containing only public challenge inputs.
-- Ephemeral home/config paths where supported.
-- Environment allowlist and redaction.
-- Client detection/discovery capability contract with read-only bounded probes.
-- Scoped native harness configuration renderer and fake transactional provider
-  adapter with strict ownership contract tests.
-- Fixture harness and generic command harness.
-- Recorded isolation capability/limitations.
+### WP2 — Minimal immutable bundle and validator
 
-**Exit criteria**
+Build a P0 bundle profile containing manifests, prompt, raw/canonical events,
+attempts, selected artifact, assertions/metrics/failures/cost evidence, one
+capture pair, consolidated provenance, inventory, and checksums. Implement
+atomic finalization and safe validation/extraction into a local inbox.
 
-- The workspace contains no source repo, prior results, references, or judge
-  pack.
-- The conductor retains logs outside the agent-writable evidence path.
-- P0 isolation is truthfully labeled rather than overstated.
+**Exit:** mutation, traversal, duplicate/case collision, symlink, partial ZIP,
+size-limit, checksum, and missing-reference fixtures are rejected; site builds
+never mutate bundles.
 
-**Estimate:** 4–6 engineering days.
+**Estimate:** 2–3 engineering days.
 
-### WP3 — Immutable bundle pipeline
+### WP3 — Common browser, traffic bridge, and capture
 
-**Deliverables**
+Build one pinned Chromium/Playwright worker, the Busy Intersection portion of
+`traffic/v1`, deterministic `advance()`, snapshot/event validation, runtime
+classification, one WebM overview, and one PNG poster.
 
-- Bundle staging, inventory, redaction, checksums, and deterministic finalization.
-- Safe ZIP validation and extraction.
-- Completeness and schema checks.
-- No report HTML inside the evidence bundle.
+**Exit:** visible playback and fast-forward reach equivalent state for a fixed
+seed; malformed bridge responses, browser crashes, fabricated counters, and
+incomplete event drains are detected. Capture metadata identifies the artifact,
+scenario/seed, interval, viewport, frame rate, and exact browser worker.
 
-**Exit criteria**
+**Estimate:** 4–5 engineering days.
 
-- A one-byte mutation fails checksum validation.
-- Path traversal, duplicate entries, symlinks, and decompression limits are
-  tested.
-- Rebuilding a site does not change a source bundle.
+### WP4 — Busy Intersection and bounded load-to-failure
 
-**Estimate:** 3–5 engineering days.
+Build the public challenge, technology-neutral visual brief, one canonical
+demand profile across a small fixed seed set, safety/accounting/fairness/queue
+checks, bounded held load stages, first-failure classification, cooldown, and
+recovery. Do not implement optional bracket refinement in P0-A.
 
-### WP4 — Common browser and traffic protocol
+**Exit:** passing and deliberately broken fixtures produce reproducible
+throughput, delay, collision/violation, backlog, starvation, breakdown, and
+recovery evidence. The calibrated profile/seed manifest is versioned and
+recorded with every result.
 
-**Deliverables**
+**Estimate:** 6–8 engineering days.
 
-- Pinned browser runtime and challenge dependency strategy.
-- `traffic/v1` interface and event contract.
-- Deterministic `advance()` evaluation mode and normal visual playback mode.
-- Independent cross-checks for trip accounting, position, overlap, road/lane
-  membership, and progress.
-- Standard screenshot and WebM capture paths.
+### WP5 — Skeletal static product
 
-**Exit criteria**
+Build deterministic local/cloud navigation, one comparison index, one run
+detail view, artifact download, animated preview/poster, acceptance and
+failure evidence, throughput curve, a compact static throughput/resource
+scatter, cost/time/token cards, attempts, and provenance. The static report
+never executes untrusted candidate HTML/JavaScript; running the downloaded
+self-contained artifact is an explicit action outside the report shell. Use a
+small coherent visual system rather than unrelated report fragments.
 
-- Fixture artifacts prove pass, failure, and dishonest/inconsistent telemetry
-  paths.
-- Fast-forward evaluation and visible playback use the same simulation state.
+**Exit:** invalid bundles never enter normal views; the same bundle set and
+closed cost pool produce the same site; malicious candidate markup is escaped
+and never executed by the report shell.
 
-**Estimate:** 4–7 engineering days.
+**Estimate:** 3–4 engineering days.
 
-### WP5 — Busy Intersection vertical slice
+### WP6 — Codex, ChatGPT, Luna, and subscription cost
 
-**Deliverables**
+Build Codex detection/version/auth fixtures, explicit non-interactive Luna
+invocation with JSONL evidence and ephemeral/scoped configuration, event/usage
+normalization, the ChatGPT provider adapter, Luna descriptor, and
+`flat-subscription-attempt-pool/v1`.
 
-- Public challenge pack and prompt.
-- Technology-neutral visual brief allowing a polished 2D, 2.5D, or 3D
-  intersection presentation.
-- Private P0 scenarios and thresholds.
-- Topology, signal, movement, pedestrian, safety, fairness, and queue checks.
-- One standardized visual capture.
-- Public structured feedback suitable for one controlled repair.
+**Exit:** the wizard authors and launches the live path without exposing
+credentials; a Busy Intersection run validates and renders; a closed pool
+produces allocated USD cost including all attempts and failures.
 
-**Exit criteria**
+**Estimate:** 3–4 engineering days plus live model time.
 
-- Passing and deliberately broken fixtures produce specific evidence.
-- Several seeds yield deterministic results.
-- The full run-to-bundle-to-site path works without the city challenge.
+### WP7 — Hardening and milestone evidence
 
-**Estimate:** 5–8 engineering days.
+Run fixture, integration, threat/failure-injection, and live smoke tests;
+publish a sample site, known limitations, threshold notes, and P0-B backlog.
 
-### WP6 — Adaptive load-to-failure engine
+**Estimate:** 3–4 engineering days plus model/calibration time.
 
-**Deliverables**
+### Estimate summary
 
-- Warm-up, held load stages, peak, cooldown, and recovery phases.
-- Last-sustainable/first-failing bracket.
-- Optional refinement runs inside the bracket.
-- Transport and runtime failure classification.
-- Capacity curve, normal-load quality, and recovery metrics.
+P0-A represents approximately **30–40 engineering days** of work. The packages
+overlap and can be developed by bounded subagents, but integration, browser
+calibration, live-run diagnosis, and lead review remain serial constraints. A
+realistic target is **four to six calendar weeks** with one lead plus two or
+three productive implementation streams and active review; a mostly serial
+effort is more safely **six to eight calendar weeks**.
 
-**Exit criteria**
-
-- Offered, admitted, active, completed, and backlogged trips reconcile.
-- Temporary queues do not falsely count as immediate breakdown.
-- Failure and recovery are reproducible for a fixed seed/profile.
-
-**Estimate:** 4–6 engineering days.
-
-### WP7 — The 5x5 Rush generalization
-
-**Deliverables**
-
-- Public frontier challenge pack.
-- Grand visual brief covering city-scale composition, spatial legibility,
-  information design, atmosphere, and creative latitude.
-- Grid, freeway, crossing, interchange, ramp, and OD-route validation.
-- Balanced, inbound, and outbound P0 demand profiles.
-- Ramp spillback, blocked-intersection, freeway collapse, fairness, and recovery
-  checks.
-- Overview and interchange captures.
-
-**Exit criteria**
-
-- The city evaluator is implemented as challenge logic over shared traffic
-  contracts, not as special cases in the conductor.
-- At least one fixture reaches a valid sustainable capacity and one fails via
-  each critical spillback class.
-
-**Estimate:** 6–10 engineering days.
-
-### WP8 — Skeletal ingest and static reporting
-
-**Deliverables**
-
-- Bundle discovery, validation, quarantine, and ingest.
-- Local/cloud top-level separation.
-- Run detail page with artifact, capture, assertions, failures, metrics,
-  throughput curve, attempts, provenance, and human visual-review prompts.
-- Combination aggregation with repetitions and sample counts.
-- Performance-versus-resource Pareto chart.
-
-**Exit criteria**
-
-- Invalid bundles never silently enter official views.
-- Missing and estimated metrics remain visibly labeled.
-- Reports are deterministic for the same bundle set.
-
-**Estimate:** 4–7 engineering days.
-
-### WP9 — Codex CLI + ChatGPT + Luna live path
-
-**Deliverables**
-
-- Codex CLI harness adapter with pinned version detection and read-only
-  `codex login status` preflight.
-- ChatGPT-managed OpenAI provider adapter representing authentication,
-  entitlement, service, and subscription/unmetered billing provenance.
-- `gpt-5.6-luna` model descriptor with explicit configurable reasoning effort.
-- Client-first wizard path that detects Codex, verifies authentication method,
-  offers the supported Luna model, and explains how to run `codex login` when
-  needed without handling credentials itself.
-- Non-interactive `codex exec` invocation with JSONL, ephemeral session state,
-  explicit model/sandbox, and isolated or ignored user configuration.
-- Preserved raw stdout JSONL and stderr plus normalized events, token usage,
-  tool activity, turn outcome, and canonical external timing.
-- End-to-end live attempts for both challenge tiers, regardless of pass/fail.
-- Fixture-only coverage for metered cost, mutable providers, unknown models,
-  and additional compatible adapter compositions.
-
-**Exit criteria**
-
-- One Codex/ChatGPT/Luna bundle for each challenge validates and renders; a
-  model failure remains a valid integration result when evidence is complete.
-- Zero-argument `rb` can author, validate, save, and launch the live SUT without
-  exposing credentials or inheriting unrelated Codex configuration.
-- Provider-reported and evaluator-derived metrics have explicit provenance.
-- Cost is classified `subscription_unmetered` with USD unavailable.
-- Repeating the smoke experiment does not accumulate session/config state or
-  depend on user model defaults.
-
-**Estimate:** 3–5 engineering days plus live model run time.
-
-### WP10 — Hardening and approval evidence
-
-**Deliverables**
-
-- Full unit/integration/end-to-end test pass.
-- Threat-model and failure-injection results.
-- P0 sample site.
-- Known limitations and P1 backlog.
-- Pilot threshold recommendations based on observed artifacts.
-
-**Estimate:** 3–5 engineering days plus model run time.
+P0-B city generalization is approximately **8–12 additional engineering days**
+or roughly **two to three calendar weeks**, depending on evaluator and visual
+calibration. It is estimated separately so the first usable skeleton is not
+held hostage by the larger challenge.
 
 ## Sequencing
 
 ```text
-WP0 -> WP1 -> WP2 -> WP3
-                 \-> WP4 -> WP5 -> WP6 -> WP7
-WP3 + WP5 + WP6 -------> WP8
-WP1 + WP2 + WP4 -------> WP9
-all --------------------> WP10
+WP0 -> WP1 -> WP2
+          \-> WP3 -> WP4
+WP2 + WP4 -------> WP5
+WP0 + WP1 -------> WP6
+all -------------> WP7
+P0-A ------------> P0-B city generalization
 ```
 
-The recommended implementation checkpoints are:
+Fixture adapters and artifacts come before paid live inference. Browser,
+bundle, reporting, and Codex work can proceed in parallel after their boundary
+fixtures are stable.
 
-1. **P0-A infrastructure:** WP0–WP4.
-2. **P0-A vertical slice:** WP5–WP6 plus minimal WP8.
-3. **P0-B generalization:** WP7.
-4. **Real-system proof:** WP9.
-5. **P0 release candidate:** complete WP8 and WP10.
+## Contract and end-to-end tests
 
-## Test strategy
+The skeleton is protected by tests that cross its seams:
 
-### Unit tests
+- Fixture harness -> public feedback -> final candidate -> private evaluation
+  -> bundle -> validation -> static site.
+- Candidate artifact, evaluator evidence, and capture all reference the same
+  tree hash.
+- A second compatible fake harness/provider/model composes without changes to
+  conductor, wizard, bundle, or reporter code.
+- Requested/materialized/effective configuration and cleanup remain distinct;
+  cleanup runs on every terminal path.
+- Repetitions and attempts never collide or overwrite earlier evidence.
+- Demand reconciliation catches dropped, duplicated, shortened, teleported,
+  or fabricated trips.
+- Held stages distinguish transient queues from sustained breakdown and record
+  recovery.
+- Missing cost stays null/incomplete; closed-pool allocation includes repair
+  attempts and failures and reconciles to the declared pool cost.
+- Conductor-owned `model_invocation.started` evidence charges ambiguous
+  post-spawn failures conservatively; incomplete member evidence prevents pool
+  closure.
+- Pool-cost source/allocation provenance produces a mechanical comparability
+  key; incompatible pools never share a primary-cost ranking.
+- The same input bundles generate byte-stable content except for explicitly
+  declared build metadata.
+- Invalid bundles are quarantined and duplicate run IDs are diagnosed.
+- A malicious candidate fixture containing script, navigation, and exfiltration
+  attempts is offered only as inert/downloadable content and never executes in
+  the report shell.
+- A city topology fixture uses the challenge registry and `traffic/v1` without
+  a conductor special case.
 
-- Prompt-state transitions, back/edit/cancel, and intelligent default
-  precedence.
-- Configuration-plan precedence, provider/harness ownership, rollback,
-  requested/effective mismatch, and idempotent repeated setup/cleanup.
-- Registry/descriptor validation, capability negotiation, adapter composition,
-  generic-model fallback, and shared conformance suites.
-- Client/provider/model discovery success, timeout, stale result, and manual
-  fallback.
-- TOML rendering, round-trip validation, atomic save, and overwrite behavior.
-- TTY versus non-TTY command behavior and secret-redaction snapshots.
-- Schema and version handling.
-- Experiment expansion and IDs.
-- Run/attempt state transitions.
-- Event normalization and timing.
-- Metric calculations and failure thresholds.
-- Checksum and ZIP validation.
-- Redaction and path validation.
+## P0-A non-goals
 
-### Fixture artifact tests
-
-- Clean passing intersection.
-- Collision, red-light, starvation, trip-loss, queue, and deadlock failures.
-- Clean passing city.
-- On-ramp spillback, off-ramp spillback, disconnected graph, invalid route,
-  blocked grid, and non-recovery failures.
-- Artifact that reports dishonest counters inconsistent with vehicle state.
-
-### Integration tests
-
-- Fixture harness through bundle finalization.
-- Public check feedback through a second controlled attempt.
-- Browser evaluator through deterministic fast-forward and capture.
-- Bundle ingest through static page generation.
-
-### End-to-end smoke tests
-
-- Codex CLI + ChatGPT-managed access + `gpt-5.6-luna` invokes Busy
-  Intersection and The 5x5 Rush and produces complete bundles whether the model
-  succeeds or fails.
-- At least two repetitions of one live experiment prove no overwrite and valid
-  aggregation.
-
-## P0 non-goals
-
-- Google Drive or other remote artifact stores.
-- Strong OS-level sandbox support on every platform.
-- Every harness from the legacy benchmark.
-- Any additional real harness/provider/model composition, including OpenCode,
-  LM Studio, local models, and API-key-metered OpenAI.
-- Universal provider/model discovery for every client; adapters may expose
-  partial capability and manual entry honestly.
-- Arbitrary third-party adapter loading or a complete model catalog.
-- A legacy corpus importer.
-- A frontier-model qualitative judge.
-- A polished public design system.
-- A universal composite overall score.
-- City pedestrians, parking, incidents, emergency vehicles, or road closures.
-- Energy measurement or infrastructure-normalized throughput.
+- A complete live 5x5 Rush evaluator or city model run; those are P0-B.
+- Any second live harness, provider, model family, or local inference runtime.
+- Universal provider/model discovery or a complete model catalog.
+- Arbitrary third-party adapter loading.
+- More than one production traffic profile, adaptive bracket refinement, or a
+  large calibration matrix.
+- Multiple browsers, multiple capture viewpoints, or synchronized side-by-side
+  playback.
+- Google Drive or any remote artifact store.
+- L2/L3 OS isolation, provider proxying, or universal network enforcement.
+- Provider billing APIs, invoices, multi-currency accounting, or live metered
+  API integration.
+- Published per-token cost breakdowns and percentage of daily/weekly/rolling
+  quota consumed across plans; this is a post-P0 stretch goal.
+- Frontier-model qualitative judging.
+- Legacy corpus import or migration of every prior runner.
+- A single composite overall score.
 
 ## Primary risks and mitigations
 
-| Risk | P0 mitigation |
+| Risk | P0-A mitigation |
 |---|---|
-| Agent fabricates telemetry | Cross-check trip IDs, visible/entity position, network membership, and event reconciliation; label the remaining trust boundary. |
-| Thresholds encode arbitrary preferences | Keep thresholds in versioned judge packs and calibrate using fixtures and pilot runs. |
-| Fast-forward diverges from visible behavior | Require one state/update path and test fast-forward state against normal playback. |
-| Cross-platform isolation is inconsistent | Record capabilities and isolation level; exclude unsealed results from official views. |
-| Vendor metrics are missing or incomparable | Measure wall phases independently and attach provenance/confidence to every vendor metric. |
-| City task overwhelms core development | Finish the intersection vertical slice before implementing city-specific checks. |
-| Public repository leaks hidden material | Keep judge packs and reference implementations outside the public repository. |
-| Optimization rewards unrealistic roads | Fix physics and infrastructure envelopes in versioned challenge definitions. |
-| A client cannot enumerate providers/models reliably | Use capability-labeled layered probes with timeouts, show provenance/freshness, and preserve manual entry. |
-| Wizard convenience undermines reproducibility | Make validated TOML the execution boundary; never consult remembered wizard state during explicit runs. |
-| Discovery leaks credentials or incurs cloud cost | Permit only read-only, non-generation probes; redact diagnostics and store credential references rather than values. |
-| Harness adapters reintroduce incompatible provider setup | Enforce typed ownership: provider adapters configure providers once; harness adapters receive a resolved connection plan and write only scoped client state. |
-| Adapter support grows into a harness-provider-model cross-product | Register the three axes independently, negotiate typed capabilities, and require new compatible adapters to pass composition tests without core changes. |
-| ChatGPT authentication is valid but Luna is unavailable to the account | Probe auth method and effective model at runtime, classify entitlement/availability separately, and never infer access from login alone. |
-| The Codex agent tool shell can read ChatGPT credentials | Require a tested credential-store boundary and canary probe; otherwise label the live smoke L0/unsealed and ineligible. |
-| Codex CLI flags or JSONL events change | Pin and record the tested CLI version, preserve raw output, and maintain fixture-backed parser contracts. |
-| Subscription usage is mistaken for zero-cost work | Classify it as unmetered with USD unavailable and exclude it from metered-cost ranking. |
-
-## Estimated effort
-
-The P0-A intersection vertical slice, including the guided `rb` authoring path,
-is expected to require roughly four to five full-time engineering weeks. P0-B
-city generalization and complete reporting add roughly two to four weeks. A
-realistic P0 range is **six to nine engineering weeks**, excluding elapsed
-model execution and calibration time.
+| Known abstractions become over-engineered | Version only durable boundaries; require one real implementation and contract fixtures, not production breadth. |
+| The first implementation accidentally defines vendor-shaped core APIs | Fake composition tests and a city fixture must cross the same seams without conductor branches. |
+| Subscription allocation is mistaken for a provider bill | Show allocated, marginal, credit, and list-price-equivalent values separately with policy/provenance. |
+| Personal subscription use makes allocation arbitrary | Require billing-period/source/fraction provenance for the explicit experiment pool amount and cohort only matching comparability keys. |
+| Agent fabricates traffic telemetry | Reconcile evaluator-issued trips, snapshots, events, geometry, and browser observations. |
+| Fast-forward diverges from visible behavior | Require one simulation state/update path and equivalence fixtures. |
+| L1 isolation is overstated | Publish capability/canary evidence; label the live result L0/unsealed if credential or filesystem boundaries cannot be demonstrated. |
+| Visual polish gets deferred as “just reporting” | Require one coherent site shell and one animated artifact preview in the P0-A exit criteria. |
+| City work destabilizes the core | Finish/freeze P0-A contracts, then require P0-B to plug in without city branches. |
+| Vendor CLI/events change | Pin and record the tested Codex version, preserve raw streams, and maintain parser fixtures. |
 
 ## Approval checklist
 
-Before implementation begins, approve or amend these proposed choices:
-
-- [ ] Python conductor with Node/Playwright browser worker.
-- [ ] `rb` as the installed command, with a client-first zero-argument wizard
-      and deterministic explicit commands.
-- [ ] Validated TOML as the boundary between interactive authoring and run
-      execution; read-only layered discovery with manual fallback.
-- [ ] Centralized transactional configuration lifecycle with provider/harness
-      ownership, effective-setting evidence, and verified cleanup.
-- [ ] Independent polymorphic harness/provider/model adapter families, a
-      built-in registry, capability resolver, and conformance suites.
-- [ ] Immutable `.ralph.zip` bundle per run.
-- [ ] Separate public challenge packs and private judge packs.
-- [ ] Staged isolation in P0 with stronger OS sandboxes deferred.
-- [ ] Codex CLI + ChatGPT-managed OpenAI access + `gpt-5.6-luna` as the only
-      required live P0 SUT; reasoning effort remains experiment-configurable.
-- [ ] OpenCode, LM Studio, local models, API-key-metered OpenAI, and all other
-      real integrations deferred as TBD.
-- [ ] Busy Intersection completed before city-specific evaluator work.
-- [ ] No single composite overall score in P0.
-- [ ] Google Drive, qualitative model judging, and legacy import deferred.
+- [ ] Evidence-backed harness/provider/model, configuration, bundle, challenge,
+      cost, and reporting seams remain in P0-A.
+- [ ] Each seam receives one real implementation plus fakes/fixtures.
+- [ ] Codex CLI + ChatGPT-managed access + Luna is the only required live SUT.
+- [ ] Busy Intersection is the only complete P0-A evaluator.
+- [ ] The 5x5 Rush contract/fixture is P0-A; full city implementation is P0-B.
+- [ ] Cloud cost is mandatory; P0 uses flat subscription attempt-pool allocation.
+- [ ] One controlled repair attempt, one L1 staged implementation, one browser,
+      one animated capture, one local inbox, and one small static site define the
+      concrete P0-A breadth.
+- [ ] Google Drive, quota-burden reporting, frontier judging, other live SUTs,
+      and richer comparison UX remain post-P0-A.

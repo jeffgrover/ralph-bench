@@ -49,7 +49,7 @@ A `HarnessAdapter` represents an agentic coding client and owns:
 - A schema for harness-specific options.
 - Scoped native configuration and invocation planning.
 - Process execution and cancellation behavior.
-- Native event, token, tool, turn, and cost normalization.
+- Native event, token, tool, turn, and raw charge/usage normalization.
 - Harness-scoped cleanup and postflight checks.
 
 It does not configure a provider, decide which model is available, or embed
@@ -67,8 +67,16 @@ owns:
 - A schema for provider/runtime options.
 - Provider preparation, model loading/selection, and bounded state mutation.
 - Read-back of effective runtime/model settings.
-- Usage, rate-limit, latency, and cost evidence normalization where available.
+- Usage, rate-limit, latency, billing-mode, and raw cost evidence capabilities.
 - Provider restoration and cleanup.
+
+A cloud composition must collectively expose the evidence required by its
+selected cost policy. That evidence may be provider-reported, harness-reported,
+or conductor-measured when the policy explicitly supports the source. The P0
+attempt-allocation policy uses a conductor-owned invocation event and does not
+pretend that ChatGPT reported a per-run bill. Provider adapters do not invent
+missing charges or allocate subscriptions themselves. If required evidence is
+absent, the run remains cost-incomplete and is not cost-rankable.
 
 A future LM Studio integration would be one provider adapter. Harness adapters
 would consume its resolved connection binding rather than each implementing LM
@@ -107,6 +115,7 @@ at least:
 - Detection/discovery support level.
 - Platform constraints and known limitations.
 - Evidence and metric provenance it can produce.
+- Billing modes and cost-evidence capabilities it can support.
 
 Adapter IDs identify implementations, not marketing display names. Result
 bundles preserve the selected descriptor versions so later reporting does not
@@ -135,9 +144,11 @@ class ProviderAdapter(Protocol):
     def detect(self, context: ProbeContext) -> ProviderProbe: ...
     def discover_models(self, context: ProbeContext) -> tuple[ModelOffer, ...]: ...
     def option_schema(self) -> OptionSchema: ...
+    def cost_capabilities(self) -> CostCapabilities: ...
     def plan(self, request: ProviderRequest) -> ProviderPlan: ...
     def apply(self, plan: ProviderPlan, context: RunContext) -> ProviderHandle: ...
     def observe(self, handle: ProviderHandle) -> EffectiveProviderState: ...
+    def collect_usage(self, handle: ProviderHandle) -> ProviderUsageEvidence: ...
     def cleanup(self, handle: ProviderHandle) -> CleanupResult: ...
 
 
@@ -269,6 +280,8 @@ Shared tests cover:
 - Requested/materialized/effective evidence consistency.
 - Cleanup after success, failure, timeout, and cancellation.
 - Raw evidence preservation alongside normalized output.
+- Required cloud-cost evidence remains nullable/provenance-labeled and never
+  defaults to zero.
 
 Composition tests use a matrix of fake harness, provider, and model adapters to
 prove that the resolver depends on contracts rather than concrete classes. A
@@ -294,9 +307,10 @@ adapter class names.
 
 P0 includes the three protocols, built-in registry, typed descriptors,
 capability resolver, generic model adapter, fake composition matrix, and the
-Codex CLI + ChatGPT-managed access + `gpt-5.6-luna` live path. Arbitrary
-third-party loading, a complete model catalog, and every other real composition
-are post-P0/TBD.
+Codex CLI + ChatGPT-managed access + `gpt-5.6-luna` live path. That provider
+path supplies the evidence required by the one live flat-subscription policy in
+[`COST_MODEL.md`](COST_MODEL.md). Arbitrary third-party loading, a complete
+model catalog, and every other real composition are post-P0/TBD.
 
 The foundational registry, contracts, resolver, fakes, and conformance tests
 are approximately **3–5 engineering days**. This substantially overlaps the

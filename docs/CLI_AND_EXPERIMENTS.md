@@ -25,8 +25,8 @@ Explicit commands remain available for automation and exact reruns:
 ```bash
 rb
 rb configure
-rb configure experiments/local-intersection.toml
-rb run experiments/local-intersection.toml
+rb configure experiments/cloud-intersection.toml
+rb run experiments/cloud-intersection.toml
 rb bundle validate results/inbox/<run-id>.ralph.zip
 rb build --source results/inbox --output site
 ```
@@ -67,8 +67,11 @@ The first substantive question is always the client. A proposed P0 flow is:
    allowing either challenge when compatible.
 5. **Client and model controls** — reasoning/effort, tool policy, native versus
    controlled loop, and adapter-specific supported options.
-6. **Evaluation controls** — repetitions, wall-time or cost budget, repair
-   attempts, scenario-pack reference, and isolation choice.
+6. **Evaluation and cost controls** — repetitions, wall-time/cost budget,
+   repair attempts, scenario-pack reference, isolation choice, and the
+   provider's required cost policy. A flat subscription asks for the USD amount
+   assigned to this experiment and its billing-period provenance; the wizard
+   may help derive that amount from a plan fee and benchmark-use fraction.
 7. **Destination** — propose a readable, collision-free filename under
    `experiments/`.
 8. **Review** — render the complete TOML, provenance of inferred defaults, and
@@ -101,8 +104,10 @@ TOML or recorded as explicit runtime references. The final review identifies
 which values were selected, inferred, or entered manually.
 
 Defaults must be cost-aware. Discovery does not send a generation request.
-Selecting a cloud provider does not authorize a run, and an unknown cloud cost
-must not be presented as zero.
+Selecting a cloud provider does not authorize a run. A cloud experiment with
+no supported cost policy is invalid, and a missing cost must not be presented
+as zero. A remembered non-secret billing profile may be suggested, but the
+final experiment pool cost must be displayed and reconfirmed.
 
 ## Discovery contract
 
@@ -168,11 +173,30 @@ max_wall_seconds = 1200
 max_attempts = 2
 
 [evaluation]
-scenario_pack = "traffic-local-p0"
+scenario_pack = "traffic-intersection-p0a"
+
+[cost]
+policy = "flat-subscription-attempt-pool/v1"
+pool_id = "chatgpt-luna-intersection-pilot-01"
+pool_scope = "experiment"
+currency = "USD"
+service_plan = "chatgpt-plus"
+billing_period_cost_usd = "20.00"
+benchmark_allocation_fraction = "1.0"
+pool_cost_usd = "20.00"
+pool_cost_source = "operator_attested_period_charge"
+allocation_rationale = "dedicated_benchmark_period"
+billing_period_start = "2026-08-01"
+billing_period_end = "2026-08-31"
+closure = "all_expected_runs_terminal"
 
 [output]
 inbox = "results/inbox"
 ```
+
+The financial values illustrate the schema only. They are not inferred from
+authentication and must reflect the operator's actual plan and declared
+benchmark allocation. See [`COST_MODEL.md`](COST_MODEL.md).
 
 The file contains no API keys, session tokens, or copied client credentials.
 It may refer to an environment variable or credential profile by name. Runtime
@@ -211,8 +235,9 @@ P0 includes:
   only source of wizard choices and option schemas.
 - Real Codex CLI detection, read-only ChatGPT authentication preflight through
   `codex login status`, and the `gpt-5.6-luna` model descriptor.
-- A provider choice labeled **ChatGPT (subscription)** with unmetered cost
-  provenance and no implied per-run USD value.
+- A provider choice labeled **ChatGPT (subscription)** with required
+  `flat-subscription-attempt-pool/v1` inputs, a reviewable allocation summary,
+  and no confusion between marginal, allocated, and list-price-equivalent USD.
 - Deterministic TOML rendering, validation, atomic saving, and overwrite
   protection.
 - A non-interactive run path that never prompts after validation.
@@ -230,7 +255,11 @@ discovery capabilities incrementally without changing the experiment schema.
 - No discovery fixture performs a generation request or writes client config.
 - A signed-in Codex fixture resolves ChatGPT subscription plus Luna; a
   signed-out fixture gives `codex login` guidance without reading credentials.
-- ChatGPT subscription selection renders USD cost as unavailable, never zero.
+- ChatGPT subscription selection cannot validate until the operator confirms a
+  supported cost policy, experiment-scoped USD pool cost, and billing-period
+  provenance.
+- Missing runtime cost evidence remains incomplete/null rather than zero; a
+  closed fixture pool derives a non-null allocated USD value.
 - Back/edit produces the same validated document as entering final answers
   directly.
 - Canceling leaves no partial TOML file.

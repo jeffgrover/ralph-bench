@@ -52,9 +52,11 @@ provenance.
 ### Local and cloud results are different products
 
 Local results prioritize time-to-green and are compared within an exact
-hardware and provider-configuration cohort. Cloud results prioritize
-cost-to-green when metered cost is available. The site does not imply that
-unmetered subscription runs have precise per-run dollar costs.
+hardware and provider-configuration cohort. Every cloud result requires a
+declared cost policy. Metered runs use attributable provider charges or a
+complete price derivation; subscription runs use an explicit share of a flat
+plan/campaign cost. Marginal charge, allocated cost, provider credits, and API
+list-price equivalents remain visibly distinct.
 
 ### The artifact remains available to human judgment
 
@@ -169,9 +171,10 @@ matching environment cohort; cloud comparisons retain provider and service-tier
 context.
 
 The proposed live P0 composition is Codex CLI with ChatGPT-managed OpenAI
-access and `gpt-5.6-luna`. It is an unmetered cloud-subscription cohort, not a
-per-run-cost cohort. All other real harness, provider, and model integrations
-remain TBD while fake adapters prove the generic composition contracts.
+access and `gpt-5.6-luna`. It is a flat-subscription cloud cohort whose primary
+cost is allocated under an explicit versioned policy. All other real harness,
+provider, and model integrations remain TBD while fake adapters prove the
+generic composition contracts.
 
 ## Core workflow
 
@@ -214,3 +217,5 @@ report:
 - Supporting remote artifact stores such as Google Drive.
 - Adding a frontier-model qualitative judge before deterministic evidence is
   stable.
+- Normalizing published token rates and percentage of daily, weekly, or
+  rolling plan quota consumed across subscription tiers.

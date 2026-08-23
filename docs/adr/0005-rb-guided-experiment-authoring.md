@@ -33,6 +33,11 @@ Discovery probes are read-only, bounded, non-generation operations. They never
 store credentials in TOML and report partial or unavailable capabilities
 honestly.
 
+When the selected track is cloud-backed, the wizard also requires and reviews
+a supported cost policy. It may reference a remembered non-secret billing
+profile, but it never infers a plan fee or benchmark allocation from login
+status and never turns missing cost into zero.
+
 ## Consequences
 
 - The common workflow can begin with one short command and no memorized flags.
@@ -45,6 +50,8 @@ honestly.
 - Universal provider/model enumeration is not promised; manual entry is part
   of the normal contract.
 - Wizard convenience state must be isolated from authoritative run inputs.
+- Cloud authoring cannot produce a runnable experiment until its cost-policy
+  inputs validate.
 
 ## Rejected alternatives
 

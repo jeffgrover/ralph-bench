@@ -19,6 +19,11 @@ captures. The submission owns the simulation architecture, control strategy,
 routing strategy, geometry within a fixed infrastructure envelope, and visual
 design.
 
+Delivery is intentionally staged. P0-A completes the Busy Intersection
+evaluator and retains The 5x5 Rush as a versioned descriptor/topology fixture
+on the same challenge boundary. P0-B implements the live city evaluator and
+profiles without changing the conductor.
+
 The public prompt should describe the experience, constraints, evaluator
 contract, and acceptance criteria. It should not prescribe filenames beyond a
 single browser entry point, implementation passes, class names, global
@@ -34,6 +39,9 @@ variables, or a reference architecture.
 - Pinned supported browser dependencies and evaluator bridge assets supplied by
   the challenge pack. Three.js may be supplied for 3D work without requiring
   the intersection to use it.
+- Any supplied dependency the candidate uses must be copied into the final
+  static submission so the bundle remains runnable without the challenge
+  source tree or a network.
 - Normal interactive playback and deterministic evaluator-driven stepping must
   operate on the same simulation state.
 
@@ -189,7 +197,7 @@ instrumentation.
 
 ### Infrastructure envelope
 
-The P0 manifest will fix the footprint, maximum lanes per approach, stop-line
+The P0-A manifest will fix the footprint, maximum lanes per approach, stop-line
 regions, crossing regions, vehicle dimensions, and road speed. No grade
 separation is permitted. Exact lane allocation within the budget remains an
 artifact design choice until calibration shows whether stronger normalization
@@ -214,16 +222,18 @@ is needed.
 - Vehicles continue completing trips.
 - The intersection drains after demand is removed.
 
-### P0 demand profiles
+### Demand profile ladder
 
-1. **Balanced:** similar demand on all approaches with a representative movement
-   mix.
+1. **Balanced:** similar demand on all approaches with a representative
+   movement mix. This is the one production P0-A profile, evaluated across a
+   small fixed seed set.
 2. **Asymmetric:** one dominant direction tests actuated behavior and fairness.
 3. **Turn-heavy:** increased conflicting left turns.
 4. **Pedestrian pulse:** a fixed pedestrian burst tests compatibility and delay.
 
-P0 may score three profiles and retain the fourth as diagnostic, depending on
-evaluation cost.
+P0-A retains fixtures/schema support for all four but ranks only Balanced.
+Additional production profiles are introduced after the end-to-end skeleton is
+stable and thresholds can be calibrated from observed artifacts.
 
 ### Human visual questions
 
@@ -268,9 +278,9 @@ signals, vehicles, congestion, and control response remain legible.
   each grid direction.
 - A grade-separated through freeway bisecting the district.
 - Directionally separated freeway lanes across the full scene.
-- Exactly two P0 interchange areas.
+- Exactly two P0-B interchange areas.
 - On- and off-ramp access for both freeway directions.
-- One-lane P0 ramps unless the versioned manifest states otherwise.
+- One-lane P0-B ramps unless the versioned manifest states otherwise.
 - Local streets crossing above or below the freeway where the design permits.
 - Multiple city boundary entrances and destinations.
 - Signalized city intersections.
@@ -307,7 +317,7 @@ Information design is particularly important at city scale. Status, charts,
 legends, highlights, and labels should reveal the simulation rather than cover
 it. The traffic remains the primary visual subject.
 
-### P0 exclusions
+### P0-B exclusions
 
 - City pedestrians.
 - Parking search or curb management.
@@ -365,7 +375,7 @@ spillback**:
 - Ramp controls do not merely move gridlock from the freeway to the city.
 - The system continues making progress and recovers after peak demand.
 
-### P0 demand profiles
+### P0-B demand profiles
 
 1. **Balanced:** mixed city, interchange, and freeway trips.
 2. **Morning inbound:** freeway exits feed city destinations.
@@ -397,7 +407,10 @@ traffic, and incidents.
 
 - Default full-layout view appropriate to the chosen 2D, 2.5D, or 3D treatment.
 - A canonical demand build-up and release segment.
-- Optional close signal/crosswalk segment.
+- An overview poster from the same artifact/scenario.
+
+This single overview animation/poster pair is the P0-A capture profile. A
+closer signal/crosswalk segment is optional after P0-A.
 
 ### City
 
@@ -406,8 +419,9 @@ traffic, and incidents.
 - Peak congestion segment.
 - Post-peak recovery segment.
 
-P0 may store separate short WebM captures or one chaptered capture. Captures are
-derived evidence inside the run bundle, not authoritative traffic metrics.
+These are P0-B requirements. P0-B may store separate short WebM captures or one
+chaptered capture. Captures are derived evidence inside the run bundle, not
+authoritative traffic metrics.
 
 ## Subjective human visual interpretation
 

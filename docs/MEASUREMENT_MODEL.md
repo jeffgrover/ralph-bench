@@ -102,6 +102,9 @@ A trip counts only when it:
 6. **Cooldown:** New demand stops.
 7. **Recovery:** The evaluator measures queue dissipation and stranded trips.
 
+P0-A uses a bounded fixed held-stage schedule and reports the last qualifying
+and first failing stages. Fresh-run bracket refinement is post-P0-A.
+
 Held stages are preferred to a continuously changing per-frame load because
 the network needs time to reveal unstable queues. A continuous ramp may be
 used for the standardized visual capture.
@@ -191,8 +194,10 @@ excellent.
 
 ## Scenario aggregation
 
-Every profile produces its own capacity and quality vector. P0 should display
-the full vector rather than hiding specialization.
+Every implemented profile produces its own capacity and quality vector. P0-A
+uses one canonical Busy Intersection profile across a small fixed seed set;
+P0-B and later profile expansions display the full vector rather than hiding
+specialization.
 
 Candidate aggregate statistics for later calibration include:
 
@@ -253,21 +258,36 @@ Every metric carries provenance such as:
 
 ## Cloud cost measurements
 
-Cost provenance values include:
+Cost is mandatory for every cloud result. Ralph Bench preserves a cost vector
+rather than one ambiguous number:
 
-- Actual provider/harness reported USD.
-- Token-derived list-price estimate with price-table version.
-- Provider credits.
-- Subscription/unmetered.
-- Unavailable.
+- Provider-billed USD, when attributable.
+- Marginal cash or purchased-credit charge, when observable.
+- Allocated flat-subscription USD.
+- Provider credits or a labeled credit equivalent.
+- Token-derived API list-price equivalent with a versioned price table.
 
-Only comparable metered or transparently derived costs enter a cost ranking.
-Subscription-backed runs remain visible in a separate or unmetered cohort.
+Every value is nullable and carries basis, provenance, confidence, policy/rate
+version, and evidence references. Unknown is not zero. An official cloud cost
+comparison requires complete evidence and a non-null primary USD cost under a
+declared policy.
 
-The live P0 SUT uses Codex CLI with ChatGPT-managed subscription access. Its
-cost provenance is `subscription_unmetered`; per-run USD is `unavailable`, not
-zero and not an estimate derived from OpenAI Platform API pricing. P0 still
-tests metered-cost schemas and reporting with fixtures for future providers.
+The live P0 SUT uses Codex CLI with ChatGPT-managed subscription access. P0
+implements `flat-subscription-attempt-pool/v1`: the operator declares the USD
+amount one experiment should bear, and a closed catalog pool allocates it using
+chargeable model-attempt counts. Passing, failing, tainted, aborted, and
+post-generation infrastructure outcomes consume cost. Marginal cash, raw
+usage, provider credits, and API list-price equivalent remain separate
+secondary fields.
+
+The P0 UI calls this value **allocated subscription USD per chargeable
+attempt/task**. It is a declared accounting allocation, not a provider-reported
+request price. Primary cost rankings require the same mechanical comparability
+key; incompatible policies/source classes appear in separate cohorts.
+
+Open pools may show provisional allocation but do not enter a final cost
+ranking. P0 uses fixtures for metered APIs and missing/incomplete cost rather
+than implementing another live provider. See [`COST_MODEL.md`](COST_MODEL.md).
 
 ## Attempts and resource-to-green
 
@@ -285,15 +305,18 @@ the defined acceptance gate. Later hidden evaluation remains separately timed.
 
 Across repetitions, failed runs are right-censored at their configured budget.
 The site reports pass rate, median successful resource-to-green, tail behavior,
-and the count of budgeted failures. A later ranking may charge failed trials
-their full budget to prevent fast failure from appearing efficient.
+and the count of budgeted failures. Cloud cost-to-green includes the allocated
+or billed cost of failed trials; it may not compute a successful-only mean that
+makes failed work economically disappear.
 
 ## P0 presentation model
 
-P0 will expose at least three views:
+P0 will expose four views:
 
 1. **Traffic performance:** sustainable capacity and supporting quality metrics.
-2. **Agent efficiency:** local time or comparable cloud cost to green.
+2. **Agent efficiency:** local time or policy-compatible cloud cost to green,
+   with allocated, marginal, credit, and equivalent values labeled separately
+   when present.
 3. **Pareto comparison:** resource-to-green versus sustainable throughput,
    with repeated-run reliability encoded separately.
 4. **Human visual review:** runnable artifact, standardized captures, and the
