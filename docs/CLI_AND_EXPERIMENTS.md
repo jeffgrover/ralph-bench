@@ -167,6 +167,8 @@ repetitions = 3
 [client_options]
 reasoning_effort = "high"
 loop = "controlled"
+# Optional when discovery requires a non-default executable:
+# executable = "/opt/codex/bin/codex"
 
 [budget]
 max_wall_seconds = 1200
@@ -202,6 +204,10 @@ The file contains no API keys, session tokens, or copied client credentials.
 It may refer to an environment variable or credential profile by name. Runtime
 preflight records requested and effective configuration—with secrets
 redacted—in the immutable result bundle.
+
+When the operator supplies a non-default client executable, the wizard writes
+that non-secret path to `client_options.executable`; later preflight must use
+the recorded path rather than silently returning to `PATH` discovery.
 
 Unknown fields and unsupported client/provider combinations should fail with a
 specific validation message. The wizard should use the same schema and

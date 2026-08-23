@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ralph-bench"
+version = "0.1.0"
+description = "Reproducible benchmark harness for agentic coding systems"
+readme = "README.md"
+requires-python = ">=3.11"
+
+[project.scripts]
+rb = "ralph_bench.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

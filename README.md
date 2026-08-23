@@ -58,3 +58,28 @@ remain deterministic and automation-friendly.
 The run command will create versioned, immutable result bundles. The build
 command will validate and aggregate those bundles into a static site without
 modifying the source evidence.
+
+## Current implementation slice
+
+The first P0-A contract spine is implemented and tested:
+
+- `rb`/`rb configure` provides client-first experiment authoring with read-only
+  Codex and ChatGPT probes and explicit subscription-cost inputs.
+- `rb doctor` reports bounded Codex detection without exposing command output.
+- `rb bundle validate` performs read-only validation of the P0-A immutable
+  bundle profile.
+- The conductor attempt loop, staged-workspace isolation, canonical events,
+  subscription pool accounting, and deterministic bundle finalizer are usable
+  as Python contracts.
+
+`rb run` and `rb build` are registered but deliberately fail closed in this
+slice; live model execution, traffic evaluation/capture, and static reporting
+are the next implementation waves.
+
+For development:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -e .
+.venv/bin/python -m unittest discover -s tests -v
+```
