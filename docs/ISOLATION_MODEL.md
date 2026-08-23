@@ -106,15 +106,28 @@ private judge pack are never copied into the run root.
 
 ## Configuration handling
 
-- Prefer explicit per-run config paths and environment variables.
-- Otherwise use an ephemeral HOME/XDG/config directory.
-- Copy only necessary authentication material, with minimal permissions.
-- Never archive the scoped home as an artifact.
-- Record hashes or nonsecret effective settings rather than credentials.
-- Verify restoration when an adapter must modify external global state.
+Configuration follows the centralized lifecycle defined in
+[`CONFIGURATION_MODEL.md`](CONFIGURATION_MODEL.md):
 
-Harness/provider idempotence includes preflight state, effective configuration,
-cleanup, and post-run verification.
+- The validated experiment is the single source of requested intent.
+- The conductor resolves and orders configuration actions.
+- A provider adapter exclusively owns provider/runtime setup and observation;
+  a client adapter exclusively owns its scoped native client configuration.
+- Prefer explicit per-run config paths and environment overlays inside an
+  ephemeral HOME/XDG/config directory.
+- Do not silently inherit user-global client configuration. Copy or broker only
+  explicitly referenced authentication material, with minimal permissions.
+- Never archive the scoped home, native credential material, or unredacted
+  configuration as an artifact.
+- Record requested, materialized, effective, and cleanup configuration as
+  distinct redacted evidence.
+- Snapshot authorized external state, register rollback before mutation, and
+  verify restoration after success, failure, cancellation, and timeout.
+
+Client/provider idempotence includes preflight state, a reviewable action plan,
+effective configuration, cleanup, and post-run verification. In particular,
+LM Studio lifecycle behavior is implemented once by its provider adapter, not
+separately by every client adapter.
 
 ## Network policy
 

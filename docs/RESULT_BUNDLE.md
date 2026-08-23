@@ -63,7 +63,9 @@ the bundle.
 │   ├── environment.json
 │   ├── hardware.json
 │   ├── software.json
+│   ├── client.json
 │   ├── provider.json
+│   ├── configuration.json
 │   ├── isolation.json
 │   └── redaction.json
 └── checksums.sha256
@@ -83,9 +85,9 @@ The manifest should include:
 - Challenge and judge-pack identifiers/versions.
 - SUT identity:
   - model
-  - harness and version
+  - client/harness and version
   - provider and service tier
-  - requested/effective configuration
+  - requested/effective configuration summary
   - effort and tool policy
 - Run validity and outcome.
 - Attempt count and selected candidate hash.
@@ -96,6 +98,13 @@ The manifest should include:
 
 Directory names and filenames are display conveniences; they are never parsed
 to reconstruct identity.
+
+`provenance/configuration.json` preserves redacted authored, resolved,
+materialized, effective, and cleanup state as distinct sections. It includes
+generated configuration hashes, environment key names, command shape,
+requested/effective mismatches, restoration results, and confidence. It never
+contains raw credentials, copied user-global configuration, or an archived
+scoped home.
 
 ## Canonical events
 
@@ -227,7 +236,7 @@ enter official reports.
 
 ## Ingest and reporting
 
-`ralph build` follows a read-only transform:
+`rb build` follows a read-only transform:
 
 ```text
 bundle inbox -> validate -> catalog/cache -> derived site

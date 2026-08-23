@@ -17,6 +17,8 @@ is approved until the documents below are reviewed.
 
 - [Vision](docs/VISION.md)
 - [P0 implementation plan](docs/P0_PLAN.md)
+- [`rb` CLI and experiment authoring](docs/CLI_AND_EXPERIMENTS.md)
+- [Configuration ownership and lifecycle](docs/CONFIGURATION_MODEL.md)
 - [Traffic challenge specifications](docs/TRAFFIC_CHALLENGES.md)
 - [Measurement model](docs/MEASUREMENT_MODEL.md)
 - [Immutable result bundle](docs/RESULT_BUNDLE.md)
@@ -26,9 +28,15 @@ is approved until the documents below are reviewed.
 ## Intended command shape
 
 ```bash
-ralph run experiments/local-intersection.toml
-ralph build --source results/inbox --output site
+rb
+rb run experiments/local-intersection.toml
+rb build --source results/inbox --output site
 ```
+
+With no arguments, `rb` will guide the user through a client-first experiment
+wizard, safely probe the selected client for compatible providers and models,
+write a validated TOML specification, and offer to run it. Explicit commands
+remain deterministic and automation-friendly.
 
 The run command will create versioned, immutable result bundles. The build
 command will validate and aggregate those bundles into a static site without

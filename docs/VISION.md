@@ -73,6 +73,23 @@ Execution produces a versioned, checksummed bundle. Reporting consumes bundles
 and writes a separate static site. It never edits, truncates, or adds HTML to
 the source evidence.
 
+### The common path is guided; the execution path is declarative
+
+`rb` with no arguments helps the user choose a client first, discover
+compatible providers and models, complete the remaining controls, and save a
+validated experiment TOML file. That file is the reproducibility boundary.
+Explicit runs do not depend on remembered interactive answers, and discovery
+never performs billable generation work or stores secrets.
+
+### Configuration has one owner and one lifecycle
+
+The conductor resolves one normalized experiment into provider and client
+actions. Provider adapters configure and observe providers such as LM Studio;
+client adapters render only their own scoped native configuration. Requested,
+materialized, effective, and cleanup states remain distinct evidence. Ralph
+Bench does not reproduce a collection of harness-specific provider setup paths
+or silently depend on user-global configuration.
+
 ### Challenge contracts stay small
 
 Difficulty comes from behavior, scenario variation, hidden holdouts, and
@@ -145,7 +162,8 @@ context.
 
 ```mermaid
 flowchart LR
-    E["Experiment specification"] --> R["Isolated agent run"]
+    W["rb guided authoring"] --> E["Validated experiment TOML"]
+    E --> R["Isolated agent run"]
     R --> A["Candidate artifact"]
     A --> C["Public and private checks"]
     C --> T["Traffic load-to-failure evaluation"]

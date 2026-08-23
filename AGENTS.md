@@ -33,6 +33,8 @@ Read these before P0 implementation:
 
 - `docs/VISION.md`
 - `docs/P0_PLAN.md`
+- `docs/CLI_AND_EXPERIMENTS.md`
+- `docs/CONFIGURATION_MODEL.md`
 - `docs/TRAFFIC_CHALLENGES.md`
 - `docs/MEASUREMENT_MODEL.md`
 - `docs/RESULT_BUNDLE.md`
@@ -47,6 +49,23 @@ not silently resolve an unapproved product decision through implementation.
 - This is a greenfield repository. Consult the legacy `llm-eval` repository
   selectively, but do not reproduce its directory-name identity, report-time
   mutation, or run/report coupling.
+- The installed command is `rb`. With no arguments in an interactive terminal,
+  it starts a client-first experiment wizard; explicit commands remain
+  available for deterministic automation.
+- Use `client` in the user-facing experiment format and interface. Internally,
+  client execution may be implemented by runner adapters.
+- Discovery must be read-only, non-billable, bounded, provenance-labeled, and
+  able to degrade to manual provider/model entry. It must never copy secrets
+  into an experiment file.
+- The wizard and `rb run` must share the same schema and semantic validation.
+  Saved TOML is authoritative for execution; remembered wizard state is not.
+- The conductor centrally owns configuration resolution and lifecycle. Provider
+  adapters own provider setup/observation; client adapters own scoped native
+  client configuration. Do not configure a provider independently inside each
+  client adapter or silently inherit user-global configuration.
+- Preserve requested, materialized, effective, and cleanup configuration as
+  distinct redacted evidence. Setup must register rollback, and cleanup must be
+  attempted after success, failure, cancellation, and timeout.
 - Every repetition receives a unique run ID and produces one immutable,
   checksummed `.ralph.zip` bundle.
 - Run identity and metadata come from manifests, never filenames or HTML.
@@ -104,6 +123,8 @@ not silently resolve an unapproved product decision through implementation.
 
 P0 tests must cover:
 
+- Client detection, partial/failed discovery, intelligent defaults, wizard
+  navigation, TOML round-tripping, cancellation, and non-interactive behavior.
 - Schema/version handling and run state transitions.
 - Unique IDs and non-overwriting repetitions.
 - Attempt preservation and controlled feedback.
