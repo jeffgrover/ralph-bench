@@ -16,10 +16,11 @@ The benchmark asks a more useful question:
 > accepted work, how well does that work perform, and how much local time or
 > cloud cost does success require?
 
-The initial benchmark uses browser-based Three.js traffic simulations because
+The initial benchmark uses browser-based visual traffic simulations because
 they combine spatial reasoning, state management, scheduling, routing,
-debugging, and software craftsmanship with a result that humans can understand
-at a glance.
+debugging, information design, and software craftsmanship with a result that
+humans can understand at a glance. The local intersection may be 2D, 2.5D, or
+3D; the frontier city is intended as a grand spatial showcase.
 
 ## Product principles
 
@@ -59,7 +60,12 @@ unmetered subscription runs have precise per-run dollar costs.
 
 Deterministic checks establish validity and measurable behavior. Standardized
 captures and runnable artifacts let people judge physical plausibility,
-legibility, creativity, and the everyday fidelity of the simulation.
+legibility, creativity, and the everyday fidelity of the simulation. Layout,
+composition, color, typography, information hierarchy, motion, atmosphere,
+polish, originality, and delight are legitimate dimensions of excellence. They
+remain separate from traffic correctness: visual beauty cannot rescue an
+invalid simulation, and technical success does not automatically imply a
+compelling human experience.
 
 ### Evidence is immutable; reports are derived
 
@@ -104,7 +110,10 @@ pilot data shows that one would be honest and useful.
 
 A compact four-way traffic simulation for local and smaller models. It tests
 continuous vehicle motion, traffic signals, turning movements, queues,
-pedestrians, fairness, and safe throughput in a bounded scene.
+pedestrians, fairness, and safe throughput in a bounded scene. The presentation
+may be an exceptionally polished 2D graphic, a dimensional 2.5D visualization,
+or a full 3D environment; it is judged by visual effectiveness rather than by
+technology choice.
 
 ### The 5x5 Rush
 
@@ -112,7 +121,9 @@ A frontier challenge in which a five-by-five-block city is bisected by a
 grade-separated freeway with complete on- and off-ramp connections. It adds
 origin-to-destination routing, multiple signals, freeway merging, interchange
 design, spillback containment, network-wide congestion, and post-peak
-recovery.
+recovery. It is also the grand visual challenge: a model city whose spatial
+design, atmosphere, motion, and information layer should make complex network
+behavior inviting and memorable.
 
 The two challenges share a traffic evaluation protocol so the smaller task
 proves the unit behavior that the larger task composes into a network.
@@ -157,6 +168,8 @@ report:
 - How long or how much money did it take?
 - What hardware, provider, and configuration produced the result?
 - What did the artifact actually look and feel like?
+- Did its layout, visual language, motion, and information design create a
+  compelling experience without obscuring the traffic mission?
 
 ## Explicit non-goals for P0
 

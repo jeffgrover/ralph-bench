@@ -64,7 +64,12 @@ candidate, with attempt history retained.
 ### 6. Qualitative judgment
 
 P0 preserves runnable artifacts and standardized captures for human judgment.
-Automated frontier-model qualitative judging is deferred.
+Review considers composition/layout, visual coherence, spatial legibility,
+information design, motion fidelity, atmosphere/polish, originality/delight,
+and whether the visuals strengthen rather than distract from the traffic
+mission. A 2D intersection is not penalized merely for being 2D, and visual
+quality remains separate from validity and traffic performance. Automated
+frontier-model qualitative judging is deferred.
 
 ## Sustainable valid throughput
 
@@ -286,6 +291,8 @@ P0 will expose at least three views:
 2. **Agent efficiency:** local time or comparable cloud cost to green.
 3. **Pareto comparison:** resource-to-green versus sustainable throughput,
    with repeated-run reliability encoded separately.
+4. **Human visual review:** runnable artifact, standardized captures, and the
+   challenge's technology-neutral qualitative prompts.
 
 The benchmark does not declare that a visually excellent but slow artifact, a
 cheap adequate artifact, and an expensive high-capacity artifact are the same

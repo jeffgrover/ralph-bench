@@ -256,6 +256,8 @@ hidden check results, or reporter output.
 **Deliverables**
 
 - Public challenge pack and prompt.
+- Technology-neutral visual brief allowing a polished 2D, 2.5D, or 3D
+  intersection presentation.
 - Private P0 scenarios and thresholds.
 - Topology, signal, movement, pedestrian, safety, fairness, and queue checks.
 - One standardized visual capture.
@@ -292,6 +294,8 @@ hidden check results, or reporter output.
 **Deliverables**
 
 - Public frontier challenge pack.
+- Grand visual brief covering city-scale composition, spatial legibility,
+  information design, atmosphere, and creative latitude.
 - Grid, freeway, crossing, interchange, ramp, and OD-route validation.
 - Balanced, inbound, and outbound P0 demand profiles.
 - Ramp spillback, blocked-intersection, freeway collapse, fairness, and recovery
@@ -314,7 +318,7 @@ hidden check results, or reporter output.
 - Bundle discovery, validation, quarantine, and ingest.
 - Local/cloud top-level separation.
 - Run detail page with artifact, capture, assertions, failures, metrics,
-  throughput curve, attempts, and provenance.
+  throughput curve, attempts, provenance, and human visual-review prompts.
 - Combination aggregation with repetitions and sample counts.
 - Performance-versus-resource Pareto chart.
 

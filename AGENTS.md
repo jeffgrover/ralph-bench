@@ -48,6 +48,11 @@ not silently resolve an unapproved product decision through implementation.
 - Public challenge packs and private judge packs are separate inputs.
 - The evaluator supplies and accounts for traffic demand; the artifact cannot
   choose how much work it receives.
+- The Busy Intersection may use 2D, 2.5D, or 3D presentation. Do not encode a
+  rendering-technology preference into traffic acceptance or visual review.
+- Treat layout, visual coherence, information design, motion, polish,
+  originality, and delight as explicit human-review dimensions, while keeping
+  them separate from traffic validity and throughput.
 - Authoritative timings, private checks, validity, bundle inventory, and
   checksums are conductor-owned.
 - Keep native harness loops and evaluator-controlled repair loops explicitly
