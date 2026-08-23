@@ -41,11 +41,11 @@ Read these before P0 implementation:
 - `docs/COST_MODEL.md`
 - `docs/RESULT_BUNDLE.md`
 - `docs/ISOLATION_MODEL.md`
-- `docs/adr/`, especially ADR 0009 (P0 seam breadth) and ADR 0010 (mandatory
-  cloud cost)
+- `docs/adr/`, especially ADR 0009 (P0 seam breadth) and ADR 0011 (cloud cost
+  evidence, OpenRouter references, and deferred subscription allocation)
 
-The P0-A planning packet and ADRs were accepted on 2026-08-23. Do not silently
-expand or revise an accepted product decision through implementation.
+The P0-A planning packet was accepted on 2026-08-23 as amended by ADR 0011.
+Do not silently expand scope through implementation.
 
 ## Architectural constraints
 
@@ -101,10 +101,24 @@ expand or revise an accepted product decision through implementation.
   labeled and separate.
 - Missing, estimated, provider-reported, and evaluator-measured values are not
   interchangeable; metric provenance is required.
-- Every cloud experiment requires a supported cost policy. Keep provider-billed
-  cash, marginal cash, allocated subscription cost, provider credits, and
-  list-price equivalents as separate nullable values; unknown must never
-  become numeric zero.
+- Every cloud result preserves typed cost evidence, but P0-A does not require a
+  numeric cost or a subscription allocation. Keep route-attributable actual
+  charge (including an OpenRouter usage debit) and normalized reference cost as
+  the generic `actual_cost_usd` and `reference_cost_usd` fields. Each populated
+  amount requires its matching `actual_source` or `reference_source`; both may
+  coexist. `status` is independently `complete`, `provisional`, or
+  `unavailable`; unavailable evidence has null amounts and sources plus an
+  explicit `unavailable_reason`. OpenRouter is the canonical normalized cloud
+  reference authority for the next provider slice, represented in the source
+  and UI label rather than in a vendor-coupled field name. A non-OpenRouter run
+  is not OpenRouter-billed merely because its model can be mapped to that
+  catalog.
+- Provider `CostCapabilities.billing_modes` drive compatible experiment
+  tracks (for example, `flat_subscription` maps to `cloud-subscription` and
+  `local` maps to `local`); the resolver and wizard use this shared mapping.
+- Challenge and track combinations resolve through one shared scenario-profile
+  registry. The wizard and experiment parser both validate the derived
+  `scenario_pack`; operators should not invent incompatible profile IDs.
 - Do not introduce a single composite overall score during P0.
 
 ## P0 implementation posture
@@ -121,9 +135,13 @@ expand or revise an accepted product decision through implementation.
 - Authentication is operator-managed. Probe it read-only with
   `codex login status`; never copy, print, archive, or silently replace ChatGPT
   credentials.
-- Treat ChatGPT-backed access as a flat subscription with mandatory allocated
-  USD cost under `flat-subscription-attempt-pool/v1`. API list-price equivalent
-  is a separate diagnostic, never the subscription bill.
+- Treat ChatGPT-backed access as a flat subscription whose P0-A per-run USD
+  cost is unavailable. Preserve time, token, independent-run, and repair-pass
+  evidence; defer subscription/quota accounting. A future OpenRouter adapter
+  may report an attributable OpenRouter usage debit for requests that traverse
+  OpenRouter and may derive a clearly labeled reference cost from an exact
+  model mapping, frozen pricing snapshot, complete supported pricing
+  components, and token evidence.
 - P0-A completes Busy Intersection. Keep a 5x5 Rush descriptor/topology fixture
   on the shared challenge boundary, but defer its live evaluator and model run
   to P0-B.
@@ -158,8 +176,9 @@ P0 tests must cover:
 - Client detection, partial/failed discovery, intelligent defaults, wizard
   navigation, TOML round-tripping, cancellation, and non-interactive behavior.
 - Codex CLI version/auth preflight fixtures, JSONL normalization, explicit Luna
-  selection, ChatGPT credential-canary isolation, and flat-subscription cost
-  allocation/provenance.
+  selection, ChatGPT credential-canary isolation, unavailable subscription-cost
+  status, and preservation of time/token/attempt provenance. OpenRouter billing
+  and reference-price fixtures belong to the next provider slice.
 - Schema/version handling and run state transitions.
 - Unique IDs and non-overwriting repetitions.
 - Attempt preservation and controlled feedback.

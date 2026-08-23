@@ -1,279 +1,198 @@
-# Cloud and Subscription Cost Model
+# Cloud Cost and Price-Reference Model
 
-**Status:** Accepted
+**Status:** Accepted, as amended by [ADR 0011](adr/0011-cloud-cost-evidence-and-openrouter-references.md)
 **Date:** 2026-08-23
 
 ## Decision summary
 
-Cost is required for every cloud comparison, including flat-subscription
-access. A missing provider charge must never become numeric zero, and a
-subscription must not be described as free merely because an individual
-request has no invoice line.
+Ralph Bench records cost evidence without inventing a charge. A cloud run may
+have an observed provider bill, a reproducible normalized price reference, or
+no available cost. These are different facts and are never collapsed into one
+leaderboard number.
 
-Ralph Bench keeps these concepts separate:
+OpenRouter is the canonical source for normalized cloud reference prices in
+the next provider slice. Its mutable model catalog and pricing snapshot can
+provide a common reference for models reached through OpenRouter and, with an
+explicit model mapping, a reproducible equivalent for a run reached through
+another provider. OpenRouter is not automatically the biller for an inference
+that did not traverse OpenRouter.
 
-| Field | Unit | Meaning |
-|---|---|---|
-| `primary_cost_usd` | USD | Cost used for the run's declared comparison cohort. |
-| `provider_billed_usd` | USD | Charge attributed to the run by a provider or harness. |
-| `marginal_cash_usd` | USD | Incremental cash charge caused by the run, when observable. |
-| `subscription_allocated_usd` | USD | Declared share of a flat plan/campaign cost. |
-| `list_price_equivalent_usd` | USD | What observed usage would cost under a versioned public API table; diagnostic, not billed cash. |
-| `provider_credits_reported` | provider units | Credits attributed to the run by the provider. |
-| `credit_equivalent` | derived units | Token-derived usage weight under a versioned public rate card; not an observed debit. |
-
-These values are not interchangeable. Reports show basis and provenance rather
-than collapsing them into one unexplained number.
+P0-A does not implement OpenRouter billing or subscription accounting. The
+live Codex + ChatGPT path records subscription billing as unavailable and
+continues to report time, token usage when exposed, and attempts. An OpenRouter
+provider implementation is the next provider slice, not a P0-A requirement.
 
 ## Cost evidence contract
 
-Every cloud result carries versioned cost evidence with at least:
+Every cloud result carries a versioned cost envelope with at least:
 
-- `status`: `complete`, `provisional`, or `incomplete`.
+- `status`: `complete`, `provisional`, or `unavailable`.
 - `billing_mode`: `metered_api`, `flat_subscription`, `provider_credits`, or
   `other_declared`.
-- `primary_basis`: the field used as `primary_cost_usd`.
-- Nullable decimal USD fields and separately typed non-USD usage fields.
-- Cost-policy, price/rate-table, allocation-pool, and charge-scope identifiers.
-- Evidence references, provenance, confidence, and explicit assumptions.
-- Effective provider, service tier, model, and billing period without account
-  secrets.
+- `actual_cost_usd`: nullable route-attributable charge for this run. For an
+  OpenRouter request this is an OpenRouter usage debit/charge evidenced by the
+  response or generation record, not an upstream provider invoice. When
+  present, `actual_source` is required.
+- `reference_cost_usd`: nullable normalized comparison value. In the next
+  provider slice, OpenRouter's catalog snapshot is the canonical reference
+  authority; the field remains generic so the source is explicit rather than
+  vendor-coupled. When present, `reference_source` is required.
+- Price-source, model-mapping, token-usage, charge-scope, and evidence
+  references, plus provenance, confidence, and explicit assumptions.
+
+`status` is independent of the two amount fields: `complete` and `provisional`
+require at least one sourced amount, and `actual_cost_usd` and
+`reference_cost_usd` may coexist; `unavailable` requires both amounts and both
+source fields to be `null` plus an explicit `unavailable_reason`.
 
 Financial values use decimal strings or integer micros in interchange files,
 not binary floating point. Unknown is `null`; zero is permitted only when
-evidence establishes a real zero for that particular field.
+evidence establishes a real zero for that field. A report must label
+`provider_billed`, `openrouter_reference`, `estimated`, and `unavailable`
+separately.
 
-An official cloud comparison requires a complete derived cost record and
-non-null `primary_cost_usd`. `rb run` rejects a cloud experiment with no
-supported cost policy. A post-run evidence failure is preserved as incomplete
-rather than discarded.
+`actual_cost_usd` may be populated only when:
 
-## Bundle evidence versus derived cost
+1. The inference request traversed OpenRouter and OpenRouter supplied an
+   attributable usage debit/charge, or
+2. The actual inference provider or harness supplied an attributable charge
+   for this run.
 
-The immutable per-run bundle stores `RunCostEvidence`:
+An operator-entered plan fee, a model's public list price, or a token estimate
+does not become `actual_cost_usd`.
 
-- The declared policy and pool identity.
-- Pool scope, cost, expected run IDs, and membership digest.
-- Chargeable attempt count and attempt references.
-- Any provider-attributed cash, credit, token, or usage evidence.
-- Provisional/incomplete status and assumptions.
+## OpenRouter reference semantics
 
-The rebuildable catalog creates a `DerivedCostRecord` after it validates and
-closes the pool. That record contains final `subscription_allocated_usd` and
-`primary_cost_usd`. The reporter never writes the final value back into source
-bundles.
-
-This split makes allocation reproducible without weakening bundle immutability.
-The bundle set remains the authoritative input; the catalog is disposable.
-
-## P0 concrete policy: flat subscription attempt pool
-
-P0 implements one real policy for Codex + ChatGPT + Luna:
+The OpenRouter adapter captures a versioned pricing snapshot and records every
+applicable pricing component exposed by the selected route, including prompt,
+completion, cache read/write, request, image, web-search, and internal
+reasoning rates, plus overrides or discounts. It also records the requested
+model, canonical OpenRouter model, route/provider/fallback details, and any
+route or discount qualifier. A derived reference cost is reproducible from:
 
 ```text
-flat-subscription-attempt-pool/v1
+model mapping + pricing snapshot digest/effective time + complete supported
+usage/component evidence
 ```
 
-P0 narrows a pool to one execution of one experiment: a single SUT, challenge,
-and declared repetition set. The operator declares:
+For a run that did not traverse OpenRouter, the result may expose
+`reference_cost_usd` only when all three inputs are present. The UI label is
+**OpenRouter-equivalent reference cost**, with the model mapping and snapshot
+identifiers visible. It must not be labeled “cost paid,” “actual cost,” or
+“OpenRouter bill.” The source field identifies the catalog snapshot used.
 
-- Stable pool ID.
-- `pool_scope = "experiment"`.
-- USD amount assigned to this experiment as `pool_cost_usd`.
-- Billing-period cost, benchmark allocation fraction, service-plan ID,
-  `pool_cost_source`, and allocation rationale that produced that amount.
-- Billing/campaign start and end for provenance.
-- Closure rule `all_expected_runs_terminal`.
+If a model cannot be mapped unambiguously, a priced component or route is not
+supported, native usage counts are missing, or the pricing snapshot is stale
+beyond the declared policy, the reference remains `null`/unavailable. The
+catalog must not silently select a similarly named model, omit a surcharge, or
+turn missing usage into zero.
 
-`pool_cost_usd` is a declared accounting allocation, not an observed provider
-bill. P0 validates it as the billing-period cost multiplied by the declared
-benchmark fraction, with versioned decimal rounding. The wizard displays and
-reconfirms every input. It must not infer the plan from login status or silently
-assign 100% of a personal subscription. P0 is USD-only and rejects a different
-currency instead of performing an implicit conversion.
+For a request that did traverse OpenRouter, the adapter stores the generation
+ID and raw response usage. When OpenRouter returns `usage.cost`, that value is
+the attributable OpenRouter usage debit/charge; it is not an upstream provider
+invoice. The independently derived reference value remains diagnostic.
+OpenRouter's selected route or top-provider price can differ from the catalog
+price, so the route/fallback evidence is required.
+Token counts captured by another harness are not automatically OpenRouter
+native counts; if used for an equivalent calculation they are marked
+approximate.
 
-Zero is accepted only with evidence for a genuinely zero-price/free plan under
-the selected source class. A manually typed zero with no plan/source evidence
-is incomplete.
+## P0-A subscription behavior
 
-### Chargeable attempt unit
+P0-A uses Codex CLI with ChatGPT-managed subscription access. It does **not**
+ask the operator to allocate a share of a plan fee, enter a billing period, or
+confirm a synthetic per-attempt amount. Subscription and quota accounting are
+deferred.
 
-The primary P0 allocation weight is deliberately simple and attributable:
+The P0-A bundle records:
+
+- `billing_mode = "flat_subscription"`;
+- `actual_cost_usd = null`, `reference_cost_usd = null`,
+  `actual_source = null`, and `reference_source = null`;
+- subscription cost status `unavailable` with an explanation;
+- elapsed time, attempts/repair passes, and provider/harness token evidence
+  when available; and
+- the relevant provider, model, and authentication mode without credentials.
+
+This is a complete diagnostic result, but it is not eligible for a cost-based
+ranking. It remains eligible for quality, throughput, time, token, and
+attempt comparisons. A future subscription policy may add provider-reported
+quota-window evidence or an explicitly declared accounting view, but that is
+a separately versioned design and must not rewrite historical bundles.
+
+## Metered provider policy (next slices)
+
+The first live metered implementation should be OpenRouter:
+
+1. Query `GET /api/v1/models` with `OPENROUTER_API_KEY` held outside the
+   repository and result bundles. Capture the selected model ID and freeze all
+   applicable price components, fetch timestamp, response/digest, and any
+   route or discount qualifiers used for discovery or execution.
+2. Preserve OpenRouter's response usage (including native prompt, completion,
+   reasoning, and cached-token counts) and the generation ID. If needed, fetch
+   usage later by generation ID and retain the raw response as evidence.
+3. Treat OpenRouter's returned `usage.cost` as an attributable OpenRouter
+   usage debit/charge when present; otherwise set `actual_cost_usd` only from
+   another attributable OpenRouter billing evidence source.
+4. Otherwise calculate only the labeled reference value from the frozen rates
+   and complete supported usage/component evidence. Unsupported or ambiguous
+   reference cases remain unavailable.
+5. Derive and retain the OpenRouter reference value from the snapshot and
+   token evidence, clearly labeled as reference even when it matches the bill.
+
+The catalog endpoint covers many models but is not a guarantee that every
+provider model is available. A reference requires an exact, recorded model
+mapping; an ambiguous or missing mapping leaves the reference unavailable.
+For example, a current catalog snapshot may contain the OpenRouter ID
+`openai/gpt-5.6-luna`, but a local or native-provider model ID must not be
+assumed equivalent without mapping evidence. Record the snapshot fetch time
+and digest because catalog membership and pricing can change. See [OpenRouter usage accounting](https://openrouter.ai/docs/cookbook/administration/usage-accounting)
+and the [models endpoint reference](https://openrouter.ai/docs/api/api-reference/models/list-all-models-and-their-properties).
+
+Other providers may later supply their own billing evidence. Their runs can
+still receive an OpenRouter-equivalent reference when a reviewed mapping and
+snapshot exist; they do not become OpenRouter-billed runs.
+
+P0 exercises metered, subscription, provisional, and missing-evidence paths
+with fixtures as useful, but implements no live API-key provider, billing API,
+invoice import, currency conversion, or quota normalization.
+
+## Comparability and reporting
+
+The catalog keeps separate cohorts for:
+
+- route-attributable `actual_cost_usd` (including an OpenRouter usage debit);
+- upstream-provider invoice evidence, when separately available;
+- OpenRouter-equivalent reference cost; and
+- unavailable cost.
+
+Reference costs are comparable only when model mappings, pricing snapshot
+version, all applicable pricing components, token accounting, currency, and
+charge scope are compatible. A
+reference cohort must never be merged with an actual-bill cohort merely because
+both values are denominated in USD. P0-A shows cost as unavailable for the
+live subscription path and does not render a cost leaderboard.
+
+The report should prefer a compact explanation over a fabricated scalar:
 
 ```text
-one conductor-admitted model invocation = one chargeable attempt unit
+Cost: unavailable (ChatGPT subscription; P0-A does not allocate plan fees)
+Time: 184 s    Attempts: 2    Tokens: provider-reported/estimated
 ```
 
-The conductor emits `model_invocation.started` only after preflight succeeds,
-the Codex process has spawned, and the prompt has been made available to that
-process. From that point the request may have reached the service, so the unit
-is charged conservatively even if authentication, networking, JSONL capture,
-or the process later fails. A process-spawn or preflight failure before that
-event has zero units. Every attempt records `generation_started_evidence` and
-`charge_basis = "conservative_invocation_started"`; ambiguous post-spawn cases
-are charged rather than undercounted.
+## Deferred subscription and quota accounting
 
-It includes attempts that later pass, fail, time out, are aborted, become
-tainted, or end in an infrastructure error after invocation. Browser judging,
-traffic simulation, bundling, and report generation are outside this
-model-subscription charge scope and are timed separately.
+A future `QuotaEvidence` extension may show provider-reported before/after
+quota state, window type, remaining units, reset time, plan tier, provenance,
+and confidence. It must not infer a precise allowance solely from marketing
+limits or allocate a personal subscription across experiments without an
+explicit, separately approved policy.
 
-A repaired run normally has two units; a first-attempt green has one. This
-ensures retries and failed work consume allocated cost even when Codex does not
-expose reliable per-run credit debits.
+## OpenRouter slice requirements
 
-### Pool allocation
-
-When the pool closes:
-
-```text
-subscription_allocated_usd(run) =
-    pool_cost_usd
-  * run_chargeable_attempt_units
-  / sum(chargeable_attempt_units for every expected run)
-```
-
-Every generated run remains in the denominator regardless of score validity or
-outcome. Only pre-generation attempts have zero weight. A pool with no
-chargeable attempts cannot be allocated and remains incomplete.
-
-For the P0 experiment cohort:
-
-```text
-cost_to_green =
-    sum(primary cost of every chargeable run in the cohort)
-  / count(accepted green runs)
-```
-
-If generated runs exist but none are green, cost-to-green is undefined and the
-complete allocated pool amount is shown. If every expected run fails before a
-chargeable invocation, the pool cannot close and no allocated amount or
-cost-to-green is reported. A successful-only mean that drops failed or tainted
-generated runs is prohibited.
-
-### Deterministic membership and closure
-
-P0 preserves the two-command workflow; no manual third cost command is needed:
-
-1. Before execution, the conductor expands repetitions, assigns every run ID,
-   and records the expected member list and digest.
-2. Every member bundle carries the same pool declaration, expected IDs, and
-   digest plus its own chargeable-attempt evidence.
-3. `rb build` groups bundles by pool ID and verifies that declarations agree,
-   every expected terminal bundle is present exactly once, the membership
-   digest matches, currency is USD, every member has complete and
-   non-contradictory charge evidence, and total attempt weight is nonzero.
-4. Only then does the catalog mark the pool closed and derive final run costs.
-   Missing, late, duplicate, or contradictory members keep the pool
-   provisional/incomplete and out of the final cost ranking.
-
-This makes closure a deterministic consequence of the immutable inputs. A
-later monthly or cross-experiment accounting pool would require a separate
-versioned closure manifest and is post-P0.
-
-### Example experiment fragment
-
-```toml
-[cost]
-policy = "flat-subscription-attempt-pool/v1"
-pool_id = "chatgpt-luna-intersection-pilot-01"
-pool_scope = "experiment"
-currency = "USD"
-service_plan = "chatgpt-plus"
-billing_period_cost_usd = "20.00"
-benchmark_allocation_fraction = "1.0"
-pool_cost_usd = "20.00"
-pool_cost_source = "operator_attested_period_charge"
-allocation_rationale = "dedicated_benchmark_period"
-billing_period_start = "2026-08-01"
-billing_period_end = "2026-08-31"
-closure = "all_expected_runs_terminal"
-```
-
-The amount is illustrative. The operator supplies the actual USD amount that
-this experiment should bear.
-
-## Comparability and labeling
-
-The derived catalog creates a mechanical cost comparability key from billing
-mode, policy/version, currency, pool scope, pool-cost source class, allocation
-basis/fraction, and charge scope. P0 ranks subscription costs only within a
-matching key; incompatible pools appear in separate cohorts with a “not
-comparable” label. Metered provider cash and API list-price equivalents never
-enter the attempt-allocation cohort merely because all use USD.
-
-The UI label is **Allocated subscription USD per chargeable attempt/task** and
-states that it is declared experiment accounting, not the measured price of a
-model request. Raw tokens, reported credits, and other usage stay separate.
-
-## Secondary usage evidence
-
-P0 preserves raw Codex token/turn/tool evidence when available, but none is
-required to allocate the flat subscription under the primary attempt policy.
-
-Provider-reported credits may be stored only when they are attributable to the
-run. An account/window-level `/status` or dashboard delta is not a precise
-per-run debit unless benchmark usage is serialized/dedicated and the evidence
-supports that attribution. Token-derived ChatGPT credit equivalents must use a
-versioned rate card and remain labeled estimated; they never become
-`provider_credits_reported`.
-
-The cost vector reserves `list_price_equivalent_usd`, but the live P0 path does
-not promise a published per-token breakdown or use API pricing as the
-subscription bill. P0 may exercise that field with deterministic fixtures.
-
-Official sources checked for the contract:
-
-- [ChatGPT and Codex pricing, plan fees, usage, and credit rate card](https://learn.chatgpt.com/docs/pricing)
-- [GPT-5.6 Luna API token pricing](https://developers.openai.com/api/docs/models/gpt-5.6-luna)
-
-## Future metered providers
-
-The same vector supports a future metered API provider:
-
-1. Prefer a provider-attributed billed amount.
-2. Otherwise derive cost from complete token/tool usage and a versioned price
-   table, labeling it derived.
-3. Keep provider credits and list-price equivalent separate.
-4. Mark the result incomplete if a required charge class cannot be observed or
-   derived.
-
-P0 exercises these paths with fixtures only. It does not implement a live API
-key provider, billing API, invoice import, multi-currency conversion, purchased
-credit reconciliation, or account-wide attribution.
-
-## Post-P0 token-rate and quota-burden stretch goal
-
-A future `QuotaEvidence` extension should show both published input/cached/
-output rates and the share of a plan's rolling or fixed quota consumed by a
-run. Candidate fields include window type, window start/end, quota units,
-before/after remaining values, consumed percentage, reset time, plan tier,
-provenance, and confidence.
-
-This must use provider-reported or captured before/after quota state, not infer
-a precise allowance solely from marketing limits. ChatGPT limits can vary by
-plan and window; current documentation directs users to the usage dashboard or
-`/status` for current remaining limits. P0 implements no quota probing,
-daily/weekly normalization, multi-plan comparison, or user-facing published
-per-token cost view.
-
-## P0 acceptance tests
-
-- A cloud experiment with no supported cost policy fails validation.
-- Missing monetary evidence remains null/incomplete rather than `0.0`.
-- Pool membership and chargeable-attempt evidence survive passing, failing,
-  aborted, tainted, and post-generation infrastructure outcomes.
-- A pre-invocation failure receives zero units; a spawned/admitted ambiguous
-  invocation is charged conservatively; a repair consumes a second unit.
-- Closing a pool allocates exactly `pool_cost_usd`, within declared decimal
-  rounding rules.
-- Missing/duplicate members, conflicting or incomplete charge evidence, zero
-  total weight, and non-USD currency prevent closure.
-- Pool cost has source/plan/allocation provenance; an unevidenced zero is
-  rejected.
-- Incompatible comparability keys never share a primary-cost ranking.
-- The same closed bundle set produces the same derived cost records and site.
-- Final catalog allocation never mutates a bundle.
-- Provider-reported credits, derived credit equivalent, API list-price
-  equivalent, and allocated subscription USD cannot be mislabeled as one
-  another.
+- What snapshot freshness and route/fallback evidence are required before a
+  reference becomes comparable rather than approximate?
+- Should a later billing endpoint reconcile or supersede response `usage.cost`,
+  and how should retries or provider credits be represented?
+- Which cross-provider model mappings are reviewed as exact, and which must be
+  marked approximate or left unavailable?

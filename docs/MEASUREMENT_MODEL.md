@@ -258,36 +258,33 @@ Every metric carries provenance such as:
 
 ## Cloud cost measurements
 
-Cost is mandatory for every cloud result. Ralph Bench preserves a cost vector
-rather than one ambiguous number:
+Cloud cost is an evidence field, not a required numeric outcome. Ralph Bench
+preserves a cost vector rather than one ambiguous number:
 
-- Provider-billed USD, when attributable.
-- Marginal cash or purchased-credit charge, when observable.
-- Allocated flat-subscription USD.
-- Provider credits or a labeled credit equivalent.
-- Token-derived API list-price equivalent with a versioned price table.
+- Route-attributable `actual_cost_usd`, when evidenced for this run, with a
+  required `actual_source`. For an OpenRouter request this is an OpenRouter
+  usage debit/charge, not an upstream provider invoice.
+- Generic `reference_cost_usd`, with required `reference_source`, derived from
+  a frozen price snapshot, exact model mapping, and token evidence. OpenRouter
+  is the canonical reference authority for the next provider slice; that
+  authority is expressed in the source/UI label rather than the field name.
+- Provider credits or a labeled credit equivalent, when observable.
+- Explicit `status` of `complete`, `provisional`, or `unavailable`, independent
+  of which amounts are populated. Actual and reference amounts may coexist;
+  unavailable requires null amounts/sources and an explicit reason.
 
-Every value is nullable and carries basis, provenance, confidence, policy/rate
-version, and evidence references. Unknown is not zero. An official cloud cost
-comparison requires complete evidence and a non-null primary USD cost under a
-declared policy.
+Every value is nullable and carries basis, provenance, confidence, price
+snapshot/mapping version, and evidence references. Unknown is not zero. Actual
+cost and reference cost are never merged into one metric or leaderboard. See
+the accepted amendment in [`COST_MODEL.md`](COST_MODEL.md) and [ADR
+0011](adr/0011-cloud-cost-evidence-and-openrouter-references.md).
 
-The live P0 SUT uses Codex CLI with ChatGPT-managed subscription access. P0
-implements `flat-subscription-attempt-pool/v1`: the operator declares the USD
-amount one experiment should bear, and a closed catalog pool allocates it using
-chargeable model-attempt counts. Passing, failing, tainted, aborted, and
-post-generation infrastructure outcomes consume cost. Marginal cash, raw
-usage, provider credits, and API list-price equivalent remain separate
-secondary fields.
-
-The P0 UI calls this value **allocated subscription USD per chargeable
-attempt/task**. It is a declared accounting allocation, not a provider-reported
-request price. Primary cost rankings require the same mechanical comparability
-key; incompatible policies/source classes appear in separate cohorts.
-
-Open pools may show provisional allocation but do not enter a final cost
-ranking. P0 uses fixtures for metered APIs and missing/incomplete cost rather
-than implementing another live provider. See [`COST_MODEL.md`](COST_MODEL.md).
+The live P0 SUT uses Codex CLI with ChatGPT-managed subscription access. P0-A
+does not allocate plan fees or ask for billing-period inputs. It reports
+subscription cost as unavailable while preserving elapsed time, token usage
+when exposed, and attempts/repair passes. This is a complete diagnostic result
+for quality, throughput, time, token, and attempt analysis, but not a cost
+ranking. See [`COST_MODEL.md`](COST_MODEL.md).
 
 ## Attempts and resource-to-green
 
@@ -305,18 +302,20 @@ the defined acceptance gate. Later hidden evaluation remains separately timed.
 
 Across repetitions, failed runs are right-censored at their configured budget.
 The site reports pass rate, median successful resource-to-green, tail behavior,
-and the count of budgeted failures. Cloud cost-to-green includes the allocated
-or billed cost of failed trials; it may not compute a successful-only mean that
-makes failed work economically disappear.
+and the count of budgeted failures. When a cohort has actual billed or
+OpenRouter-equivalent reference evidence, cost-to-green may be derived with
+the basis stated. P0-A subscription runs have cost unavailable, so their
+time/token/attempt resource-to-green remains visible while cost-to-green is
+not computed.
 
 ## P0 presentation model
 
 P0 will expose four views:
 
 1. **Traffic performance:** sustainable capacity and supporting quality metrics.
-2. **Agent efficiency:** local time or policy-compatible cloud cost to green,
-   with allocated, marginal, credit, and equivalent values labeled separately
-   when present.
+2. **Agent efficiency:** local time or cloud cost/reference-to-green, with
+   provider-billed, OpenRouter-equivalent, credit, and unavailable values
+   labeled separately when present.
 3. **Pareto comparison:** resource-to-green versus sustainable throughput,
    with repeated-run reliability encoded separately.
 4. **Human visual review:** runnable artifact, standardized captures, and the

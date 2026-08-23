@@ -16,17 +16,20 @@ The P0 live system under test is:
 Codex CLI x ChatGPT-managed OpenAI access x gpt-5.6-luna
 ```
 
-It is a cloud-subscription path with mandatory, explicitly allocated cost.
-Other real harnesses, providers, and models remain TBD; deterministic fake
-adapters preserve polymorphic contract coverage during P0.
+It is a cloud-subscription path whose P0-A cost is explicitly unavailable;
+time, token, and attempt evidence remain reportable. OpenRouter is the next
+provider slice for billed and normalized reference pricing. Other real
+harnesses, providers, and models remain TBD; deterministic fake adapters
+preserve polymorphic contract coverage during P0.
 
 P0-A completes one Busy Intersection vertical slice through every durable
 boundary. The 5x5 Rush is retained as a contract/fixture in P0-A and becomes
 the P0-B challenge-generalization milestone.
 
-The P0-A planning packet was accepted on 2026-08-23 and implementation is now
-underway. The documents below are the approved product and architecture
-contracts for this milestone.
+The P0-A planning packet was accepted on 2026-08-23, as amended by [ADR
+0011](docs/adr/0011-cloud-cost-evidence-and-openrouter-references.md), and
+implementation is underway. P0-A does not allocate subscription fees;
+OpenRouter billing/reference support is the next provider slice.
 
 ## P0-A design documents
 
@@ -64,13 +67,22 @@ modifying the source evidence.
 The first P0-A contract spine is implemented and tested:
 
 - `rb`/`rb configure` provides client-first experiment authoring with read-only
-  Codex and ChatGPT probes and explicit subscription-cost inputs.
+  Codex and ChatGPT probes; P0-A has no subscription-cost questionnaire.
 - `rb doctor` reports bounded Codex detection without exposing command output.
 - `rb bundle validate` performs read-only validation of the P0-A immutable
   bundle profile.
+- Cost evidence uses the generic `actual_cost_usd` and
+  `reference_cost_usd` fields with required matching source fields. Status is
+  independent, and P0-A records flat-subscription cost as unavailable with an
+  explicit reason; OpenRouter is the canonical reference authority for the
+  next provider slice and appears in source/UI provenance rather than a field
+  name.
+- Provider billing capabilities select compatible tracks, while the shared
+  challenge/track scenario-profile registry derives and validates the
+  persisted scenario pack in both the wizard and experiment parser.
 - The conductor attempt loop, staged-workspace isolation, canonical events,
-  subscription pool accounting, and deterministic bundle finalizer are usable
-  as Python contracts.
+  unavailable-subscription cost evidence, and deterministic bundle finalizer
+  are usable as Python contracts.
 
 `rb run` and `rb build` are registered but deliberately fail closed in this
 slice; live model execution, traffic evaluation/capture, and static reporting

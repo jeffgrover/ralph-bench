@@ -187,8 +187,8 @@ Record at least:
 - Public and private pack digests.
 - Harness binary/version and command shape with secrets redacted.
 - Model/provider identifiers and requested/effective settings.
-- Cloud billing mode, cost-policy/pool identity, and redacted cost inputs and
-  evidence provenance.
+- Cloud billing mode, cost/reference status, and redacted billing, model
+  mapping, pricing-snapshot, and evidence provenance.
 - Tool policy and network capability.
 - Hardware, OS, browser, Node, Python, inference runtime, and relevant driver
   versions.

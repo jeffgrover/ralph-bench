@@ -1,6 +1,6 @@
 # P0 Skeleton Plan
 
-**Status:** Accepted
+**Status:** Accepted, as amended by [ADR 0011](adr/0011-cloud-cost-evidence-and-openrouter-references.md)
 **Date:** 2026-08-23
 **P0-A target:** One complete Busy Intersection vertical slice through every
 durable system boundary
@@ -10,7 +10,7 @@ durable system boundary
 Build the smallest Ralph Bench that is already shaped like the intended
 product: guided experiment authoring, polymorphic SUT resolution, controlled
 execution, staged isolation, deterministic browser evaluation, immutable
-evidence, mandatory cloud cost, and a visually coherent derived report.
+evidence, honest cloud-cost provenance, and a visually coherent derived report.
 
 The abstractions are not speculative. The legacy evaluator already proves the
 need for separate harness/provider/model behavior, normalized metrics and
@@ -47,7 +47,7 @@ several production variants.
 | Browser | Versioned browser observation/capture boundary | One pinned Chromium/Playwright worker | Other browsers, capture backends, and viewpoints |
 | Challenge | Versioned challenge plug-in boundary and shared `traffic/v1` | Busy Intersection | Live 5x5 Rush evaluator and other challenge families |
 | Load search | Evaluator-owned demand, held stages, failure and recovery semantics | One bounded deterministic stage schedule, no bracket refinement | Multiple production profiles and adaptive refinement |
-| Cost | Typed cost vector, policy, provenance, and completeness | Flat ChatGPT subscription attempt-pool allocation | Live API billing, invoice imports, token/quota normalization |
+| Cost | Typed cost vector, billing/reference provenance, and completeness | P0-A subscription result with cost unavailable plus time/token/attempt evidence | OpenRouter billing/reference implementation, subscription allocation, invoices, token/quota normalization |
 | Reporting | Read-only bundle view model | One polished index and one run-detail page | Rich explorer, full Pareto interaction, alternate themes |
 | Media | Standard capture record tied to artifact hash | One animated overview plus poster | Multi-angle and side-by-side synchronized playback |
 
@@ -68,7 +68,8 @@ P0-A is complete when all of the following are true:
 - Harness, provider, and model adapters compose into a `ResolvedSUT`; adding a
   compatible fake adapter requires no conductor or wizard branch.
 - The real wizard path detects Codex, checks ChatGPT authentication read-only,
-  offers Luna, and requires a valid subscription cost policy.
+  and offers Luna. It does not ask for a subscription allocation or cost
+  questionnaire.
 - Every repetition and attempt has a unique identity and is never overwritten.
 - A controlled public-check loop permits at most one repair attempt and
   preserves both candidates and their resource use.
@@ -76,11 +77,13 @@ P0-A is complete when all of the following are true:
   isolation limits and canary results are recorded honestly.
 - A Codex + ChatGPT + Luna run invokes Busy Intersection and preserves complete
   evidence whether the model passes or fails.
-- Cloud cost evidence records pool membership and chargeable attempts; once all
-  expected bundles are present, the derived catalog contains non-null allocated
-  subscription USD. Raw usage/provenance remains separate, and missing cost is
-  never zero. An experiment with no chargeable model invocation remains
-  diagnostic and cost-incomplete.
+- Cloud cost evidence records billing mode, route-attributable actual charge
+  when evidenced, and any clearly labeled reference cost. An OpenRouter actual
+  is an attributable OpenRouter usage debit/charge, not an upstream provider
+  invoice. The live subscription path reports cost unavailable rather than
+  inventing an allocation, while preserving time, token, and attempt evidence.
+  Missing cost is never zero and does not block diagnostic, quality,
+  throughput, time, token, or attempt reporting.
 - Busy Intersection exposes `traffic/v1`; evaluator-driven stepping and visible
   playback use the same simulation state.
 - Evaluator-owned demand rises through held stages until the first sustained
@@ -137,14 +140,15 @@ rb build --source results/inbox --output site
 
 Zero-argument `rb` starts with client selection, then uses bounded, read-only
 adapter probes for compatible providers and models. It previews and validates
-the TOML, saves atomically, and may offer to run it. Explicit commands remain
+the TOML, saves atomically, and may offer to run it *(target behavior; the
+current wizard saves but does not offer execution)*. Explicit commands remain
 suitable for unattended use.
 
 An illustrative P0-A experiment is:
 
 ```toml
 schema_version = "experiment/v1"
-name = "codex-chatgpt-luna-intersection"
+name = "codex-luna"
 challenge = "busy-intersection/v1"
 client = "codex-cli"
 provider = "openai-chatgpt"
@@ -155,36 +159,27 @@ repetitions = 3
 [client_options]
 reasoning_effort = "high"
 loop = "controlled"
+# Independent repetitions are represented by `repetitions` above.
+# Evaluator-controlled Ralph repair passes are represented by max_attempts.
 
 [budget]
 max_wall_seconds = 1200
+# max_attempts = 1 initial attempt + permitted Ralph repair passes.
 max_attempts = 2
 
 [evaluation]
 scenario_pack = "traffic-intersection-p0a"
 
-[cost]
-policy = "flat-subscription-attempt-pool/v1"
-pool_id = "chatgpt-luna-intersection-pilot-01"
-pool_scope = "experiment"
-currency = "USD"
-service_plan = "chatgpt-plus"
-billing_period_cost_usd = "20.00"
-benchmark_allocation_fraction = "1.0"
-pool_cost_usd = "20.00"
-pool_cost_source = "operator_attested_period_charge"
-allocation_rationale = "dedicated_benchmark_period"
-billing_period_start = "2026-08-01"
-billing_period_end = "2026-08-31"
-closure = "all_expected_runs_terminal"
-
 [output]
 inbox = "results/inbox"
 ```
 
-Financial values are examples, not inferred defaults. The operator supplies
-and confirms the actual plan/accounting inputs. Exact field names remain
-provisional until fixtures exercise the schemas.
+No financial inputs are requested by the P0-A wizard. The current parser uses
+`loop`, `scenario_pack`, and `max_attempts`; the latter is always one initial
+attempt plus the permitted Ralph repair passes. The versioned cost contract
+uses generic `actual_cost_usd` and `reference_cost_usd` fields with required
+matching source fields; OpenRouter is identified by source/provenance when it
+provides the canonical reference snapshot.
 
 See:
 
@@ -208,18 +203,19 @@ flowchart TB
     FIN --> PRIV["Private browser and traffic evaluation"]
     PRIV --> MET["Assertions, throughput, and failures"]
     CON --> EVT["Raw events and evaluator timing"]
-    CON --> CE["Run cost and pool-membership evidence"]
+    CON --> CE["Run cost and price-reference evidence"]
     MET --> BUN["Bundle finalizer"]
     EVT --> BUN
     CE --> BUN
     BUN --> ZIP["Immutable .ralph.zip"]
     ZIP --> ING["Validator and catalog"]
-    ING --> COST["Closed-pool cost derivation"]
+    ING --> COST["Derived cost/reference catalog"]
     COST --> SITE["Derived static site"]
 ```
 
 The agent process never owns authoritative timing, private checks, traffic
-metrics, cost allocation, bundle identity/checksums, or reporter output.
+metrics, cost/reference derivation, bundle identity/checksums, or reporter
+output.
 
 ## Proposed implementation stack
 
@@ -324,21 +320,24 @@ self-contained artifact is an explicit action outside the report shell. Use a
 small coherent visual system rather than unrelated report fragments.
 
 **Exit:** invalid bundles never enter normal views; the same bundle set and
-closed cost pool produce the same site; malicious candidate markup is escaped
+cost/reference evidence produce the same site; malicious candidate markup is escaped
 and never executed by the report shell.
 
 **Estimate:** 3–4 engineering days.
 
-### WP6 — Codex, ChatGPT, Luna, and subscription cost
+### WP6 — Codex, ChatGPT, Luna, and honest cost evidence
 
 Build Codex detection/version/auth fixtures, explicit non-interactive Luna
 invocation with JSONL evidence and ephemeral/scoped configuration, event/usage
-normalization, the ChatGPT provider adapter, Luna descriptor, and
-`flat-subscription-attempt-pool/v1`.
+normalization, the ChatGPT provider adapter, and Luna descriptor. The live
+subscription path records cost as unavailable and preserves time, token, and
+attempt evidence; it does not allocate plan fees.
 
 **Exit:** the wizard authors and launches the live path without exposing
-credentials; a Busy Intersection run validates and renders; a closed pool
-produces allocated USD cost including all attempts and failures.
+credentials; a Busy Intersection run validates and renders; its report
+explains unavailable subscription cost while showing measured time, tokens,
+and attempts. OpenRouter billing/reference support is a subsequent provider
+slice.
 
 **Estimate:** 3–4 engineering days plus live model time.
 
@@ -395,13 +394,16 @@ The skeleton is protected by tests that cross its seams:
   or fabricated trips.
 - Held stages distinguish transient queues from sustained breakdown and record
   recovery.
-- Missing cost stays null/incomplete; closed-pool allocation includes repair
-  attempts and failures and reconciles to the declared pool cost.
-- Conductor-owned `model_invocation.started` evidence charges ambiguous
-  post-spawn failures conservatively; incomplete member evidence prevents pool
-  closure.
-- Pool-cost source/allocation provenance produces a mechanical comparability
-  key; incompatible pools never share a primary-cost ranking.
+- Missing cost stays null/unavailable and never becomes zero; subscription
+  results preserve repair attempts and failures without synthetic allocation.
+- Where a provider supplies usage or billing evidence, the bundle preserves it
+  with source and provenance; otherwise it remains explicitly unavailable.
+- OpenRouter reference cost is reproducible only from an exact model mapping,
+  frozen pricing snapshot, all applicable supported pricing components, and
+  native token/usage evidence; unsupported or ambiguous cases remain
+  unavailable. Actual and reference cohorts never share a primary-cost
+  ranking, and P0-A's unavailable subscription results are excluded from cost
+  ranking.
 - The same input bundles generate byte-stable content except for explicitly
   declared build metadata.
 - Invalid bundles are quarantined and duplicate run IDs are diagnosed.
@@ -423,10 +425,10 @@ The skeleton is protected by tests that cross its seams:
   playback.
 - Google Drive or any remote artifact store.
 - L2/L3 OS isolation, provider proxying, or universal network enforcement.
-- Provider billing APIs, invoices, multi-currency accounting, or live metered
-  API integration.
+- OpenRouter provider/billing implementation; provider billing APIs, invoices,
+  multi-currency accounting, or live metered API integration.
 - Published per-token cost breakdowns and percentage of daily/weekly/rolling
-  quota consumed across plans; this is a post-P0 stretch goal.
+  quota consumed across subscription plans; this is post-P0 work.
 - Frontier-model qualitative judging.
 - Legacy corpus import or migration of every prior runner.
 - A single composite overall score.
@@ -437,8 +439,8 @@ The skeleton is protected by tests that cross its seams:
 |---|---|
 | Known abstractions become over-engineered | Version only durable boundaries; require one real implementation and contract fixtures, not production breadth. |
 | The first implementation accidentally defines vendor-shaped core APIs | Fake composition tests and a city fixture must cross the same seams without conductor branches. |
-| Subscription allocation is mistaken for a provider bill | Show allocated, marginal, credit, and list-price-equivalent values separately with policy/provenance. |
-| Personal subscription use makes allocation arbitrary | Require billing-period/source/fraction provenance for the explicit experiment pool amount and cohort only matching comparability keys. |
+| Subscription cost is mistaken for a provider bill | Show subscription cost as unavailable in P0-A; later separate route-attributable actual charges, OpenRouter usage debits, references, and any approved accounting view. |
+| Reference price is mistaken for actual spend | Require exact model mapping, frozen pricing snapshot, token evidence, and an explicit OpenRouter-equivalent label. |
 | Agent fabricates traffic telemetry | Reconcile evaluator-issued trips, snapshots, events, geometry, and browser observations. |
 | Fast-forward diverges from visible behavior | Require one simulation state/update path and equivalence fixtures. |
 | L1 isolation is overstated | Publish capability/canary evidence; label the live result L0/unsealed if credential or filesystem boundaries cannot be demonstrated. |
@@ -454,7 +456,7 @@ The skeleton is protected by tests that cross its seams:
 - [x] Codex CLI + ChatGPT-managed access + Luna is the only required live SUT.
 - [x] Busy Intersection is the only complete P0-A evaluator.
 - [x] The 5x5 Rush contract/fixture is P0-A; full city implementation is P0-B.
-- [x] Cloud cost is mandatory; P0 uses flat subscription attempt-pool allocation.
+- [x] Cloud cost evidence is preserved; P0-A does not allocate subscription fees.
 - [x] One controlled repair attempt, one L1 staged implementation, one browser,
       one animated capture, one local inbox, and one small static site define the
       concrete P0-A breadth.

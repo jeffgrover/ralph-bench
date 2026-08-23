@@ -52,11 +52,14 @@ provenance.
 ### Local and cloud results are different products
 
 Local results prioritize time-to-green and are compared within an exact
-hardware and provider-configuration cohort. Every cloud result requires a
-declared cost policy. Metered runs use attributable provider charges or a
-complete price derivation; subscription runs use an explicit share of a flat
-plan/campaign cost. Marginal charge, allocated cost, provider credits, and API
-list-price equivalents remain visibly distinct.
+hardware and provider-configuration cohort. Cloud results preserve billing
+evidence when it exists and otherwise say that cost is unavailable. OpenRouter
+is the canonical normalized reference-price authority for the next provider
+slice: non-OpenRouter runs may receive an OpenRouter-equivalent reference only
+with an exact model mapping, frozen pricing snapshot, and token evidence. The
+generic `reference_cost_usd` field identifies its source through
+`reference_source`; a reference is not an actual bill, and subscription
+allocation/quota accounting is deferred.
 
 ### The artifact remains available to human judgment
 
@@ -126,12 +129,17 @@ into a single opaque number:
 2. **Acceptance** — critical functional and runtime requirements.
 3. **Artifact performance** — traffic capacity, delay, fairness, and recovery.
 4. **Agent reliability** — pass rate across repetitions and scenarios.
-5. **Agent efficiency** — time-to-green locally or cost-to-green in cloud runs.
+5. **Agent efficiency** — time-to-green locally or cost/reference-to-green in
+   cloud cohorts with compatible evidence; unavailable-cost P0-A runs retain
+   time/token/attempt views but are excluded from cost ranking.
 6. **Qualitative judgment** — visual fidelity, coherence, and human preference.
 
 The initial site will present separate leaderboards and a performance/resource
-Pareto view. A single composite overall score is deliberately deferred until
-pilot data shows that one would be honest and useful.
+Pareto view when the relevant validity and cost/reference evidence exists. A
+P0-A ChatGPT subscription result with unavailable cost is diagnostic and is
+excluded from cost-based ranking. A single composite overall score is
+deliberately deferred until pilot data shows that one would be honest and
+useful.
 
 ## Initial challenge ladder
 
@@ -171,10 +179,11 @@ matching environment cohort; cloud comparisons retain provider and service-tier
 context.
 
 The proposed live P0 composition is Codex CLI with ChatGPT-managed OpenAI
-access and `gpt-5.6-luna`. It is a flat-subscription cloud cohort whose primary
-cost is allocated under an explicit versioned policy. All other real harness,
-provider, and model integrations remain TBD while fake adapters prove the
-generic composition contracts.
+access and `gpt-5.6-luna`. It is a flat-subscription cloud cohort whose cost is
+unavailable in P0-A; time, tokens, and attempts remain reportable. OpenRouter
+is the next provider implementation, not part of the P0-A live SUT. All other
+real harness, provider, and model integrations remain TBD while fake adapters
+prove the generic composition contracts.
 
 ## Core workflow
 

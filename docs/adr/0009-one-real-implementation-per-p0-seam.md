@@ -36,7 +36,8 @@ real P0-A implementation plus deterministic fakes or fixtures:
   with a poster image.
 - One bounded held-stage load-to-failure policy with recovery.
 - One local bundle inbox and safe `.ralph.zip` validator.
-- One flat-subscription cost-allocation policy.
+- One honest subscription-cost evidence path: unavailable cost plus preserved
+  time, token, and attempt evidence.
 - One small, visually coherent static comparison/detail site.
 
 The 5x5 Rush remains a versioned public challenge design in P0-A. A topology

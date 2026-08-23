@@ -38,9 +38,9 @@ deferred until the contracts and security boundary are proven.
   branches.
 - Capability negotiation can explain why combinations or controls are
   unavailable.
-- Cloud composition also negotiates the raw usage/billing evidence required by
-  the selected cost policy; missing evidence remains typed and cannot silently
-  become zero.
+- Cloud composition also negotiates raw usage/billing/reference evidence. A
+  provider-billed amount, an OpenRouter-equivalent reference, and unavailable
+  evidence remain distinct and cannot silently become zero.
 - Shared conformance suites can enforce discovery, redaction, planning,
   evidence, timeout, and cleanup behavior.
 - Typed protocols and descriptors require more up-front design than accepting

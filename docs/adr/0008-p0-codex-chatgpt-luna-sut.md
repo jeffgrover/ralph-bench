@@ -82,22 +82,19 @@ and provider lifecycle contracts during P0.
 
 ## Cost interpretation
 
-ChatGPT subscription-backed Codex usage has a real flat plan cost even when it
-does not expose an attributable per-request invoice line. Cost is mandatory for
-the live P0 path.
+ChatGPT subscription-backed Codex usage does not expose an attributable
+per-request invoice line in this path. P0-A therefore records subscription
+cost as unavailable, never zero, and preserves elapsed time, token evidence
+when exposed, and attempts/repair passes. The wizard does not request a plan
+fee, billing period, or flat allocation.
 
-P0 uses `flat-subscription-attempt-pool/v1`. The operator declares the USD
-amount one experiment should bear and its billing-period provenance. Once all
-expected run bundles are present, the catalog allocates that amount by
-chargeable model-attempt count. All generated attempts and failures consume
-weight even when per-run credit debits are unavailable.
-
-Allocated subscription USD is the primary comparison value. Marginal cash,
-provider credits, and a Luna API list-price equivalent are reserved as separate
-nullable fields with provenance; the live P0 path does not require the
-per-token equivalent view. Missing evidence is never numeric zero, and an open
-or incomplete pool cannot enter a final cost ranking. See
-[`COST_MODEL.md`](../COST_MODEL.md) and [ADR 0010](0010-require-cloud-cost-evidence.md).
+OpenRouter is a future provider slice and canonical normalized reference-price
+source for that slice. It may supply an attributable usage debit/charge only
+for requests that traverse it and provide billing evidence; this is not an
+upstream provider invoice. A non-OpenRouter Luna run may receive an
+OpenRouter-equivalent reference only with an exact mapping, frozen pricing
+snapshot, and token evidence; that value is not the ChatGPT bill. See
+[`COST_MODEL.md`](../COST_MODEL.md) and [ADR 0011](0011-cloud-cost-evidence-and-openrouter-references.md).
 
 ## Challenge coverage
 
@@ -112,7 +109,7 @@ behavior.
 - P0 has one concrete real integration instead of three simultaneous unknowns.
 - Codex JSONL provides a documented event/usage source for the first adapter.
 - ChatGPT authentication avoids requiring a Platform API key for the live P0
-  smoke path while exercising flat-subscription cost allocation.
+  smoke path while exercising honest unavailable-cost evidence.
 - P0 does not prove real LM Studio lifecycle, local hardware cohorting, or
   metered API billing collection; those remain architecture-and-fixture tested.
 - The `rb` wizard has one detected real client/provider/model path in P0 and
@@ -120,9 +117,8 @@ behavior.
   partial production support.
 - The exact ChatGPT plan entitlement, rate limits, and model availability are
   runtime observations and must not be inferred from authentication alone.
-- The exact USD amount assigned to the experiment pool and its billing-period
-  provenance are operator-confirmed, never inferred from authentication or a
-  marketing plan label.
+- Subscription/quota accounting is deferred until a separately approved policy
+  has provider-reported evidence and clear semantics.
 
 ## Rejected alternatives
 

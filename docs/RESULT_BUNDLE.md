@@ -101,7 +101,7 @@ The manifest should include:
   - model
   - client/harness and version
   - provider and service tier
-  - authentication mode, billing mode, cost policy/status, and provenance,
+  - authentication mode, billing mode, cost status, and provenance,
     without account secrets
   - harness/provider/model adapter IDs and versions
   - negotiated protocol/capability versions
@@ -132,11 +132,19 @@ Reports use these explicit identity fields rather than adapter class names.
 For the P0 ChatGPT-backed path, provider evidence records that Codex reported
 ChatGPT-managed authentication and that billing uses a flat subscription. It
 does not archive authentication caches, tokens, or account identifiers.
-`cost.json` preserves the declared experiment-scoped pool cost/period, expected
-run membership and digest, chargeable-attempt evidence, provisional/incomplete
-status, and any separately labeled raw cash, credit, token, or API list-price-
-equivalent evidence. The disposable catalog derives final allocated
-subscription USD after it validates complete pool membership. See
+`cost.json` records `billing_mode = "flat_subscription"`, `status =
+"unavailable"`, `actual_cost_usd = null`, `reference_cost_usd = null`,
+`actual_source = null`, `reference_source = null`, and an explicit
+`unavailable_reason` explaining that P0-A does not allocate plan fees. Cost
+status is independent of the two nullable amounts; when either amount is
+present its corresponding source is required, and both amounts may coexist.
+The bundle also preserves separately labeled provider, harness, token, time,
+or attempt evidence. There is no expected pool-membership or billing-period
+declaration. A future OpenRouter bundle may additionally record the
+requested/canonical model mapping, frozen pricing snapshot, generation ID,
+native token usage, and route-attributable/reference values. An OpenRouter
+actual is an OpenRouter usage debit/charge, not an upstream provider invoice.
+See
 [`COST_MODEL.md`](COST_MODEL.md).
 
 ## Canonical events
@@ -291,12 +299,10 @@ bundle inbox -> validate -> catalog/cache -> derived site
 
 The catalog is rebuildable. Deleting it must not lose authoritative evidence.
 The reporter may copy or transform selected captures and artifacts into `site/`
-but never edits the bundle. `rb build` closes a P0 subscription pool only when
-all expected terminal run IDs are present exactly once with matching pool
-declarations, complete non-contradictory charge evidence and cost provenance,
-and a nonzero chargeable-attempt total. It then produces a versioned derived
-catalog/report value from immutable `cost.json` inputs; it does not rewrite
-source bundles.
+but never edits the bundle. `rb build` produces a versioned derived
+catalog/report from immutable `cost.json` inputs, preserving unavailable cost
+as an explicit state and keeping route-attributable actual charges separate
+from OpenRouter-equivalent reference cost; it does not rewrite source bundles.
 
 Candidate HTML/JavaScript is untrusted. The derived static site must not inject
 or execute it in the report DOM. P0-A embeds only trusted evaluator-produced

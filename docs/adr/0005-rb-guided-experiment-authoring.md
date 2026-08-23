@@ -33,10 +33,17 @@ Discovery probes are read-only, bounded, non-generation operations. They never
 store credentials in TOML and report partial or unavailable capabilities
 honestly.
 
-When the selected track is cloud-backed, the wizard also requires and reviews
-a supported cost policy. It may reference a remembered non-secret billing
-profile, but it never infers a plan fee or benchmark allocation from login
-status and never turns missing cost into zero.
+When the selected track is cloud-backed, the wizard explains what billing or
+reference evidence the selected provider can supply. It does not ask for a
+subscription plan fee or benchmark allocation in P0-A; ChatGPT subscription
+runs record cost as unavailable and preserve time, token, and attempt
+evidence. Missing cost is never turned into zero.
+
+The P0-A flow uses concise experiment names, labels repetitions as
+**Independent runs**, labels evaluator-controlled retries as **Ralph repair
+passes**, derives the scenario profile from the selected challenge and track,
+and explains that the result inbox stores immutable `.ralph.zip` evidence.
+There is no cost questionnaire in this path.
 
 ## Consequences
 
@@ -50,8 +57,9 @@ status and never turns missing cost into zero.
 - Universal provider/model enumeration is not promised; manual entry is part
   of the normal contract.
 - Wizard convenience state must be isolated from authoritative run inputs.
-- Cloud authoring cannot produce a runnable experiment until its cost-policy
-  inputs validate.
+- Cloud authoring can produce a runnable diagnostic experiment when cost is
+  unavailable; a cost-based comparison requires the relevant provider billing
+  or reference evidence after execution.
 
 ## Rejected alternatives
 

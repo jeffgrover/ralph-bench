@@ -71,12 +71,13 @@ owns:
 - Provider restoration and cleanup.
 
 A cloud composition must collectively expose the evidence required by its
-selected cost policy. That evidence may be provider-reported, harness-reported,
-or conductor-measured when the policy explicitly supports the source. The P0
-attempt-allocation policy uses a conductor-owned invocation event and does not
-pretend that ChatGPT reported a per-run bill. Provider adapters do not invent
-missing charges or allocate subscriptions themselves. If required evidence is
-absent, the run remains cost-incomplete and is not cost-rankable.
+selected cost/reference semantics. That evidence may be provider-reported,
+harness-reported, or derived from a frozen normalized price snapshot when the
+mapping and token evidence support it. The P0 ChatGPT path records subscription
+cost as unavailable; it does not pretend that ChatGPT reported a per-run bill
+and does not allocate subscriptions. Provider adapters do not invent missing
+charges. If billing evidence is absent, the run remains explicitly unavailable
+and is not cost-rankable.
 
 A future LM Studio integration would be one provider adapter. Harness adapters
 would consume its resolved connection binding rather than each implementing LM
@@ -308,9 +309,10 @@ adapter class names.
 P0 includes the three protocols, built-in registry, typed descriptors,
 capability resolver, generic model adapter, fake composition matrix, and the
 Codex CLI + ChatGPT-managed access + `gpt-5.6-luna` live path. That provider
-path supplies the evidence required by the one live flat-subscription policy in
-[`COST_MODEL.md`](COST_MODEL.md). Arbitrary third-party loading, a complete
-model catalog, and every other real composition are post-P0/TBD.
+path supplies honest unavailable-cost evidence as described in
+[`COST_MODEL.md`](COST_MODEL.md). OpenRouter reference/billing integration,
+arbitrary third-party loading, a complete model catalog, and every other real
+composition are post-P0/TBD.
 
 The foundational registry, contracts, resolver, fakes, and conformance tests
 are approximately **3–5 engineering days**. This substantially overlaps the

@@ -55,7 +55,11 @@ client x model x provider/configuration x effort/tool policy
 
 ## Zero-argument flow
 
-The first substantive question is always the client. A proposed P0 flow is:
+The first substantive question is always the client. The following is the
+target P0 flow; the current wizard implements client/provider/model discovery,
+challenge, effort, repetition, wall-time, repair-pass, inbox, and save. The
+isolation choice, back/edit navigation, and post-save run offering remain
+target behavior until implemented:
 
 1. **Client** — show detected compatible clients, executable paths, versions,
    and detection status.
@@ -67,19 +71,24 @@ The first substantive question is always the client. A proposed P0 flow is:
    allowing either challenge when compatible.
 5. **Client and model controls** — reasoning/effort, tool policy, native versus
    controlled loop, and adapter-specific supported options.
-6. **Evaluation and cost controls** — repetitions, wall-time/cost budget,
-   repair attempts, scenario-pack reference, isolation choice, and the
-   provider's required cost policy. A flat subscription asks for the USD amount
-   assigned to this experiment and its billing-period provenance; the wizard
-   may help derive that amount from a plan fee and benchmark-use fraction.
-7. **Destination** — propose a readable, collision-free filename under
-   `experiments/`.
-8. **Review** — render the complete TOML, provenance of inferred defaults, and
+6. **Experiment basics** — ask for a concise experiment name, repetitions as
+   **Independent runs**, and a wall-time/attempt budget.
+7. **Repair policy** — offer **Ralph repair passes** as the evaluator-controlled
+   repair loop, separately from the independent repetition runs.
+8. **Scenario and isolation** — derive the scenario profile from the selected
+   challenge and track through the shared challenge/profile registry, show the
+   resulting profile, and collect the isolation choice. The user should not
+   have to invent a scenario-pack ID for the common path.
+9. **Result inbox** — explain that the inbox is the local destination for
+   immutable `.ralph.zip` evidence and suggest a safe path; do not imply that
+   it is a live report or a cloud upload.
+10. **Review** *(target behavior)* — render the complete TOML, provenance of inferred defaults, and
    warnings; allow the user to move back and edit any section.
-9. **Validate and save** — write atomically, never silently overwrite, and
+11. **Validate and save** — write atomically, never silently overwrite, and
    report the exact path.
-10. **Run** — offer to execute the saved experiment. Cloud runs show the
-    requested cost controls and require explicit confirmation.
+12. **Run** *(target behavior)* — offer to execute the saved experiment. Cloud runs explain the
+    available billing/reference evidence; P0-A subscription runs do not show a
+    cost questionnaire or request a synthetic allocation.
 
 The interface should support Enter to accept a displayed default, numbered
 choices, back, help, manual entry, and quit without leaving a partial file.
@@ -104,10 +113,10 @@ TOML or recorded as explicit runtime references. The final review identifies
 which values were selected, inferred, or entered manually.
 
 Defaults must be cost-aware. Discovery does not send a generation request.
-Selecting a cloud provider does not authorize a run. A cloud experiment with
-no supported cost policy is invalid, and a missing cost must not be presented
-as zero. A remembered non-secret billing profile may be suggested, but the
-final experiment pool cost must be displayed and reconfirmed.
+Selecting a cloud provider does not authorize a run. Missing cost must not be
+presented as zero. In P0-A, a subscription selection is valid without a
+financial questionnaire; the resulting bundle says cost is unavailable and
+preserves time, token, and attempt evidence.
 
 ## Discovery contract
 
@@ -151,12 +160,11 @@ provider probing or configuration strategy.
 
 ## Experiment file
 
-The schema remains versioned and the exact fields remain provisional until the
-first adapters exercise them. The intended shape is:
+The schema is versioned and the current parser shape is:
 
 ```toml
 schema_version = "experiment/v1"
-name = "codex-chatgpt-luna-intersection"
+name = "codex-luna"
 challenge = "busy-intersection/v1"
 client = "codex-cli"
 provider = "openai-chatgpt"
@@ -167,38 +175,30 @@ repetitions = 3
 [client_options]
 reasoning_effort = "high"
 loop = "controlled"
+# Independent repetitions are represented by `repetitions` above.
+# Evaluator-controlled Ralph repair passes are represented by max_attempts.
 # Optional when discovery requires a non-default executable:
 # executable = "/opt/codex/bin/codex"
 
 [budget]
 max_wall_seconds = 1200
+# max_attempts = 1 initial attempt + permitted Ralph repair passes.
 max_attempts = 2
 
 [evaluation]
 scenario_pack = "traffic-intersection-p0a"
 
-[cost]
-policy = "flat-subscription-attempt-pool/v1"
-pool_id = "chatgpt-luna-intersection-pilot-01"
-pool_scope = "experiment"
-currency = "USD"
-service_plan = "chatgpt-plus"
-billing_period_cost_usd = "20.00"
-benchmark_allocation_fraction = "1.0"
-pool_cost_usd = "20.00"
-pool_cost_source = "operator_attested_period_charge"
-allocation_rationale = "dedicated_benchmark_period"
-billing_period_start = "2026-08-01"
-billing_period_end = "2026-08-31"
-closure = "all_expected_runs_terminal"
-
 [output]
 inbox = "results/inbox"
 ```
 
-The financial values illustrate the schema only. They are not inferred from
-authentication and must reflect the operator's actual plan and declared
-benchmark allocation. See [`COST_MODEL.md`](COST_MODEL.md).
+P0-A has no financial input block. Cloud cost evidence is populated from the
+provider/harness when available; the ChatGPT subscription path reports cost as
+unavailable. Provider billing capabilities determine which execution tracks
+are compatible, and the shared challenge/track profile registry validates the
+derived `scenario_pack`. `max_attempts` is always one initial attempt plus the
+permitted Ralph repair passes. See [`COST_MODEL.md`](COST_MODEL.md) for the
+future OpenRouter reference/billing semantics.
 
 The file contains no API keys, session tokens, or copied client credentials.
 It may refer to an environment variable or credential profile by name. Runtime
@@ -241,9 +241,9 @@ P0 includes:
   only source of wizard choices and option schemas.
 - Real Codex CLI detection, read-only ChatGPT authentication preflight through
   `codex login status`, and the `gpt-5.6-luna` model descriptor.
-- A provider choice labeled **ChatGPT (subscription)** with required
-  `flat-subscription-attempt-pool/v1` inputs, a reviewable allocation summary,
-  and no confusion between marginal, allocated, and list-price-equivalent USD.
+- A provider choice labeled **ChatGPT (subscription)** whose review explains
+  that P0-A cost is unavailable, while time, tokens, and attempts remain
+  visible. There is no subscription-cost questionnaire.
 - Deterministic TOML rendering, validation, atomic saving, and overwrite
   protection.
 - A non-interactive run path that never prompts after validation.
@@ -261,11 +261,9 @@ discovery capabilities incrementally without changing the experiment schema.
 - No discovery fixture performs a generation request or writes client config.
 - A signed-in Codex fixture resolves ChatGPT subscription plus Luna; a
   signed-out fixture gives `codex login` guidance without reading credentials.
-- ChatGPT subscription selection cannot validate until the operator confirms a
-  supported cost policy, experiment-scoped USD pool cost, and billing-period
-  provenance.
-- Missing runtime cost evidence remains incomplete/null rather than zero; a
-  closed fixture pool derives a non-null allocated USD value.
+- ChatGPT subscription selection validates without a plan-fee allocation.
+- Missing runtime cost evidence remains unavailable/null rather than zero;
+  token, time, and attempt evidence remains reportable.
 - Back/edit produces the same validated document as entering final answers
   directly.
 - Canceling leaves no partial TOML file.

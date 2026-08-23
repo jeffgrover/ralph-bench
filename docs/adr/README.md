@@ -1,7 +1,8 @@
 # Architecture Decision Records
 
 These records capture the foundational decisions approved for Ralph Bench P0-A.
-They were accepted when implementation began on 2026-08-23.
+They were accepted when implementation began on 2026-08-23. Superseded ADRs are
+retained as historical decisions; the current cost decision is ADR 0011.
 
 | ADR | Decision |
 |---|---|
@@ -14,4 +15,5 @@ They were accepted when implementation began on 2026-08-23.
 | [0007](0007-polymorphic-sut-adapters.md) | Compose harness, provider, and model adapter families polymorphically. |
 | [0008](0008-p0-codex-chatgpt-luna-sut.md) | Use Codex CLI, ChatGPT access, and Luna for the P0 live SUT. |
 | [0009](0009-one-real-implementation-per-p0-seam.md) | Keep proven contracts while building one real P0 implementation per seam. |
-| [0010](0010-require-cloud-cost-evidence.md) | Require explicit cost evidence and subscription allocation for cloud runs. |
+| [0010](0010-require-cloud-cost-evidence.md) | Require cost evidence for every cloud run; superseded by ADR 0011. |
+| [0011](0011-cloud-cost-evidence-and-openrouter-references.md) | Preserve cloud cost evidence, use OpenRouter references explicitly, and defer subscription allocation. |

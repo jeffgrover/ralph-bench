@@ -1,6 +1,6 @@
 # ADR 0010: Require Cost Evidence for Every Cloud Run
 
-**Status:** Accepted
+**Status:** Superseded by [ADR 0011](0011-cloud-cost-evidence-and-openrouter-references.md)
 **Date:** 2026-08-23
 
 ## Context
