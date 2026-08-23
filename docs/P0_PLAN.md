@@ -28,8 +28,8 @@ Track:    cloud-subscription
 ```
 
 The only complete P0-A challenge evaluator is Busy Intersection. The 5x5 Rush
-remains a versioned challenge contract and fixture in P0-A, then becomes the
-P0-B generalization milestone.
+descriptor/topology fixture remains required but is not yet implemented in
+P0-A; the complete evaluator becomes the P0-B generalization milestone.
 
 ## Skeleton rule: preserve the seam, implement one path
 
@@ -228,9 +228,11 @@ output.
 - Python 3.11+ typed orchestration with a standard-library-first core.
 - Versioned JSON/TOML boundary documents; typed internal objects need not each
   become public JSON Schemas.
-- Node.js plus one lockfile-pinned Playwright package/browser revision for
-  observation/capture; record the executable digest and downgrade a mismatched
-  runtime to experimental rather than silently treating it as canonical.
+- One Python Playwright worker for observation/capture. The current `uv.lock`
+  resolves the package version, but canonical publication still requires an
+  exact supported dependency pin, the installed Chromium executable digest,
+  and an experimental downgrade for a mismatched browser/runtime rather than
+  silently treating it as canonical.
 - Static HTML/CSS/JavaScript output suitable for GitHub Pages.
 - No database requirement; the bundle catalog is rebuildable.
 
@@ -456,7 +458,11 @@ The skeleton is protected by tests that cross its seams:
 | City work destabilizes the core | Finish/freeze P0-A contracts, then require P0-B to plug in without city branches. |
 | Vendor CLI/events change | Pin and record the tested Codex version, preserve raw streams, and maintain parser fixtures. |
 
-## Approval checklist
+## Approved scope checklist
+
+Checked items record accepted scope decisions, not implementation completion.
+Current implementation gaps are tracked in
+[`NEXT_STEPS.md`](NEXT_STEPS.md).
 
 - [x] Evidence-backed harness/provider/model, configuration, bundle, challenge,
       cost, and reporting seams remain in P0-A.

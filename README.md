@@ -22,9 +22,10 @@ provider slice for billed and normalized reference pricing. Other real
 harnesses, providers, and models remain TBD; deterministic fake adapters
 preserve polymorphic contract coverage during P0.
 
-P0-A completes one Busy Intersection vertical slice through every durable
-boundary. The 5x5 Rush is retained as a contract/fixture in P0-A and becomes
-the P0-B challenge-generalization milestone.
+P0-A targets one Busy Intersection vertical slice through every durable
+boundary. A descriptor/topology-only 5x5 Rush fixture remains required in P0-A
+to prove the challenge seam before the full P0-B implementation; that fixture
+is not implemented yet.
 
 The P0-A planning packet was accepted on 2026-08-23, as amended by [ADR
 0011](docs/adr/0011-cloud-cost-evidence-and-openrouter-references.md), and

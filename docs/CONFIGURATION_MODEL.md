@@ -17,6 +17,18 @@ translate only the portions they own into scoped native configuration. The run
 bundle records what was requested, what was materialized, and what was actually
 observed.
 
+### Current implementation status
+
+This document describes the target lifecycle required when Ralph Bench adds a
+mutable provider or a harness that writes native configuration. The P0-A
+ChatGPT subscription path is deliberately narrower: it performs read-only
+detection, builds a Codex invocation plan, materializes an owned staged home and
+workspace, and records requested/effective evidence. It does not yet implement
+a general provider `plan/apply/observe/cleanup` transaction or verified
+rollback report. Current bundle cleanup evidence describes the planned owned
+temporary-directory strategy; it must not be interpreted as proof of the full
+transactional lifecycle below.
+
 These adapters participate in the independent polymorphic families defined in
 [`ADAPTER_MODEL.md`](ADAPTER_MODEL.md). Configuration ownership constrains how
 they compose; it does not hard-code particular harness/provider/model triples.
@@ -34,7 +46,7 @@ they compose; it does not hard-code particular harness/provider/model triples.
 
 ## Configuration states
 
-Configuration moves through distinct typed states:
+The complete configuration lifecycle moves through distinct typed states:
 
 1. **Authored experiment** — validated TOML containing user intent and named
    secret references, but no credentials.

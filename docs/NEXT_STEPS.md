@@ -39,6 +39,12 @@ Do not reopen these without new evidence:
   the movement bridge.
 - Some failed assertions use success-oriented detail text such as “browser
   snapshot has no runtime errors,” making failure evidence harder to read.
+- The public pack names the `traffic/v1` methods but does not yet ship complete
+  payload schemas, valid lifecycle examples, dynamics limits, or an
+  agent-runnable browser checker.
+- Conversely, the current public scenario pack exposes the same pilot stage
+  schedule used by the live evaluator. Public conformance inputs and private
+  scored profiles are not yet meaningfully separated.
 
 ## Fair-shot design guardrails
 
@@ -67,12 +73,19 @@ an undocumented interface.
 
 ## P0-A — next session
 
-### 1. Correct judge diagnostics and offline detection
+### 1. Complete the fair-shot public contract and checker
 
 **Priority:** blocking
 
-**Estimate:** 0.5–1 engineering day
+**Estimate:** 1–2 engineering days
 
+- Publish complete versioned request/response/event schemas, small valid
+  lifecycle examples, and every required physical/dynamics bound.
+- Add a deterministic, deliberately modest scenario covering every movement
+  and lifecycle shape plus an agent-runnable real-browser conformance command.
+- Separate that representative public scenario from private scored profiles;
+  passing the public command must prove contract readiness, not reveal
+  throughput capacity or guarantee benchmark acceptance.
 - Replace the broad URL regex with context-aware offline dependency checks that
   do not confuse CSS custom properties, JavaScript comments, or harmless
   namespace strings with network access.
@@ -82,9 +95,10 @@ an undocumented interface.
 - Aggregate repeated stage/movement failures for operator-facing summaries
   while preserving full assertion evidence in the bundle.
 
-**Exit:** the live artifact's static check fails only for a real external
-runtime dependency, and every emitted failure message is actionable and
-semantically consistent with `result=fail`.
+**Exit:** a model can implement and debug `traffic/v1` without guessing any
+field or lifecycle convention; the live artifact's static check fails only for
+a real external dependency; public tooling does not expose the scored load
+profile or prescribe an implementation.
 
 ### 2. Give the model a fair, non-prescriptive acceptance loop
 
@@ -92,10 +106,8 @@ semantically consistent with `result=fail`.
 
 **Estimate:** 2–4 engineering days
 
-- Ship a public conformance command and representative smoke scenario in the
-  staged tool/challenge pack. The model can invoke it while building; it checks
-  the public contract but does not contain a reference implementation or act
-  as a capacity/score oracle.
+- Integrate the public conformance command and representative smoke scenario
+  from step 1 into the staged tool/challenge pack and attempt lifecycle.
 - Give the model bounded browser-console and structured-log inspection so it
   can debug the same artifact state the evaluator will inspect.
 - Evaluate the initial candidate through browser/runtime contract checks before
@@ -115,7 +127,41 @@ tooling to reach conformance; a fixture that passes static checks but fails
 `traffic/v1` can repair and pass on attempt two; neither the tool nor feedback
 dictates its algorithm or visual design; both attempts remain auditable.
 
-### 3. Make terminal completion status unmistakable
+### 3. Extract a real challenge execution boundary
+
+**Priority:** blocking skeleton work
+
+**Estimate:** 2–3 engineering days
+
+- Define a versioned challenge adapter/descriptor owning public-pack
+  materialization, scenario construction, expected topology, evaluation,
+  capture instructions, and challenge-specific bundle identity.
+- Move Busy Intersection imports and path knowledge out of the generic
+  conductor and browser-worker orchestration.
+- Add a descriptor/topology-only 5x5 Rush fixture that traverses this boundary;
+  do not implement the city simulation or production judge yet.
+
+**Exit:** the generic conductor contains no Busy Intersection branch, and the
+intersection plus skeletal city fixture traverse the same challenge contract.
+
+### 4. Complete harness polymorphism through execution
+
+**Priority:** high skeleton work
+
+**Estimate:** 1–2 engineering days
+
+- Let the selected harness adapter provide/factory the `AttemptExecutor` and
+  lifecycle evidence instead of constructing `CodexAttemptExecutor` in the
+  conductor.
+- Exercise the complete conductor with two fake harness implementations, not
+  only resolver composition tests.
+- Keep P0's sole live implementation Codex; this is contract completion, not a
+  second-harness integration.
+
+**Exit:** adding a compatible fake harness requires registry work but no
+conductor branch or Codex import.
+
+### 5. Make terminal completion status unmistakable
 
 **Priority:** high
 
@@ -130,7 +176,7 @@ dictates its algorithm or visual design; both attempts remain auditable.
 **Exit:** an operator can answer “did it work?” without opening JSON or asking
 for bundle inspection.
 
-### 4. Implement `rb build` and the first static report
+### 6. Implement `rb build` and the first static report
 
 **Priority:** high
 
@@ -147,7 +193,24 @@ for bundle inspection.
 **Exit:** `rb build --source results/inbox --output site` produces a static,
 portable site containing the first live bundle and its recorded animation.
 
-### 5. Portability pass for macOS and Windows
+### 7. Reconcile reproducibility claims with the implementation
+
+**Priority:** high before canonical publication
+
+**Estimate:** 0.5–1 engineering day
+
+- Keep the configuration lifecycle documented as a target contract while P0
+  implements only read-only subscription detection, scoped materialization,
+  and planned temporary-root cleanup—not generalized transactional rollback.
+- Pin the supported Python Playwright package exactly, record the installed
+  Chromium executable digest, and downgrade mismatches to experimental.
+- Add a lightweight release checklist/test for executable claims in the README
+  and P0 plan so architectural prose cannot silently outrun the code.
+
+**Exit:** documentation and bundle provenance distinguish implemented,
+verified, and future behavior without relying on implication.
+
+### 8. Portability pass for macOS and Windows
 
 **Priority:** high after the Linux vertical slice stabilizes
 
@@ -173,3 +236,26 @@ Linux, macOS, and Windows/WSL with platform provenance recorded.
 5. Evaluate and select strong L1/L2 isolation backends cross-platform.
 6. Add Google Drive bundle storage/ingest after the local immutable
    bundle/report path is stable.
+7. Give the legacy `llm-eval` corpus an explicit archival/read-only-view policy
+   rather than silently treating it as migrated data.
+
+## Independent review triage
+
+An independent 2026-08-23 comparison with `llm-eval` was checked against the
+current implementation. Its useful findings are reflected above:
+
+- **Confirmed and promoted:** challenge execution is hard-coded; harness
+  polymorphism stops before execution; the public checker/contract pack is
+  incomplete; `rb build` remains absent; configuration and browser-stack docs
+  overstate current implementation; a passing live artifact is still needed
+  to calibrate capacity separation.
+- **Intentional but monitored:** one live SUT and unavailable subscription cost
+  are deliberate P0 scope reductions, provided the execution contracts and
+  cost provenance remain honest.
+- **Already superseded:** Bubblewrap is no longer a P0 dependency or L1 claim;
+  P0 is explicitly portable L0/unsealed. A first live run has also occurred,
+  though it did not reach valid throughput and therefore did not calibrate the
+  sustainable-load curve.
+- **Deferred deliberately:** the legacy corpus needs an explicit fate, but it
+  should not distort the immutable vNext bundle model or block the first static
+  product surface.
