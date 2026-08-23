@@ -1,6 +1,6 @@
 # P0 Skeleton Plan
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-08-23
 **P0-A target:** One complete Busy Intersection vertical slice through every
 durable system boundary
@@ -448,15 +448,15 @@ The skeleton is protected by tests that cross its seams:
 
 ## Approval checklist
 
-- [ ] Evidence-backed harness/provider/model, configuration, bundle, challenge,
+- [x] Evidence-backed harness/provider/model, configuration, bundle, challenge,
       cost, and reporting seams remain in P0-A.
-- [ ] Each seam receives one real implementation plus fakes/fixtures.
-- [ ] Codex CLI + ChatGPT-managed access + Luna is the only required live SUT.
-- [ ] Busy Intersection is the only complete P0-A evaluator.
-- [ ] The 5x5 Rush contract/fixture is P0-A; full city implementation is P0-B.
-- [ ] Cloud cost is mandatory; P0 uses flat subscription attempt-pool allocation.
-- [ ] One controlled repair attempt, one L1 staged implementation, one browser,
+- [x] Each seam receives one real implementation plus fakes/fixtures.
+- [x] Codex CLI + ChatGPT-managed access + Luna is the only required live SUT.
+- [x] Busy Intersection is the only complete P0-A evaluator.
+- [x] The 5x5 Rush contract/fixture is P0-A; full city implementation is P0-B.
+- [x] Cloud cost is mandatory; P0 uses flat subscription attempt-pool allocation.
+- [x] One controlled repair attempt, one L1 staged implementation, one browser,
       one animated capture, one local inbox, and one small static site define the
       concrete P0-A breadth.
-- [ ] Google Drive, quota-burden reporting, frontier judging, other live SUTs,
+- [x] Google Drive, quota-burden reporting, frontier judging, other live SUTs,
       and richer comparison UX remain post-P0-A.

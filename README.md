@@ -1,6 +1,6 @@
 # Ralph Bench
 
-Ralph Bench is a proposed next-generation benchmark for agentic coding systems.
+Ralph Bench is a next-generation benchmark for agentic coding systems.
 It measures whether a model-and-harness combination can produce an original,
 accepted browser artifact, how well that artifact performs, and how much local
 time or cloud cost was required to reach it.
@@ -10,7 +10,7 @@ The initial challenge family uses visible traffic simulations at two scales:
 - **Busy Intersection** for local and smaller models.
 - **The 5x5 Rush** for frontier and cloud-class models.
 
-The proposed P0 live system under test is:
+The P0 live system under test is:
 
 ```text
 Codex CLI x ChatGPT-managed OpenAI access x gpt-5.6-luna
@@ -24,10 +24,11 @@ P0-A completes one Busy Intersection vertical slice through every durable
 boundary. The 5x5 Rush is retained as a contract/fixture in P0-A and becomes
 the P0-B challenge-generalization milestone.
 
-The repository is currently in the planning stage. No implementation contract
-is approved until the documents below are reviewed.
+The P0-A planning packet was accepted on 2026-08-23 and implementation is now
+underway. The documents below are the approved product and architecture
+contracts for this milestone.
 
-## Proposed design documents
+## P0-A design documents
 
 - [Vision](docs/VISION.md)
 - [P0 implementation plan](docs/P0_PLAN.md)

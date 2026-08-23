@@ -1,6 +1,6 @@
 # ADR 0010: Require Cost Evidence for Every Cloud Run
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-08-23
 
 ## Context

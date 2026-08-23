@@ -1,6 +1,6 @@
 # ADR 0005: Use `rb` with Guided Experiment Authoring
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-08-23
 
 ## Context

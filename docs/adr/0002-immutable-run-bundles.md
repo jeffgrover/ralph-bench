@@ -1,6 +1,6 @@
 # ADR 0002: Immutable Run Bundles
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-08-23
 
 ## Context

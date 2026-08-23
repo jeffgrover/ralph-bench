@@ -1,7 +1,7 @@
 # Architecture Decision Records
 
-These records capture foundational decisions proposed for Ralph Bench. Their
-status remains **Proposed** until the planning packet is approved.
+These records capture the foundational decisions approved for Ralph Bench P0-A.
+They were accepted when implementation began on 2026-08-23.
 
 | ADR | Decision |
 |---|---|

@@ -1,6 +1,6 @@
 # ADR 0007: Compose the SUT from Polymorphic Adapter Families
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-08-23
 
 ## Context

@@ -1,6 +1,6 @@
 # Measurement Model
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-08-23
 
 ## Goals

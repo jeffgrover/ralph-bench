@@ -1,6 +1,6 @@
 # Traffic Challenge Specifications
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-08-23
 **Protocol:** `traffic/v1`
 

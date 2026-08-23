@@ -1,6 +1,6 @@
 # ADR 0008: Use Codex CLI, ChatGPT Access, and Luna for the P0 Live SUT
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-08-23
 
 ## Context

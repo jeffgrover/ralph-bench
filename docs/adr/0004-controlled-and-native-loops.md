@@ -1,6 +1,6 @@
 # ADR 0004: Controlled and Native Loops
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-08-23
 
 ## Context

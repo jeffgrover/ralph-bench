@@ -44,8 +44,8 @@ Read these before P0 implementation:
 - `docs/adr/`, especially ADR 0009 (P0 seam breadth) and ADR 0010 (mandatory
   cloud cost)
 
-The documents and ADRs are marked `Proposed` until the user approves them. Do
-not silently resolve an unapproved product decision through implementation.
+The P0-A planning packet and ADRs were accepted on 2026-08-23. Do not silently
+expand or revise an accepted product decision through implementation.
 
 ## Architectural constraints
 

@@ -1,6 +1,6 @@
 # ADR 0009: Build One Real Implementation Per Proven P0 Seam
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-08-23
 
 ## Context

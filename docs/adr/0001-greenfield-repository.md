@@ -1,6 +1,6 @@
 # ADR 0001: Greenfield Repository
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-08-23
 
 ## Context
