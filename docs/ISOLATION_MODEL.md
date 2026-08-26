@@ -186,9 +186,10 @@ The agent cannot author or overwrite:
 - Isolation capability report.
 - Final validity decision.
 
-The candidate may emit public telemetry through `traffic/v1`, but authoritative
-metrics reconcile it against evaluator-issued trip IDs, independent snapshots,
-network geometry, and browser observations.
+The candidate receives arrivals and reports finishes through the minimal public
+`gates/v1` interface. Ralph owns IDs, timestamps, completion validation, and
+the issued/completed/outstanding ledger; the same monitored run is recorded for
+visual review. Candidate-authored summary counters are not authoritative.
 
 ## Provenance capture
 

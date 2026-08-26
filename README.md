@@ -98,11 +98,11 @@ The first P0-A contract spine is implemented and tested:
   and Codex's native `workspace-write` sandbox. P0 records this honestly as
   L0/unsealed: credential confidentiality and read isolation from unrelated
   host files are not proven.
-- Busy Intersection ships a public `traffic/v1` pack, deterministic load
-  schedule with rotating seeds, evaluator-owned physical constraints,
-  anti-fabrication lifecycle/fairness checks, and a killable offline Playwright
-  worker that produces a validated poster and WebM overview from the evaluated
-  artifact.
+- Busy Intersection ships a public `gates/v1` pack: Ralph injects two arrival
+  callbacks and two finish notifications, owns completion timestamps and the
+  issued/completed/outstanding ledger, and samples that ledger while a killable
+  offline Playwright worker records the same live run as a validated poster and
+  WebM overview. The scored load schedule is not staged with the candidate.
 - `rb run` reports concise phase transitions and a once-per-minute heartbeat
   while a model attempt is still running; vendor-native output is redacted and
   preserved as bundle evidence rather than flooding the console. In an

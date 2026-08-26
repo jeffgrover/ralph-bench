@@ -41,7 +41,7 @@ real P0-A implementation plus deterministic fakes or fixtures:
 - One small, visually coherent static comparison/detail site.
 
 The 5x5 Rush remains a versioned public challenge design in P0-A. A topology
-fixture must cross the same challenge and `traffic/v1` boundaries without a
+fixture must cross the same challenge and `gates/v1` boundaries without a
 conductor branch, but its live evaluator, private profiles, interchange checks,
 and model run form P0-B.
 

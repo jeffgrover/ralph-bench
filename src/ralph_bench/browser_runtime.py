@@ -104,6 +104,9 @@ def run_browser_evaluation(
 
     if timeout_seconds <= 0:
         raise BrowserRuntimeError("browser timeout must be positive")
+    candidate = candidate.resolve()
+    output = output.resolve()
+    raw_evidence = raw_evidence.resolve()
     chromium = chromium or find_chromium()
     playwright_browsers_path = (
         playwright_browsers_path or find_playwright_browsers_path()
@@ -187,8 +190,10 @@ def run_browser_evaluation(
         result = json.loads(paths["result"].read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise BrowserRuntimeError("browser result is not valid JSON") from exc
-    if not isinstance(result, dict) or result.get("schema_version") != "browser-evaluation/v1":
+    if not isinstance(result, dict) or result.get("schema_version") != "browser-evaluation/v2":
         raise BrowserRuntimeError("browser result has an unsupported schema")
+    if result.get("protocol") != "gates/v1":
+        raise BrowserRuntimeError("browser result does not use gates/v1")
     try:
         capture = json.loads(paths["metadata"].read_text(encoding="utf-8"))
         png = paths["poster"].read_bytes()

@@ -39,9 +39,11 @@ differentiate eligible results.
 ### Performance should reflect good design
 
 The traffic challenges have an in-simulation optimization target:
-**sustainable valid vehicle throughput**. The evaluator increases externally
-controlled traffic demand until the artifact reaches a defined breakdown
-condition, then measures whether it recovers.
+**sustainable monitored vehicle throughput**. The evaluator increases
+externally controlled traffic demand until observed completion or backlog
+reaches a defined breakdown condition, then measures whether the artifact
+recovers. Safety, physical plausibility, and agreement between finish
+notifications and visible movement remain separate recorded-review dimensions.
 
 ### Reliability needs repeated evidence
 
@@ -162,8 +164,9 @@ recovery. It is also the grand visual challenge: a model city whose spatial
 design, atmosphere, motion, and information layer should make complex network
 behavior inviting and memorable.
 
-The two challenges share a traffic evaluation protocol so the smaller task
-proves the unit behavior that the larger task composes into a network.
+The challenge family shares a minimal semantic gate protocol for controlling
+arrivals and observing departures. The larger challenge may extend that narrow
+boundary only where network-scale measurement proves it necessary.
 
 ## System under test
 

@@ -194,10 +194,10 @@ files, hidden tests, credentials, or reporter output. Its complete tree hash is
 recorded in `run.json` and the checksum inventory.
 
 The artifact must remain runnable after safe extraction with no network. P0-A
-requires every runtime dependency actually used by the candidate—including
-challenge-supplied browser libraries—to be copied into
-`artifact/submission/`. A manifest lists their source challenge version and
-digests; the reporter does not fetch or reconstruct missing dependencies.
+requires every runtime dependency used by the candidate to be copied into
+`artifact/submission/`. The evaluator injects `RalphGates` only while measuring;
+it is not an artifact runtime dependency, and the artifact supplies its own
+standalone demonstration when the interface is absent.
 
 ## Capture evidence
 
@@ -214,10 +214,10 @@ Evaluation records include:
 
 - Structured assertions and evidence paths.
 - Scenario/profile/seed.
-- Requested trip manifest hash.
+- Evaluator-issued gate-arrival manifest hash.
 - Capacity stages and refinement runs.
-- Snapshots/events used for metric derivation.
-- Runtime/browser observations.
+- Sampled gate-ledger and runtime/browser observations used for metric
+  derivation.
 - Failure windows and thresholds.
 
 Private scenario values may be included in a locally retained forensic bundle

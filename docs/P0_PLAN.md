@@ -45,7 +45,7 @@ several production variants.
 | Isolation | Versioned capability/taint report and conductor-owned evidence | Portable L0 staged-workspace protection with explicit limitations | Selection and implementation of OS/container/VM-backed L1/L2 protection |
 | Storage | Immutable bundle/store boundary | Local `.ralph.zip` inbox | Google Drive and other remote stores |
 | Browser | Versioned browser observation/capture boundary | One pinned Chromium/Playwright worker | Other browsers, capture backends, and viewpoints |
-| Challenge | Versioned challenge plug-in boundary and shared `traffic/v1` | Busy Intersection | Live 5x5 Rush evaluator and other challenge families |
+| Challenge | Versioned challenge plug-in boundary and minimal `gates/v1` monitoring | Busy Intersection | Live 5x5 Rush evaluator and other challenge families |
 | Load search | Evaluator-owned demand, held stages, failure and recovery semantics | One bounded deterministic stage schedule, no bracket refinement | Multiple production profiles and adaptive refinement |
 | Cost | Typed cost vector, billing/reference provenance, and completeness | P0-A subscription result with cost unavailable plus time/token/attempt evidence | OpenRouter billing/reference implementation, subscription allocation, invoices, token/quota normalization |
 | Reporting | Read-only bundle view model | One polished index and one run-detail page | Rich explorer, full Pareto interaction, alternate themes |
@@ -85,14 +85,16 @@ P0-A is complete when all of the following are true:
   inventing an allocation, while preserving time, token, and attempt evidence.
   Missing cost is never zero and does not block diagnostic, quality,
   throughput, time, token, or attempt reporting.
-- Busy Intersection exposes `traffic/v1`; evaluator-driven stepping and visible
-  playback use the same simulation state.
+- Busy Intersection uses evaluator-injected `gates/v1`: two arrival callbacks,
+  two finish notifications, and evaluator-owned monitoring of the same live run
+  that is recorded for review.
 - Evaluator-owned demand rises through held stages until the first sustained
   failure, then stops for cooldown/recovery.
-- Requested, admitted, active, completed, rejected, backlogged, and lost trips
-  reconcile.
-- Results include the last sustainable offered load, peak valid throughput,
-  ordinary-load delay, first failure, queue evidence, and recovery outcome.
+- Issued, completed, invalid, and outstanding traveler IDs reconcile without a
+  candidate-authored topology, snapshot, queue, or event ontology.
+- Results include the last sustainable offered load, peak monitored throughput,
+  completion latency, first failure, outstanding-demand evidence, and recovery
+  outcome.
 - The evaluator produces one standardized animated overview and poster image
   tied to the evaluated artifact hash.
 - Execution finalizes one versioned, redacted, checksummed `.ralph.zip` bundle
@@ -244,7 +246,7 @@ P0-A versions only durable interchange boundaries:
 - run/bundle manifest and inventory
 - canonical event envelope
 - assertion, metric, failure, and cost envelopes
-- `traffic/v1` bridge payloads needed by Busy Intersection
+- `gates/v1` arrival and finish payloads needed by Busy Intersection
 
 Challenge-private implementation objects, wizard screens, internal state
 transitions, and every vendor payload do not each receive a public schema.
@@ -292,30 +294,32 @@ never mutate bundles.
 
 **Estimate:** 2–3 engineering days.
 
-### WP3 — Common browser, traffic bridge, and capture
+### WP3 — Common browser, gate monitor, and capture
 
-Build one pinned Chromium/Playwright worker, the Busy Intersection portion of
-`traffic/v1`, deterministic `advance()`, snapshot/event validation, runtime
-classification, one WebM overview, and one PNG poster.
+Build one pinned Chromium/Playwright worker, inject the four-method `gates/v1`
+surface, monitor evaluator-issued arrivals and valid finish notifications,
+classify runtime failures, and capture one WebM overview plus one PNG poster
+from that same live run.
 
-**Exit:** visible playback and fast-forward reach equivalent state for a fixed
-seed; malformed bridge responses, browser crashes, fabricated counters, and
-incomplete event drains are detected. Capture metadata identifies the artifact,
-scenario/seed, interval, viewport, frame rate, and exact browser worker.
+**Exit:** missing registration, unknown/duplicate/wrong-exit finishes, browser
+crashes, blocked network access, and disagreement between issued/completed
+ledgers are detected. Capture metadata identifies the artifact, scenario/seed,
+interval, viewport, frame rate, and exact browser worker.
 
 **Estimate:** 4–5 engineering days.
 
 ### WP4 — Busy Intersection and bounded load-to-failure
 
-Build the public challenge, technology-neutral visual brief, one canonical
-demand profile across a small fixed seed set, safety/accounting/fairness/queue
-checks, bounded held load stages, first-failure classification, cooldown, and
-recovery. Do not implement optional bracket refinement in P0-A.
+Build the public challenge, technology-neutral visual brief, one private demand
+profile across a small seed set, gate-ledger reconciliation, bounded held load
+stages, first-failure classification, cooldown, recovery, and standardized
+recorded visual review. Do not implement optional bracket refinement in P0-A.
 
 **Exit:** passing and deliberately broken fixtures produce reproducible
-throughput, delay, collision/violation, backlog, starvation, breakdown, and
-recovery evidence. The calibrated profile/seed manifest is versioned and
-recorded with every result.
+throughput, completion latency, invalid-finish, backlog, low-load service,
+breakdown, and recovery evidence. Captures preserve collision/safety/motion
+evidence for visual review. The calibrated profile/seed manifest is versioned
+and recorded with every result.
 
 **Estimate:** 6–8 engineering days.
 
@@ -400,8 +404,9 @@ The skeleton is protected by tests that cross its seams:
 - Requested/materialized/effective configuration and cleanup remain distinct;
   cleanup runs on every terminal path.
 - Repetitions and attempts never collide or overwrite earlier evidence.
-- Demand reconciliation catches dropped, duplicated, shortened, teleported,
-  or fabricated trips.
+- Gate reconciliation catches dropped, duplicate, unknown, wrong-kind, and
+  wrong-exit completions; recorded review checks physical plausibility and
+  agreement with reported finishes.
 - Held stages distinguish transient queues from sustained breakdown and record
   recovery.
 - Missing cost stays null/unavailable and never becomes zero; subscription
@@ -420,7 +425,7 @@ The skeleton is protected by tests that cross its seams:
 - A malicious candidate fixture containing script, navigation, and exfiltration
   attempts is offered only as inert/downloadable content and never executes in
   the report shell.
-- A city topology fixture uses the challenge registry and `traffic/v1` without
+- A city topology fixture uses the challenge registry and `gates/v1` without
   a conductor special case.
 
 ## P0-A non-goals
@@ -451,7 +456,7 @@ The skeleton is protected by tests that cross its seams:
 | The first implementation accidentally defines vendor-shaped core APIs | Fake composition tests and a city fixture must cross the same seams without conductor branches. |
 | Subscription cost is mistaken for a provider bill | Show subscription cost as unavailable in P0-A; later separate route-attributable actual charges, OpenRouter usage debits, references, and any approved accounting view. |
 | Reference price is mistaken for actual spend | Require exact model mapping, frozen pricing snapshot, token evidence, and an explicit OpenRouter-equivalent label. |
-| Agent fabricates traffic telemetry | Reconcile evaluator-issued trips, snapshots, events, geometry, and browser observations. |
+| Agent fabricates traffic telemetry | Ralph owns arrival/completion ledgers and timestamps; recorded visual review checks that finishes match visible behavior. |
 | Fast-forward diverges from visible behavior | Require one simulation state/update path and equivalence fixtures. |
 | Best-effort protection is mistaken for isolation | Publish L0/unsealed provenance prominently; make strong-backend selection a separate reviewed milestone. |
 | Visual polish gets deferred as “just reporting” | Require one coherent site shell and one animated artifact preview in the P0-A exit criteria. |

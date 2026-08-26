@@ -1,10 +1,10 @@
 # Prioritized next steps
 
-This is the resume point after the first end-to-end P0-A live run on
-2026-08-23. The run produced a valid immutable bundle and a visually strong
-Busy Intersection, but the candidate did not pass the contract or produce
-valid throughput. That is useful benchmark separation, not an infrastructure
-failure.
+This is the resume point after replacing the original rich traffic protocol
+with the minimal `gates/v1` arrival/finish boundary. The first P0-A model run
+on 2026-08-23 remains valuable evidence: it produced a valid immutable bundle
+and a visually strong Busy Intersection, but exposed that interface plumbing
+was dominating measurement.
 
 ## Decisions already made
 
@@ -31,20 +31,31 @@ Do not reopen these without new evidence:
   intended subjective payoff.
 - The static offline check falsely interpreted the CSS custom property
   `--ws:64px` as a `ws:` WebSocket URL.
-- Runtime judging rejected a malformed movement identity
+- The retired `traffic/v1` runtime judge rejected a malformed movement identity
   (`movement.id must be a non-empty string`) and measured zero valid
   throughput.
 - The repair attempt received static public-check feedback but did not receive
   the later browser/runtime contract failure, so it had no opportunity to fix
   the movement bridge.
-- Some failed assertions use success-oriented detail text such as “browser
-  snapshot has no runtime errors,” making failure evidence harder to read.
-- The public pack names the `traffic/v1` methods but does not yet ship complete
-  payload schemas, valid lifecycle examples, dynamics limits, or an
-  agent-runnable browser checker.
-- Conversely, the current public scenario pack exposes the same pilot stage
-  schedule used by the live evaluator. Public conformance inputs and private
-  scored profiles are not yet meaningfully separated.
+- That failure helped expose that the rich topology/snapshot/event contract was
+  testing interface plumbing more than simulation design. It has been replaced
+  by the four-method `gates/v1` arrival/finish interface.
+- The public pack now contains only an unscored smoke schedule and semantic gate
+  diagram. Production arrival mixes, stage rates, seeds, and thresholds remain
+  evaluator-owned.
+
+## Evidence from the `gates/v1` replacement
+
+- The checked-in passing artifact completed a real 50-second monitored
+  Chromium run: 60/60 cars and 13/13 pedestrians finished with no invalid
+  notifications.
+- The worker collected 198 live ledger samples while recording the same run,
+  then derived monitored throughput, completion latency, stage backlog, and
+  cooldown recovery.
+- Missing callbacks are reported as `unmeasurable`, not as zero throughput.
+- Context-aware offline checks accept CSS custom properties such as
+  `--ws:64px` while still rejecting real external URLs.
+- The complete unit and contract suite contains 107 passing tests.
 
 ## Fair-shot design guardrails
 
@@ -52,7 +63,7 @@ The benchmark should be difficult because the system must design, implement,
 debug, and optimize a rich simulation—not because success depends on guessing
 an undocumented interface.
 
-- Publish every correctness requirement and the complete `traffic/v1` schema.
+- Publish every rule of the complete four-method `gates/v1` contract.
 - Give the model a deterministic public smoke scenario and a runnable
   conformance tool that exercises all required lifecycle shapes.
 - Provide browser console/runtime evidence and stable assertion IDs in a
@@ -73,32 +84,22 @@ an undocumented interface.
 
 ## P0-A — next session
 
-### 1. Complete the fair-shot public contract and checker
+### 1. Ship the agent-runnable public gate check
 
 **Priority:** blocking
 
-**Estimate:** 1–2 engineering days
+**Estimate:** 0.5–1 engineering day
 
-- Publish complete versioned request/response/event schemas, small valid
-  lifecycle examples, and every required physical/dynamics bound.
-- Add a deterministic, deliberately modest scenario covering every movement
-  and lifecycle shape plus an agent-runnable real-browser conformance command.
-- Separate that representative public scenario from private scored profiles;
-  passing the public command must prove contract readiness, not reveal
-  throughput capacity or guarantee benchmark acceptance.
-- Replace the broad URL regex with context-aware offline dependency checks that
-  do not confuse CSS custom properties, JavaScript comments, or harmless
-  namespace strings with network access.
-- Add the first live artifact pattern (`--ws:64px`) as a regression fixture.
-- Make every failed assertion's detail describe the observed failure rather
-  than reuse success-oriented text.
-- Aggregate repeated stage/movement failures for operator-facing summaries
-  while preserving full assertion evidence in the bundle.
+- Add an agent-runnable command for the small public smoke schedule and concise
+  registration/finish diagnostics without exposing the production load.
+- Exercise that command against both checked-in fixtures and at least two
+  deliberately different implementations.
+- Keep it a contract debugger: report observed callback/identity/exit/runtime
+  failures without suggesting a simulation architecture or traffic algorithm.
 
-**Exit:** a model can implement and debug `traffic/v1` without guessing any
-field or lifecycle convention; the live artifact's static check fails only for
-a real external dependency; public tooling does not expose the scored load
-profile or prescribe an implementation.
+**Exit:** a model can validate the two arrival callbacks and two finish methods
+without guessing; the scored profile remains private; passing the command
+proves interface readiness but does not predict benchmark capacity.
 
 ### 2. Give the model a fair, non-prescriptive acceptance loop
 
@@ -124,7 +125,7 @@ profile or prescribe an implementation.
 
 **Exit:** two deliberately different implementations can use the same public
 tooling to reach conformance; a fixture that passes static checks but fails
-`traffic/v1` can repair and pass on attempt two; neither the tool nor feedback
+`gates/v1` can repair and pass on attempt two; neither the tool nor feedback
 dictates its algorithm or visual design; both attempts remain auditable.
 
 ### 3. Extract a real challenge execution boundary
@@ -169,8 +170,8 @@ conductor branch or Codex import.
 
 - Distinguish “bundle produced and validated” from “candidate passed the
   benchmark” in the final console summary.
-- Print the selected attempt, static acceptance, runtime outcome, peak valid
-  throughput, repair usage, and bundle path in a compact block.
+- Print the selected attempt, static acceptance, runtime outcome, peak
+  monitored throughput, repair usage, and bundle path in a compact block.
 - Keep the default-yes recorded-overview prompt after that summary.
 
 **Exit:** an operator can answer “did it work?” without opening JSON or asking
@@ -253,9 +254,10 @@ current implementation. Its useful findings are reflected above:
   are deliberate P0 scope reductions, provided the execution contracts and
   cost provenance remain honest.
 - **Already superseded:** Bubblewrap is no longer a P0 dependency or L1 claim;
-  P0 is explicitly portable L0/unsealed. A first live run has also occurred,
-  though it did not reach valid throughput and therefore did not calibrate the
-  sustainable-load curve.
+  P0 is explicitly portable L0/unsealed. The rich `traffic/v1` bridge is also
+  retired; a real `gates/v1` fixture run now proves the minimal monitored
+  boundary, though a fresh model-generated artifact is still needed for
+  capacity calibration.
 - **Deferred deliberately:** the legacy corpus needs an explicit fate, but it
   should not distort the immutable vNext bundle model or block the first static
   product surface.

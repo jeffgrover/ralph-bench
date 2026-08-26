@@ -71,29 +71,34 @@ mission. A 2D intersection is not penalized merely for being 2D, and visual
 quality remains separate from validity and traffic performance. Automated
 frontier-model qualitative judging is deferred.
 
-## Sustainable valid throughput
+## Sustainable monitored throughput
 
 The primary in-simulation metric is:
 
-> Valid, evaluator-requested trips completed per simulated hour while all
-> qualifying safety, accounting, fairness, queue-containment, and recovery
-> constraints remain satisfied.
+> Evaluator-requested cars visibly finishing at their requested gate per
+> evaluation minute while the issued/completed/outstanding ledger remains
+> consistent and the artifact continues serving low-load pedestrians.
 
-A trip counts only when it:
+A P0 `gates/v1` completion counts only when it:
 
-- Matches an evaluator-issued trip ID, origin, destination, and departure
-  request.
-- Is admitted and represented in snapshots/events.
-- Traverses connected valid movement geometry.
-- Does not teleport or disappear outside a valid completion region.
-- Respects direction and applicable controls.
-- Completes before the evaluation horizon.
+- Matches an evaluator-issued ID and traveler kind.
+- Is reported no more than once.
+- For a car, names the requested exit gate.
+- Arrives before the evaluation horizon ends.
+
+Ralph owns issue and completion timestamps and samples its ledger throughout
+the same live run recorded for review. The candidate does not provide topology,
+snapshots, queues, event logs, or aggregate counters. Collision avoidance,
+signal compliance, pedestrian safety, motion plausibility, and agreement
+between finish notifications and visible behavior remain separate human or
+frontier visual-review dimensions in P0. A missing interface produces
+`unmeasurable`, not a measured throughput of zero.
 
 ## Load-to-failure protocol
 
 ### Phase structure
 
-1. **Reset:** Clean state and fixed seed/profile.
+1. **Reset:** Reload the page and attach the injected gate monitor.
 2. **Warm-up:** Low demand validates basic operation.
 3. **Held stages:** Offered trip rate increases in discrete steps.
 4. **Breakdown detection:** The evaluator records the first sustained failure.
@@ -113,16 +118,15 @@ used for the standardized visual capture.
 
 The evaluator records separately:
 
-- Requested/offered trips.
-- Admitted trips.
-- External backlog.
-- Active trips.
-- Completed trips.
-- Explicitly rejected trips.
-- Lost or inconsistent trips.
+- Issued cars and pedestrians.
+- Valid car and pedestrian finishes.
+- Outstanding IDs.
+- Unknown, duplicate, wrong-kind, and wrong-exit notifications.
+- Completion latency and observed completion rate.
 
-An artifact cannot improve capacity by delaying admission indefinitely or
-discarding demand. External backlog participates in failure criteria.
+An artifact cannot improve measured capacity by silently discarding demand;
+every uncompleted evaluator ID remains in Ralph's outstanding ledger and
+participates in breakdown and recovery evidence.
 
 ### Breakdown capacity
 
@@ -130,15 +134,15 @@ The highest offered demand rate that remains qualifying for the complete held
 stage and recovery requirements.
 
 ```text
-breakdown_capacity = highest qualifying offered trips / simulated hour
+breakdown_capacity = highest qualifying offered cars / evaluation minute
 ```
 
-### Peak sustainable throughput
+### Peak sustainable monitored throughput
 
 The highest valid completion rate observed at a qualifying load:
 
 ```text
-peak_sustainable_throughput = valid completed trips / simulated hour
+peak_sustainable_throughput = valid car finishes / evaluation minute
 ```
 
 Offered capacity and completion throughput are not interchangeable. A network
@@ -146,34 +150,38 @@ may accept demand while accumulating an unstable backlog.
 
 ### Failure classes
 
-Immediate transport failures include:
+Immediate automated failures include:
 
-- Collision or prohibited overlap.
-- Vehicle/pedestrian collision.
-- Red-light or direction violation.
-- Teleportation or invalid traversal.
-- Lost/duplicated trip identity.
+- Missing `gates/v1` callback registration.
+- Unknown, duplicate, wrong-kind, or wrong-exit finish notification.
+- Low-load cars or pedestrians never receiving service.
+- Browser/runtime or offline-network failure.
 
 Sustained capacity failures include:
 
-- Queue storage overflow or forbidden spillback.
-- Persistent blocked intersection.
-- Starvation above a versioned wait limit.
-- Growing internal or external backlog beyond the allowed window.
+- Persistent visible blockage.
+- Growing evaluator-owned outstanding backlog beyond the allowed window.
 - Completion/service ratio below the versioned bound.
-- Persistent freeway speed collapse.
-- Failure to drain critical queues during recovery.
+- Failure to drain outstanding demand during recovery.
 
 Runtime failures include browser exceptions, event-loop stalls, runaway entity
-growth, invalid snapshots, evaluation timeouts, and unacceptable frame/update
-performance.
+growth, evaluation timeouts, and unacceptable frame/update performance.
 
 Transient congestion does not count as immediate failure. Thresholds and
 rolling windows live in versioned judge packs.
 
 ## Supporting traffic metrics
 
-- Requested, admitted, active, completed, rejected, and outstanding trips.
+P0 derives directly from `gates/v1`:
+
+- Issued, completed, invalid, and outstanding travelers.
+- Completion rate by load stage and traveler kind.
+- Median and maximum completion latency.
+- First stage with sustained backlog/service failure.
+- Outstanding demand at cooldown start/end and clear time.
+
+Later protocols or calibrated visual judges may add:
+
 - Completion rate by trip class, approach, movement, and ramp.
 - Median and P95 trip time.
 - Median and P95 normalized delay versus free-flow travel time.

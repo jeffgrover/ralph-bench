@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-08-23
-**Protocol:** `traffic/v1`
+**Protocol:** `gates/v1`
 
 ## Design intent
 
@@ -36,43 +36,40 @@ variables, or a reference architecture.
 - A static browser artifact with `index.html` as its entry point.
 - No backend service required.
 - No network dependency during evaluation.
-- Pinned supported browser dependencies and evaluator bridge assets supplied by
-  the challenge pack. Three.js may be supplied for 3D work without requiring
-  the intersection to use it.
+- The evaluator injects the dependency-free `RalphGates` JavaScript interface;
+  the artifact does not run a server or bundle evaluator code.
 - Any supplied dependency the candidate uses must be copied into the final
   static submission so the bundle remains runnable without the challenge
   source tree or a network.
-- Normal interactive playback and deterministic evaluator-driven stepping must
-  operate on the same simulation state.
+- Ralph monitors and records the same live page run. The artifact may provide
+  any standalone demonstration behavior when `RalphGates` is absent.
 
-### Proposed evaluator API
+### Minimal gates API
 
 ```javascript
-window.__RALPH_BENCH__ = {
-  apiVersion: "traffic/v1",
-  describeNetwork(),
-  loadScenario(scenario),
-  reset(seed),
-  advance(simulatedMilliseconds),
-  snapshot(),
-  drainEvents()
-};
+RalphGates.register({
+  carArrived({ id, entersFrom, exitsTo }) { /* add the requested car */ },
+  pedestrianArrived({ id, crossing, direction }) { /* add the pedestrian */ }
+});
+
+RalphGates.carFinished(id, exit);
+RalphGates.pedestrianFinished(id);
 ```
 
-The exact JSON schemas will be versioned. Conceptually:
+Vehicle entrances and exits are `north`, `east`, `south`, and `west`; evaluator
+requests never contain a U-turn. North/south pedestrian crossings use
+`east-to-west` or `west-to-east`, while east/west crossings use
+`north-to-south` or `south-to-north`. The public pack includes an SVG defining
+these semantic gates without fixing their pixel coordinates or visual style.
 
-- `describeNetwork()` describes nodes, directed lane segments, movements,
-  signals, crossings, road classes, speed limits, and storage boundaries.
-- `loadScenario()` accepts evaluator-owned trip demand and timing parameters.
-- `reset()` returns the artifact to a clean deterministic state.
-- `advance()` progresses simulation time without depending on display refresh.
-- `snapshot()` exposes current vehicle, pedestrian, signal, queue, and trip
-  state for independent checks.
-- `drainEvents()` returns ordered state-transition evidence since the previous
-  drain.
+Ralph owns arrival IDs and timestamps. It accepts a finish only for a known ID,
+only once, and for cars only at the requested exit. It samples its issued,
+completed, outstanding, invalid, and latency ledgers throughout the same live
+run captured for visual review. Page reload is the reset boundary.
 
-The evaluator does not trust self-reported summary counters without reconciling
-them against requested trips, snapshots, events, and browser observations.
+There is no candidate-authored network description, topology schema, snapshot,
+queue report, summary counter, simulation clock, or parallel event ontology in
+`gates/v1`. Those concepts remain implementation choices inside the artifact.
 
 ### Visual design and creative latitude
 
@@ -115,32 +112,26 @@ traffic validity and throughput; it cannot rescue an invalid simulation, and a
 technically excellent simulation does not automatically count as visually
 excellent.
 
-### Shared trip lifecycle
+### Evaluator-owned completion ledger
 
 ```text
-requested -> admitted -> active -> completed
-                    \-> explicitly_rejected
+issued -> outstanding -> finished
 ```
 
-Every evaluator-requested trip must remain accounted for. A trip not yet
-admitted remains in an external backlog and counts against capacity. A
-submission may not silently discard, replace, shorten, or move a trip's origin
-or destination.
+Every evaluator request remains outstanding until its finish notification.
+Silently dropped demand therefore becomes visible backlog. Ralph computes
+throughput and latency from its own timestamps rather than candidate counters.
+An artifact that does not register the two callbacks is `unmeasurable`, not a
+zero-throughput simulation.
 
-### Shared physical constraints
+### Physical interpretation
 
-Versioned challenge manifests will define:
-
-- Fixed vehicle dimensions and collision envelopes.
-- Road-class speed limits.
-- Maximum acceleration and comfortable/emergency braking limits.
-- Minimum following headway.
-- Turning-speed or lateral-motion bounds.
-- Infrastructure footprint and lane budget.
-- Valid entry, exit, origin, and destination regions.
-
-These constraints prevent throughput from being increased using tiny vehicles,
-unlimited speed, teleportation, or unbounded road capacity.
+P0 `gates/v1` deliberately does not standardize vehicle dimensions,
+acceleration, braking, or internal geometry. Plausibility, safety, visible
+agreement with finish notifications, and attempts to inflate throughput using
+teleportation or implausible scale are reviewed from the recorded run. Later
+versions may add optional traveler attributes when pilot evidence justifies
+them; they must not complicate v1 retroactively.
 
 ## Challenge A: Busy Intersection
 
@@ -171,7 +162,7 @@ experience rather than a debugging canvas.
 - Four pedestrian crossings and compatible walk phases.
 - Continuous lane-following and turning motion.
 - Queuing, braking, starting, and bounded vehicle spacing.
-- Evaluator-supplied trip schedule and pedestrian demand.
+- Evaluator-supplied car and pedestrian arrival callbacks.
 - Pause, reset, simulation speed, and visible basic status.
 - A useful default view from which behavior is understandable.
 
@@ -203,16 +194,19 @@ separation is permitted. Exact lane allocation within the budget remains an
 artifact design choice until calibration shows whether stronger normalization
 is needed.
 
-### Critical validity and safety checks
+### Automated measurement checks
 
-- Connected valid movement graph.
-- Vehicles stay in declared compatible lanes and paths.
-- No collisions or overlapping occupancy.
-- No red-light entry.
-- No vehicle/pedestrian conflict.
-- No teleportation or invalid disappearance.
-- Requested-trip reconciliation.
+- Arrival callbacks register successfully.
+- Issued IDs, completion IDs, and requested car exits reconcile.
+- No unknown, duplicate, wrong-kind, or wrong-exit completion.
+- Low-load cars and pedestrians visibly receive service.
+- Outstanding demand, completion latency, throughput, breakdown, and recovery
+  remain observable through the evaluator-owned ledger.
 - Browser/runtime stability.
+
+Collision avoidance, signal compliance, pedestrian safety, plausible motion,
+and visible agreement with reported finishes are P0 human/frontier visual
+review dimensions rather than a candidate-authored telemetry contract.
 
 ### Critical operational checks
 
@@ -460,7 +454,7 @@ responsibility is to preserve and present the evidence exceptionally well.
 
 - Narrative prompt.
 - Infrastructure constraints.
-- Evaluator API schemas.
+- The complete four-method `gates/v1` contract and semantic gate diagram.
 - Starter/vendor assets.
 - Public smoke checks.
 - One representative public scenario.
@@ -486,12 +480,11 @@ representative real-browser run.
 
 The public pack should therefore provide:
 
-- Complete versioned API and event schemas, with small valid examples.
-- A deterministic smoke scenario that exercises every required lifecycle and
-  movement shape without revealing the scored load schedule.
-- A runnable conformance tool that checks bridge shape, reconciliation,
-  ordering, basic physical continuity, offline readiness, and browser/runtime
-  errors.
+- The complete versioned arrival and finish shapes, with small valid examples.
+- A deterministic smoke scenario that exercises every gate and traveler type
+  without revealing the scored load schedule.
+- A runnable conformance tool that checks registration, completion identity and
+  exit reconciliation, offline readiness, and browser/runtime errors.
 - Access to useful console/log evidence in a documented, bounded format.
 - Stable assertion identifiers and failure details describing the observed
   contract violation.
@@ -503,7 +496,7 @@ private judge.
 
 The private judge may vary seeds, mixes, timings, demand intensity, failure
 windows, and capacity search. It must not require an undocumented field,
-lifecycle transition, coordinate convention, or tool behavior. Hidden values
+lifecycle rule, semantic gate, or tool behavior. Hidden values
 should decide robustness and score, not whether the model could have known how
 to be correct.
 

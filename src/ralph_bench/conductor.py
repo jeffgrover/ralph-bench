@@ -1,4 +1,4 @@
-"""The complete P0-A Codex → traffic evaluation → bundle vertical slice."""
+"""The complete P0-A Codex → gates evaluation → bundle vertical slice."""
 
 from __future__ import annotations
 
@@ -53,8 +53,8 @@ from .isolation import (
     build_isolation_report,
     build_process_environment,
 )
-from .traffic import balanced_seed_for_repetition, build_balanced_scenario, busy_intersection_network
-from .traffic_evaluator import check_static_candidate
+from .gate_evaluator import check_static_candidate
+from .gates import balanced_seed_for_repetition, build_balanced_gate_scenario
 
 
 class ConductorError(RuntimeError):
@@ -67,7 +67,7 @@ class CompletedRun:
     repetition: int
     bundle: Path
     public_accepted: bool
-    traffic_outcome: str
+    simulation_outcome: str
     attempt_count: int
 
 
@@ -79,7 +79,7 @@ class EvaluationRunSummary:
     @property
     def passed(self) -> int:
         return sum(
-            run.public_accepted and run.traffic_outcome == "passed"
+            run.public_accepted and run.simulation_outcome == "passed"
             for run in self.runs
         )
 
@@ -659,7 +659,7 @@ def _execute_one(
         )
     artifact_hash = candidate_tree_hash(candidate)
 
-    reporter.emit(f"{run_label}: evaluating traffic and recording the overview")
+    reporter.emit(f"{run_label}: monitoring gate completions and recording the overview")
     browser_output = staged.conductor_root / "browser"
     browser = run_browser_evaluation(
         candidate,
@@ -681,7 +681,7 @@ def _execute_one(
     assert isinstance(evaluation, dict)
     recorder.record(
         phase="private_evaluation",
-        event_type="traffic_evaluation.completed",
+        event_type="gate_evaluation.completed",
         source="browser-worker",
         payload={
             "outcome": evaluation.get("outcome"),
@@ -750,8 +750,7 @@ def _execute_one(
             )
         )
 
-    scenario = build_balanced_scenario(seed)
-    expected_network = busy_intersection_network()
+    scenario = build_balanced_gate_scenario(seed)
     challenge = json.loads(
         (staged.public_challenge / "challenge.json").read_text(encoding="utf-8")
     )
@@ -759,7 +758,6 @@ def _execute_one(
         {
             "scenario_pack": experiment.evaluation.scenario_pack,
             "scenario": scenario.to_dict(),
-            "expected_network": expected_network.to_dict(),
             "seed": seed,
         }
     )
@@ -773,8 +771,8 @@ def _execute_one(
             "evidence_refs": [browser_ref],
         }
     )
-    traffic_outcome = str(evaluation.get("outcome", "failed"))
-    overall_passed = loop_result.accepted and traffic_outcome == "passed"
+    simulation_outcome = str(evaluation.get("outcome", "failed"))
+    overall_passed = loop_result.accepted and simulation_outcome == "passed"
     created = datetime.now(timezone.utc).isoformat()
     run_manifest = {
         "schema_version": "run/v1",
@@ -790,7 +788,8 @@ def _execute_one(
         "scenario_profile": scenario.profile,
         "outcome": "passed" if overall_passed else "failed",
         "public_accepted": loop_result.accepted,
-        "traffic_outcome": traffic_outcome,
+        "simulation_outcome": simulation_outcome,
+        "measurement_status": evaluation.get("measurement_status", "unmeasurable"),
         "terminal_reason": (
             loop_result.attempts[-1].terminal_reason
             if loop_result.attempts
@@ -810,7 +809,7 @@ def _execute_one(
     metrics = {
         "schema_version": "metrics/v1",
         "public_accepted": loop_result.accepted,
-        "traffic": evaluation.get("metrics", {}),
+        "simulation": evaluation.get("metrics", {}),
         "recovery": evaluation.get("recovery", {}),
         "agent": {
             "wall_seconds": round(agent_wall, 6),
@@ -871,7 +870,7 @@ def _execute_one(
         canonical_events_jsonl=recorder.to_jsonl(),
         assertions={
             "schema_version": "assertions/v1",
-            "outcome": traffic_outcome,
+            "outcome": simulation_outcome,
             "scenario_id": scenario.scenario_id,
             "scenario_profile": scenario.profile,
             "seed": scenario.seed,
@@ -887,6 +886,7 @@ def _execute_one(
         runtime_observations={
             "schema_version": "runtime-observations/v1",
             "observations": evaluation.get("runtime_observations", []),
+            "gate_monitor": browser.result.get("monitor", {}),
             "browser": browser.result.get("browser", {}),
             "evidence_refs": [browser_ref],
         },
@@ -921,7 +921,7 @@ def _execute_one(
         repetition,
         finalized.path,
         loop_result.accepted,
-        traffic_outcome,
+        simulation_outcome,
         len(loop_result.attempts),
     )
 

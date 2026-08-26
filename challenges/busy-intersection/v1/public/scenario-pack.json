@@ -1,21 +1,21 @@
 {
-  "schema_version": "scenario-pack/v1",
+  "schema_version": "gates-smoke/v1",
   "scenario_pack": "traffic-intersection-p0a",
   "challenge": "busy-intersection/v1",
-  "protocol": "traffic/v1",
-  "production_profile": "balanced",
-  "seeds": [17, 29, 43],
-  "stages": [
-    {"id": "warmup", "start_ms": 0, "end_ms": 60000, "offered_trips_per_hour": 240, "pedestrian_requests_per_hour": 60, "qualifying": true, "cooldown": false},
-    {"id": "balanced-1", "start_ms": 60000, "end_ms": 180000, "offered_trips_per_hour": 600, "pedestrian_requests_per_hour": 120, "qualifying": true, "cooldown": false},
-    {"id": "balanced-2", "start_ms": 180000, "end_ms": 300000, "offered_trips_per_hour": 900, "pedestrian_requests_per_hour": 180, "qualifying": true, "cooldown": false},
-    {"id": "balanced-3", "start_ms": 300000, "end_ms": 420000, "offered_trips_per_hour": 1200, "pedestrian_requests_per_hour": 240, "qualifying": true, "cooldown": false},
-    {"id": "balanced-4", "start_ms": 420000, "end_ms": 540000, "offered_trips_per_hour": 1500, "pedestrian_requests_per_hour": 300, "qualifying": true, "cooldown": false},
-    {"id": "cooldown", "start_ms": 540000, "end_ms": 660000, "offered_trips_per_hour": 0, "pedestrian_requests_per_hour": 0, "qualifying": false, "cooldown": true}
+  "protocol": "gates/v1",
+  "purpose": "public unscored interface smoke example",
+  "cars": [
+    {"at_ms": 0, "id": "smoke-car-1", "entersFrom": "north", "exitsTo": "south"},
+    {"at_ms": 1500, "id": "smoke-car-2", "entersFrom": "east", "exitsTo": "north"},
+    {"at_ms": 3000, "id": "smoke-car-3", "entersFrom": "south", "exitsTo": "east"},
+    {"at_ms": 4500, "id": "smoke-car-4", "entersFrom": "west", "exitsTo": "south"}
+  ],
+  "pedestrians": [
+    {"at_ms": 750, "id": "smoke-ped-1", "crossing": "north", "direction": "east-to-west"},
+    {"at_ms": 3750, "id": "smoke-ped-2", "crossing": "east", "direction": "south-to-north"}
   ],
   "notes": [
-    "The evaluator owns trip IDs, origins, destinations, timing, and pedestrian demand.",
-    "Exact private thresholds and hidden scenario variation are not public challenge inputs.",
-    "The fixed stages are deterministic pilot calibration inputs, not a composite score."
+    "This example demonstrates interface shape, not scored capacity.",
+    "Production seeds, arrival mixes, stage rates and thresholds are evaluator-owned."
   ]
 }

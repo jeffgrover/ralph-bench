@@ -1,10 +1,4 @@
-"""Isolated Playwright worker for deterministic traffic observation/capture.
-
-The conductor launches this module in a dedicated process group.  That is a
-deliberate reliability boundary: hostile or simply broken candidate
-JavaScript can block a renderer indefinitely, so the parent must be able to
-terminate the worker and every Chromium child on a hard timeout.
-"""
+"""Killable Playwright worker for ``gates/v1`` monitoring and capture."""
 
 from __future__ import annotations
 
@@ -20,20 +14,17 @@ from urllib.parse import unquote, urlsplit
 
 from playwright.sync_api import Page, Route, sync_playwright
 
-from .traffic import (
-    NetworkDescription,
-    build_balanced_scenario,
-    busy_intersection_network,
-)
-from .traffic_evaluator import evaluate_transport
+from .gate_bridge import GATES_INIT_SCRIPT
+from .gate_evaluator import evaluate_gate_monitor
+from .gates import GateScenario, build_balanced_gate_scenario
 
 
 _ORIGIN = "http://candidate.invalid"
 _VIEWPORT = {"width": 1440, "height": 900}
-_CAPTURE_STEP_MS = 10_000
-_CAPTURE_DELAY_MS = 60
+_MONITOR_INTERVAL_MS = 250
+_READY_TIMEOUT_MS = 5_000
 _VIDEO_FRAME_RATE_FPS = 25
-_CAPTURE_WORKER_PROTOCOL = "browser-worker/v1"
+_CAPTURE_WORKER_PROTOCOL = "browser-worker/v2"
 
 
 class WorkerError(RuntimeError):
@@ -70,76 +61,21 @@ class CandidateRouter:
         candidate = self.root.joinpath(*logical.parts)
         try:
             resolved = candidate.resolve(strict=True)
-            mode_ok = resolved.is_file() and not candidate.is_symlink()
-            contained = resolved.is_relative_to(self.root)
+            valid = resolved.is_file() and not candidate.is_symlink() and resolved.is_relative_to(self.root)
         except OSError:
-            mode_ok = contained = False
-        if not mode_ok or not contained:
+            valid = False
+        if not valid:
             route.fulfill(status=404, body=b"not found", content_type="text/plain")
             return
         mime = mimetypes.guess_type(resolved.name)[0] or "application/octet-stream"
         route.fulfill(status=200, body=resolved.read_bytes(), content_type=mime)
 
 
-class PageTrafficTransport:
-    def __init__(
-        self,
-        page: Page,
-        *,
-        runtime_errors: list[str],
-        network_violations: list[str],
-    ) -> None:
-        self.page = page
-        self.runtime_errors = runtime_errors
-        self.network_violations = network_violations
-
-    def _call(self, method: str, *args: Any) -> Any:
-        return self.page.evaluate(
-            """async ({method, args}) => {
-              const bridge = globalThis.__RALPH_BENCH__;
-              if (!bridge || bridge.apiVersion !== "traffic/v1") {
-                throw new Error("traffic/v1 bridge is unavailable");
-              }
-              const fn = bridge[method];
-              if (typeof fn !== "function") {
-                throw new Error(`traffic/v1 method ${method}() is unavailable`);
-              }
-              return await fn.apply(bridge, args);
-            }""",
-            {"method": method, "args": list(args)},
-        )
-
-    def describe_network(self) -> Any:
-        return self._call("describeNetwork")
-
-    def load_scenario(self, scenario: dict[str, Any]) -> None:
-        self._call("loadScenario", scenario)
-
-    def reset(self, seed: int) -> None:
-        self._call("reset", seed)
-
-    def advance(self, simulated_milliseconds: int) -> None:
-        self._call("advance", simulated_milliseconds)
-
-    def snapshot(self) -> dict[str, Any]:
-        value = self._call("snapshot")
-        if not isinstance(value, dict):
-            raise TypeError("snapshot() must return an object")
-        inherited = value.get("runtime_errors", value.get("runtimeErrors", []))
-        errors = list(inherited) if isinstance(inherited, list) else [str(inherited)]
-        errors.extend(self.runtime_errors)
-        errors.extend(f"network-blocked:{item}" for item in self.network_violations)
-        value["runtime_errors"] = errors
-        return value
-
-    def drain_events(self) -> list[dict[str, Any]]:
-        value = self._call("drainEvents")
-        if not isinstance(value, list):
-            raise TypeError("drainEvents() must return an array")
-        return value
-
-
-def _prepare_page(context: Any, candidate: Path) -> tuple[Page, CandidateRouter, list[str], list[dict[str, str]]]:
+def _prepare_page(
+    context: Any,
+    candidate: Path,
+) -> tuple[Page, CandidateRouter, list[str], list[dict[str, str]]]:
+    context.add_init_script(script=GATES_INIT_SCRIPT)
     page = context.new_page()
     router = CandidateRouter(candidate)
     runtime_errors: list[str] = []
@@ -150,21 +86,44 @@ def _prepare_page(context: Any, candidate: Path) -> tuple[Page, CandidateRouter,
     page.on("pageerror", lambda error: runtime_errors.append(f"pageerror:{str(error)[:1000]}"))
     page.on(
         "console",
-        lambda message: console.append(
-            {"type": message.type, "text": message.text[:2000]}
-        ),
+        lambda message: console.append({"type": message.type, "text": message.text[:2000]}),
     )
     page.goto(f"{_ORIGIN}/index.html", wait_until="domcontentloaded", timeout=10_000)
     return page, router, runtime_errors, console
 
 
-def _capture(
+def _driver_call(page: Page, method: str, *args: Any) -> Any:
+    return page.evaluate(
+        """async ({method, args}) => {
+          const driver = globalThis.__RALPH_GATES_DRIVER__;
+          if (!driver || driver.apiVersion !== "gates/v1") {
+            throw new Error("evaluator gates/v1 driver is unavailable");
+          }
+          const fn = driver[method];
+          if (typeof fn !== "function") throw new Error(`unknown gates driver method: ${method}`);
+          return await fn.apply(driver, args);
+        }""",
+        {"method": method, "args": list(args)},
+    )
+
+
+def _arrival_schedule(scenario: GateScenario) -> list[tuple[int, str, dict[str, str]]]:
+    values = [
+        (item.arrival_ms, "car", item.to_public_dict()) for item in scenario.cars
+    ] + [
+        (item.arrival_ms, "pedestrian", item.to_public_dict())
+        for item in scenario.pedestrians
+    ]
+    return sorted(values, key=lambda item: (item[0], item[1], item[2]["id"]))
+
+
+def _monitor_and_capture(
     browser: Any,
     candidate: Path,
     output: Path,
-    scenario: Any,
-) -> dict[str, Any]:
-    capture_started = time.monotonic()
+    scenario: GateScenario,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], list[str], list[dict[str, str]], list[str]]:
+    started = time.monotonic()
     video_root = output / ".video"
     video_root.mkdir()
     context = browser.new_context(
@@ -174,56 +133,90 @@ def _capture(
         service_workers="block",
         offline=True,
     )
-    page, router, errors, console = _prepare_page(context, candidate)
+    page, router, runtime_errors, console = _prepare_page(context, candidate)
     video = page.video
-    captured_at_ms: int | None = None
-    replay_error: str | None = None
+    observations: list[dict[str, Any]] = []
+    monitor: dict[str, Any] = {
+        "api_version": "gates/v1",
+        "ready": False,
+        "issued": [],
+        "completions": [],
+        "invalid": [],
+    }
+    readiness_error: str | None = None
+    poster_at_ms = 0
     try:
-        transport = PageTrafficTransport(
-            page, runtime_errors=errors, network_violations=router.blocked
-        )
-        transport.load_scenario(scenario.to_dict())
-        transport.reset(scenario.seed)
-        elapsed = 0
-        poster_target = 480_000
-        while elapsed < scenario.horizon_ms:
-            amount = min(_CAPTURE_STEP_MS, scenario.horizon_ms - elapsed)
-            transport.advance(amount)
-            elapsed += amount
-            page.wait_for_timeout(_CAPTURE_DELAY_MS)
-            if captured_at_ms is None and elapsed >= poster_target:
-                page.screenshot(path=str(output / "overview.png"), full_page=False)
-                captured_at_ms = elapsed
-    except Exception as exc:
-        replay_error = f"{type(exc).__name__}: {exc}"[:2000]
-        page.wait_for_timeout(1_000)
+        try:
+            page.wait_for_function(
+                "() => globalThis.__RALPH_GATES_DRIVER__?.ready() === true",
+                timeout=_READY_TIMEOUT_MS,
+            )
+        except Exception as exc:
+            readiness_error = f"{type(exc).__name__}: gates/v1 callbacks were not registered"[:1000]
+        if readiness_error is None:
+            _driver_call(page, "start")
+            arrivals = _arrival_schedule(scenario)
+            next_arrival = 0
+            run_started = time.monotonic()
+            poster_target = 34_000
+            while True:
+                elapsed_ms = min(
+                    scenario.horizon_ms,
+                    max(0, round((time.monotonic() - run_started) * 1_000)),
+                )
+                while next_arrival < len(arrivals) and arrivals[next_arrival][0] <= elapsed_ms:
+                    _, kind, request = arrivals[next_arrival]
+                    _driver_call(page, "addCar" if kind == "car" else "addPedestrian", request)
+                    next_arrival += 1
+                snapshot = _driver_call(page, "snapshot")
+                snapshot["time_ms"] = elapsed_ms
+                snapshot["runtime_error_count"] = len(runtime_errors)
+                snapshot["network_violation_count"] = len(router.blocked)
+                observations.append(snapshot)
+                if poster_at_ms == 0 and elapsed_ms >= poster_target:
+                    page.screenshot(path=str(output / "overview.png"), full_page=False)
+                    poster_at_ms = elapsed_ms
+                if elapsed_ms >= scenario.horizon_ms:
+                    break
+                page.wait_for_timeout(min(_MONITOR_INTERVAL_MS, scenario.horizon_ms - elapsed_ms))
+            monitor = _driver_call(page, "final")
+        else:
+            runtime_errors.append(readiness_error)
+            page.wait_for_timeout(1_000)
+            monitor = _driver_call(page, "final")
     finally:
         if not (output / "overview.png").exists():
             page.screenshot(path=str(output / "overview.png"), full_page=False)
-            captured_at_ms = 0
         context.close()
     if video is None:
         raise WorkerError("Playwright did not create a video artifact")
     video.save_as(str(output / "overview.webm"))
     shutil.rmtree(video_root, ignore_errors=True)
-    duration_ms = max(1, round((time.monotonic() - capture_started) * 1_000))
-    return {
+    evaluation = evaluate_gate_monitor(
+        scenario,
+        monitor,
+        observations,
+        runtime_errors=runtime_errors,
+        network_violations=router.blocked,
+    ).to_dict()
+    duration_ms = max(1, round((time.monotonic() - started) * 1_000))
+    capture = {
         "schema_version": "capture/v1",
         "viewport": _VIEWPORT,
         "scenario_id": scenario.scenario_id,
         "scenario_profile": scenario.profile,
         "seed": scenario.seed,
         "simulated_horizon_ms": scenario.horizon_ms,
-        "poster_simulation_ms": captured_at_ms,
+        "poster_simulation_ms": poster_at_ms,
         "simulation_interval_ms": {
             "start": 0,
             "end": scenario.horizon_ms,
-            "step": _CAPTURE_STEP_MS,
+            "step": _MONITOR_INTERVAL_MS,
         },
-        "simulation_phase": "full-scenario-replay",
-        "playback_step_ms": _CAPTURE_STEP_MS,
-        "playback_delay_ms": _CAPTURE_DELAY_MS,
-        "playback_rate": round(_CAPTURE_STEP_MS / _CAPTURE_DELAY_MS, 6),
+        "simulation_phase": "gates-load-and-capture",
+        "playback_step_ms": _MONITOR_INTERVAL_MS,
+        "playback_delay_ms": _MONITOR_INTERVAL_MS,
+        "playback_rate": 1,
         "duration_ms": duration_ms,
         "frame_rate_fps": _VIDEO_FRAME_RATE_FPS,
         "capture_worker": {
@@ -232,10 +225,12 @@ def _capture(
             "version": package_version("ralph-bench"),
         },
         "network_violations": list(router.blocked),
-        "runtime_errors": errors,
+        "runtime_errors": list(runtime_errors),
         "console": console,
-        "replay_error": replay_error,
+        "interface": "gates/v1",
+        "monitor_observation_count": len(observations),
     }
+    return evaluation, monitor, capture, runtime_errors, console, list(router.blocked)
 
 
 def run_worker(candidate: Path, output: Path, chromium: Path, seed: int) -> dict[str, Any]:
@@ -244,8 +239,7 @@ def run_worker(candidate: Path, output: Path, chromium: Path, seed: int) -> dict
     if output.exists():
         raise WorkerError("browser output directory already exists")
     output.mkdir(parents=True)
-    scenario = build_balanced_scenario(seed)
-    expected_network = busy_intersection_network()
+    scenario = build_balanced_gate_scenario(seed)
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(
             executable_path=str(chromium),
@@ -261,34 +255,9 @@ def run_worker(candidate: Path, output: Path, chromium: Path, seed: int) -> dict
             ),
         )
         browser_version = browser.version
-        evaluation_context = browser.new_context(
-            viewport=_VIEWPORT,
-            service_workers="block",
-            offline=True,
+        evaluation, monitor, capture, errors, console, blocked = _monitor_and_capture(
+            browser, candidate, output, scenario
         )
-        page, router, errors, console = _prepare_page(evaluation_context, candidate)
-        transport = PageTrafficTransport(
-            page, runtime_errors=errors, network_violations=router.blocked
-        )
-        described_network: object | None = None
-        described_network_error: str | None = None
-        candidate_network: NetworkDescription | None = None
-        try:
-            described_network = transport.describe_network()
-            candidate_network = NetworkDescription.from_dict(described_network)
-        except Exception as exc:
-            described_network_error = f"{type(exc).__name__}: {exc}"[:2000]
-            errors.append(f"describeNetwork:{described_network_error}")
-        evaluation = evaluate_transport(
-            transport,
-            scenario,
-            expected_network,
-            step_ms=1_000,
-            candidate_network=candidate_network,
-            candidate_network_error=described_network_error,
-        )
-        evaluation_context.close()
-        capture = _capture(browser, candidate, output, scenario)
         browser.close()
     capture.update(
         {
@@ -298,12 +267,11 @@ def run_worker(candidate: Path, output: Path, chromium: Path, seed: int) -> dict
         }
     )
     result = {
-        "schema_version": "browser-evaluation/v1",
-        "evaluation": evaluation.to_dict(),
+        "schema_version": "browser-evaluation/v2",
+        "protocol": "gates/v1",
+        "evaluation": evaluation,
         "scenario": scenario.to_dict(),
-        "expected_network": expected_network.to_dict(),
-        "described_network": described_network,
-        "described_network_error": described_network_error,
+        "monitor": monitor,
         "browser": {
             "name": "chromium",
             "version": browser_version,
@@ -311,7 +279,7 @@ def run_worker(candidate: Path, output: Path, chromium: Path, seed: int) -> dict
             "executable": chromium.name,
             "console": console,
             "page_errors": errors,
-            "network_violations": list(router.blocked),
+            "network_violations": blocked,
         },
         "capture": capture,
     }
@@ -330,8 +298,6 @@ def main(argv: list[str] | None = None) -> int:
     try:
         run_worker(args.candidate, args.output, args.chromium, args.seed)
     except Exception as exc:
-        # stdout/stderr belong to the conductor's raw evidence.  Do not emit a
-        # traceback containing arbitrary candidate values by default.
         print(f"browser worker failed: {type(exc).__name__}: {exc}")
         return 1
     return 0

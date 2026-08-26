@@ -12,9 +12,12 @@ The P0 challenge family is:
 - `busy-intersection/v1` for local and smaller models.
 - `five-by-five-rush/v1` for frontier and cloud-class models.
 
-Both challenges use the proposed `traffic/v1` evaluator protocol and optimize
-for sustainable valid vehicle throughput under fixed safety, fairness,
-physical, infrastructure, spillback, and recovery constraints.
+Busy Intersection uses evaluator-injected `gates/v1`: two arrival callbacks,
+two finish notifications, and an evaluator-owned completion ledger sampled
+while the same live run is recorded. It optimizes sustainable monitored vehicle
+throughput; physical plausibility, safety, and visible agreement with finish
+notifications are separate human/frontier-review dimensions. The full city
+protocol remains a P0-B design concern.
 
 ## Repository identity
 
@@ -41,8 +44,9 @@ Read these before P0 implementation:
 - `docs/COST_MODEL.md`
 - `docs/RESULT_BUNDLE.md`
 - `docs/ISOLATION_MODEL.md`
-- `docs/adr/`, especially ADR 0009 (P0 seam breadth) and ADR 0011 (cloud cost
-  evidence, OpenRouter references, and deferred subscription allocation)
+- `docs/adr/`, especially ADR 0009 (P0 seam breadth), ADR 0011 (cloud cost
+  evidence, OpenRouter references, and deferred subscription allocation), and
+  ADR 0013 (minimal evaluator-injected gates)
 
 The P0-A planning packet was accepted on 2026-08-23 as amended by ADR 0011.
 Do not silently expand scope through implementation.
@@ -90,6 +94,9 @@ Do not silently expand scope through implementation.
 - Public challenge packs and private judge packs are separate inputs.
 - The evaluator supplies and accounts for traffic demand; the artifact cannot
   choose how much work it receives.
+- Do not reintroduce candidate-authored topology, snapshot, queue, simulation
+  clock, or event ontologies into Busy Intersection. Ralph owns gate IDs,
+  timestamps, completion validation, and outstanding-demand monitoring.
 - The Busy Intersection may use 2D, 2.5D, or 3D presentation. Do not encode a
   rendering-technology preference into traffic acceptance or visual review.
 - Treat layout, visual coherence, information design, motion, polish,

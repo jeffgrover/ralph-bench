@@ -1,83 +1,57 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Busy Intersection fixture</title>
-<div id="intersection" aria-label="Busy Intersection fixture"></div>
+<title>Busy Intersection gates fixture</title>
+<style>
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101820;color:#eef;font-family:system-ui}
+  #scene{position:relative;width:100%;height:100%;background:linear-gradient(90deg,transparent 42%,#38454f 42% 58%,transparent 58%),linear-gradient(transparent 40%,#38454f 40% 60%,transparent 60%)}
+  #scene:after{content:"gates/v1 fixture";position:absolute;left:20px;top:20px;font-weight:700}
+  .car,.ped{position:absolute;left:50%;top:50%;transition-property:transform;transition-timing-function:linear;will-change:transform}
+  .car{width:24px;height:13px;border-radius:4px;background:#55d6be;transition-duration:.7s}
+  .ped{width:11px;height:11px;border-radius:50%;background:#ff7b72;transition-duration:.9s}
+</style>
+<div id="scene" aria-label="Busy Intersection gates fixture"></div>
 <script>
 (() => {
-  let scenario = {trips: []};
-  let now = 0;
-  let events = [];
-  let sequence = 0;
-  let trips = new Map();
-  const approaches = ["north", "east", "south", "west"];
-  const lanes = approaches.flatMap((approach) => [
-    {id: `${approach}-in`, approach, direction: "inbound", length_m: 120, speed_limit_mps: 13.4, storage_m: 90},
-    {id: `${approach}-out`, approach, direction: "outbound", length_m: 120, speed_limit_mps: 13.4, storage_m: 90}
-  ]);
-  const movements = [];
-  for (let originIndex = 0; originIndex < approaches.length; originIndex++) {
-    for (let destinationIndex = 0; destinationIndex < approaches.length; destinationIndex++) {
-      if (originIndex === destinationIndex) continue;
-      const origin = approaches[originIndex];
-      const destination = approaches[destinationIndex];
-      const delta = (destinationIndex - originIndex + approaches.length) % approaches.length;
-      const turn = delta === 2 ? "straight" : (delta === 1 ? "right" : "left");
-      movements.push({id: `${origin}-${turn}-${destination}`, origin, destination, turn, lane_segments: [`${origin}-in`, `${destination}-out`]});
-    }
+  const scene = document.querySelector("#scene");
+  const point = {
+    north: [0, -520], east: [820, 0], south: [0, 520], west: [-820, 0]
+  };
+  function carArrived(request) {
+    const car = document.createElement("div");
+    car.className = "car";
+    scene.append(car);
+    const start = point[request.entersFrom];
+    const finish = point[request.exitsTo];
+    car.style.transform = `translate(${start[0]}px,${start[1]}px)`;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      car.style.transform = `translate(${finish[0]}px,${finish[1]}px)`;
+    }));
+    setTimeout(() => {
+      window.RalphGates?.carFinished(request.id, request.exitsTo);
+      car.remove();
+    }, 720);
   }
-  const network = {
-    api_version: "traffic/v1",
-    nodes: approaches,
-    lane_segments: lanes,
-    movements,
-    crossings: approaches.map((approach) => ({id: `${approach}-crossing`, approach, length_m: 18})),
-    constraints: {vehicle_length_m: 4.8, max_acceleration_mps2: 2.5, comfortable_braking_mps2: 4, minimum_headway_m: 7, grade_separation: false}
-  };
-  const emit = (type, id, time) => events.push({schema_version: "event/v1", sequence: 0, time_ms: time, event_type: type, entity_id: id, payload: {}});
-  window.__RALPH_BENCH__ = {
-    apiVersion: "traffic/v1",
-    describeNetwork() { return network; },
-    loadScenario(value) { scenario = value; },
-    reset() {
-      now = 0; sequence = 0; events = [];
-      trips = new Map((scenario.trips || []).map((trip, index) => [trip.trip_id, {trip_id: trip.trip_id, status: "requested", origin: trip.origin, destination: trip.destination, movement_id: trip.movement_id, departure_ms: trip.departure_ms, index}]));
-    },
-    advance(milliseconds) {
-      now += milliseconds;
-      for (const trip of scenario.trips || []) {
-        const state = trips.get(trip.trip_id);
-        if (!state || state.status === "completed" || trip.departure_ms > now) continue;
-        if (state.status === "requested") {
-          state.status = "active";
-          emit("trip.admitted", trip.trip_id, trip.departure_ms);
-          emit("vehicle.entered", trip.trip_id, trip.departure_ms);
-        }
-        if (now >= trip.departure_ms + 1500) {
-          state.status = "completed";
-          emit("vehicle.exited", trip.trip_id, trip.departure_ms + 1500);
-          emit("trip.completed", trip.trip_id, trip.departure_ms + 1500);
-        }
-      }
-    },
-    snapshot() {
-      const vehicles = [];
-      for (const trip of trips.values()) {
-        if (trip.status !== "active" && trip.status !== "completed") continue;
-        // Keep an exited vehicle for one observation interval so the judge can
-        // reconcile its physical trajectory, then remove it normally.
-        if (trip.status === "completed" && now >= trip.departure_ms + 2500) continue;
-        const movement = movements.find((item) => item.id === trip.movement_id);
-        const offset = (trip.index % 6) * 12;
-        const completed = trip.status === "completed";
-        vehicles.push({trip_id: trip.trip_id, movement_id: trip.movement_id, lane_segment_id: movement.lane_segments[completed ? 1 : 0], position_m: (completed ? 55 : 5) + offset, speed_mps: completed ? 0 : 2, length_m: 4.8, status: completed ? "exited" : "active", entered_on_red: false});
-      }
-      return {schema_version: "snapshot/v1", time_ms: now, vehicles, pedestrians: [], signals: [], queues: [], trips: [...trips.values()], runtime_errors: []};
-    },
-    drainEvents() {
-      events.sort((a, b) => a.time_ms - b.time_ms);
-      for (const event of events) event.sequence = ++sequence;
-      const result = events; events = []; return result;
-    }
-  };
+  function pedestrianArrived(request) {
+    const ped = document.createElement("div");
+    ped.className = "ped";
+    scene.append(ped);
+    const horizontal = request.direction.includes("east") || request.direction.includes("west");
+    const start = horizontal ? [-120, request.crossing === "north" ? -105 : 105] : [request.crossing === "east" ? 125 : -125, -105];
+    const finish = horizontal ? [120, start[1]] : [start[0], 105];
+    ped.style.transform = `translate(${start[0]}px,${start[1]}px)`;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      ped.style.transform = `translate(${finish[0]}px,${finish[1]}px)`;
+    }));
+    setTimeout(() => {
+      window.RalphGates?.pedestrianFinished(request.id);
+      ped.remove();
+    }, 920);
+  }
+  if (window.RalphGates) {
+    RalphGates.register({carArrived, pedestrianArrived});
+  } else {
+    let id = 0;
+    setInterval(() => carArrived({id:`demo-${++id}`,entersFrom:"north",exitsTo:"south"}), 1000);
+  }
 })();
 </script>

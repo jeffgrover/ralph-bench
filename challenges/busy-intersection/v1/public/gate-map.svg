@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" role="img" aria-labelledby="title desc">
+  <title id="title">Busy Intersection gates/v1 semantic gate map</title>
+  <desc id="desc">Four vehicle entrances and exits plus four bidirectional pedestrian crossings.</desc>
+  <rect width="800" height="800" rx="36" fill="#101820"/>
+  <path d="M280 0h240v280h280v240H520v280H280V520H0V280h280z" fill="#35424d"/>
+  <rect x="280" y="280" width="240" height="240" fill="#25313a" stroke="#f7c948" stroke-width="4"/>
+  <g fill="none" stroke="#f5f7fa" stroke-width="4" stroke-dasharray="16 14" opacity=".7">
+    <path d="M340 0v280M460 0v280M340 520v280M460 520v280"/>
+    <path d="M0 340h280M0 460h280M520 340h280M520 460h280"/>
+  </g>
+  <g fill="#55d6be" font-family="system-ui,sans-serif" font-size="20" font-weight="700" text-anchor="middle">
+    <text x="335" y="42">N-IN ↓</text><text x="465" y="42">N-OUT ↑</text>
+    <text x="758" y="335">E-IN ←</text><text x="758" y="475">E-OUT →</text>
+    <text x="465" y="774">S-IN ↑</text><text x="335" y="774">S-OUT ↓</text>
+    <text x="42" y="475">W-IN →</text><text x="42" y="335">W-OUT ←</text>
+  </g>
+  <g fill="#ff7b72" font-family="system-ui,sans-serif" font-size="17" font-weight="650" text-anchor="middle">
+    <text x="400" y="255">N-CROSS ↔</text><text x="545" y="405" transform="rotate(90 545 405)">E-CROSS ↕</text>
+    <text x="400" y="550">S-CROSS ↔</text><text x="255" y="405" transform="rotate(-90 255 405)">W-CROSS ↕</text>
+  </g>
+  <text x="400" y="405" fill="#f5f7fa" font-family="system-ui,sans-serif" font-size="24" font-weight="800" text-anchor="middle">LAYOUT AND STYLE ARE YOURS</text>
+  <text x="400" y="435" fill="#b8c4ce" font-family="system-ui,sans-serif" font-size="16" text-anchor="middle">These labels define semantic boundaries, not pixel coordinates.</text>
+</svg>

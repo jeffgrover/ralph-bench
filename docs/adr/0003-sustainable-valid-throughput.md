@@ -1,7 +1,12 @@
-# ADR 0003: Sustainable Valid Throughput
+# ADR 0003: Sustainable Throughput with Validity Gates
 
 **Status:** Accepted
 **Date:** 2026-08-23
+
+Candidate-facing measurement details are amended by
+[ADR 0013](0013-minimal-gates-interface.md): P0 uses evaluator-owned gate
+ledgers plus recorded visual review rather than a topology/snapshot/event
+contract.
 
 ## Context
 
@@ -14,15 +19,21 @@ matches what a human recognizes as good traffic design.
 
 ## Decision
 
-Use **sustainable valid throughput** as the primary traffic optimization
-metric. The evaluator controls trip demand and raises it through held stages
-until the artifact reaches a versioned safety, accounting, fairness,
-queue-containment, recovery, or runtime failure condition.
+Use sustainable throughput as the primary traffic optimization target. Under
+the P0 `gates/v1` amendment, the automated metric is specifically
+**sustainable monitored throughput**: Ralph controls trip demand and raises it
+through held stages until observed completion, accounting, backlog, recovery,
+or runtime behavior reaches a versioned failure condition.
+
+Safety, physical plausibility, fairness, and visible agreement with completion
+notifications are distinct validity/review evidence. They must not be implied
+by the monitored-throughput number alone.
 
 Report both:
 
 - Breakdown capacity: highest qualifying offered demand.
-- Peak sustainable throughput: highest qualifying valid completion rate.
+- Peak sustainable monitored throughput: highest qualifying observed
+  completion rate.
 
 Also report ordinary-load delay/fairness and post-overload recovery. Fix the
 physical and infrastructure envelope per challenge version.
@@ -40,13 +51,15 @@ physical and infrastructure envelope per challenge version.
 
 - Thresholds and stage durations need empirical calibration.
 - Evaluation is more expensive than a single smoke test.
-- Telemetry needs independent reconciliation.
+- Finish notifications need evaluator-owned identity reconciliation and visual
+  auditing against the recorded run.
 - Traffic profiles yield a vector of capacities rather than one naturally
   universal value.
 
 ## Rejected alternatives
 
-- Count vehicles passing one detector without complete trip accounting.
+- Count anonymous vehicles passing one detector without evaluator-issued ID and
+  requested-exit accounting.
 - Score only a fixed low-demand scenario.
 - Require literal zero queueing during rush hour.
 - Combine unsafe throughput and safety penalties into one tradeable number.
