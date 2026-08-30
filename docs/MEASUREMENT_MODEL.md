@@ -37,6 +37,26 @@ Outcome describes the run independently of validity:
 Infrastructure errors are reported and normally excluded from model/harness
 reliability denominators when the cause is demonstrably outside the SUT.
 
+### Eligibility before performance
+
+The primary value proposition is layered. First, the SUT must create a working
+simulation that participates correctly in evaluator-owned demand. This is an
+eligibility floor, not a pool of points. A candidate that does not register the
+public interface, produce valid observed completions, or remain runnable is
+failed, unmeasurable, or otherwise ineligible for performance comparison.
+
+Only eligible, sufficiently evidenced artifacts receive the performance
+vector: sustainable throughput, qualifying offered load, completion latency,
+backlog behavior, and recovery. Higher throughput differentiates working
+systems; it cannot compensate for invalid, unsafe, unverifiable, or dishonest
+behavior. Resource efficiency and visual review remain separate dimensions.
+
+The public smoke/conformance check demonstrates correct interface use. The
+private judge measures performance under demand that is not fully disclosed,
+so the benchmark rewards a generally working simulation rather than a
+candidate tuned only to the public schedule. Relative comparisons are derived
+from immutable absolute measurements at report time.
+
 ### 3. Acceptance
 
 Assertions are structured records with:
@@ -204,8 +224,10 @@ excellent.
 
 Every implemented profile produces its own capacity and quality vector. P0-A
 uses one canonical Busy Intersection profile across a small fixed seed set;
-P0-B and later profile expansions display the full vector rather than hiding
-specialization.
+future city profiles and later expansions display their full vectors rather
+than hiding specialization. A Challenge Portability Fixture exists to prove
+that these profile-specific vectors can enter through the generic challenge
+boundary; it is not itself a scored city challenge.
 
 Candidate aggregate statistics for later calibration include:
 
@@ -214,8 +236,9 @@ Candidate aggregate statistics for later calibration include:
 - Harmonic mean of normalized profile capacities.
 - Confidence interval or observed range.
 
-P0 will not approve a single traffic composite until pilot distributions are
-available.
+P0 will not approve a single traffic composite. If a later product view needs
+a simple summary, it must preserve the eligibility decision and the underlying
+performance vector rather than allowing a weighted number to hide failure.
 
 ## Agent time measurements
 
@@ -287,12 +310,13 @@ cost and reference cost are never merged into one metric or leaderboard. See
 the accepted amendment in [`COST_MODEL.md`](COST_MODEL.md) and [ADR
 0011](adr/0011-cloud-cost-evidence-and-openrouter-references.md).
 
-The live P0 SUT uses Codex CLI with ChatGPT-managed subscription access. P0-A
-does not allocate plan fees or ask for billing-period inputs. It reports
+The initial live P0 SUT uses Codex CLI with ChatGPT-managed subscription access.
+P0-A does not allocate plan fees or ask for billing-period inputs. It reports
 subscription cost as unavailable while preserving elapsed time, token usage
-when exposed, and attempts/repair passes. This is a complete diagnostic result
-for quality, throughput, time, token, and attempt analysis, but not a cost
-ranking. See [`COST_MODEL.md`](COST_MODEL.md).
+when exposed, and attempts/repair passes. After seam completion, Pi-wiggum with
+a local model is the next real proving path; local cost and model-serving
+configuration remain explicit provider/model evidence rather than a synthetic
+cloud charge. See [`COST_MODEL.md`](COST_MODEL.md).
 
 ## Attempts and resource-to-green
 

@@ -31,9 +31,9 @@ rb bundle validate results/inbox/<run-id>.ralph.zip
 rb build --source results/inbox --output site
 ```
 
-`rb run` with no experiment path may enter the same wizard. In a non-interactive
-environment, commands that need answers fail with an actionable message rather
-than guessing.
+`rb run` requires an experiment path. The zero-argument `rb` command enters the
+wizard; in a non-interactive environment, commands that need answers fail with
+an actionable message rather than guessing.
 
 ## Vocabulary
 
@@ -67,19 +67,23 @@ work:
    separated into local and cloud choices.
 3. **Model** — query the selected client/provider where possible and show model
    IDs with the source and freshness of the discovery.
-4. **Challenge** — default according to the selected local/cloud track while
-   allowing either challenge when compatible.
+4. **Challenge** — Busy Intersection is the primary current challenge. The
+   Challenge Portability Fixture is an internal seam proof, not a competing
+   city choice; future city challenges remain open for later extension.
 5. **Client and model controls** — reasoning/effort, tool policy, native versus
-   controlled loop, and adapter-specific supported options.
+   controlled loop, and adapter-specific supported options. Controlled
+   execution is the current P0 path; native-loop execution remains a distinct
+   future implementation until a harness supplies it end to end.
 6. **Experiment basics** — ask for a concise experiment name, repetitions as
    **Independent runs per configuration**, explain that they are aggregated
    to measure variability, and collect a per-run wall-time ceiling.
 7. **Repair policy** — offer **Ralph repair passes** as the evaluator-controlled
    repair loop, separately from the independent repetition runs.
 8. **Scenario and isolation** — derive the scenario profile from the selected
-   challenge and track through the shared challenge/profile registry, show the
-   resulting profile, and collect the isolation choice. The user should not
-   have to invent a scenario-pack ID for the common path.
+   challenge and track through the shared challenge/profile registry and show
+   the resulting profile. The current P0 path uses portable L0/unsealed
+   staging; an operator-facing isolation choice remains future UI work. The
+   user should not have to invent a scenario-pack ID for the common path.
 9. **Result inbox** — explain that the inbox is the local destination for
    immutable `.ralph.zip` evidence and suggest a safe path; do not imply that
    it is a live report or a cloud upload.
@@ -109,7 +113,9 @@ before acceptance. The preference order is:
 1. A compatible value already present when completing an existing TOML file.
 2. The most recent successful choice recorded in local, non-secret UI state,
    if it is still detected and compatible.
-3. A currently active or uniquely detected client/provider/model.
+3. A currently active or uniquely detected client/provider/model. For a
+   harness with an update-aware adapter, the current release is checked before
+   execution and the exact release used is recorded in provenance.
 4. A challenge- or adapter-defined safe default.
 5. No default; require a choice.
 
@@ -250,8 +256,9 @@ P0 includes:
   manual fallback.
 - The built-in harness/provider/model registry and capability resolver as the
   only source of wizard choices and option schemas.
-- Real Codex CLI detection, read-only ChatGPT authentication preflight through
-  `codex login status`, and the `gpt-5.6-luna` model descriptor.
+- Current-version Codex CLI detection, bounded update-aware preflight,
+  read-only ChatGPT authentication through `codex login status`, and the
+  `gpt-5.6-luna` model descriptor.
 - A provider choice labeled **ChatGPT (subscription)** whose review explains
   that P0-A cost is unavailable, while time, tokens, and attempts remain
   visible. There is no subscription-cost questionnaire.
@@ -274,8 +281,11 @@ P0 includes:
   bundle and provides the same view later without executing candidate HTML.
 
 P0 does not require universal discovery across every legacy client or a live
-online catalog of every provider model. Additional adapters may improve their
-discovery capabilities incrementally without changing the experiment schema.
+online catalog of every provider model. The next real proving path is Pi-wiggum
+with a local model; it is not implemented yet, and its provider/runtime and
+exact model identity will be resolved through the same experiment and adapter
+contracts. Additional adapters may improve their discovery capabilities
+incrementally without changing the experiment schema.
 
 ## Acceptance tests
 

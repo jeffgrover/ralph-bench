@@ -1,19 +1,29 @@
 # Prioritized next steps
 
 This is the resume point after replacing the original rich traffic protocol
-with the minimal `gates/v1` arrival/finish boundary. The first P0-A model run
-on 2026-08-23 remains valuable evidence: it produced a valid immutable bundle
-and a visually strong Busy Intersection, but exposed that interface plumbing
-was dominating measurement.
+with the minimal `gates/v1` arrival/finish boundary and accepting the
+seam-first direction. The first P0-A model run on 2026-08-23 remains valuable
+evidence: it produced a valid immutable bundle and a visually strong Busy
+Intersection, but exposed that interface plumbing was dominating measurement.
 
 ## Decisions already made
 
 Do not reopen these without new evidence:
 
-- P0 live SUT: Codex CLI + ChatGPT subscription + GPT-5.6 Luna.
-- P0 challenge: Busy Intersection; the 5x5 Rush city is P0-B.
+- Busy Intersection is the primary challenge. The future city remains open for
+  extension; its P0 seam proof is the Challenge Portability Fixture, not a
+  partial 5x5 implementation.
+- The initial live SUT is Codex CLI + ChatGPT subscription + GPT-5.6 Luna.
+  Codex resolves the most recent available release before a run and records the
+  exact version and executable identity.
+- After the common seams are complete, Pi-wiggum with a local model is the next
+  real SUT used to prove the local harness/provider path.
 - P0 protection: portable L0/unsealed staging. Strong isolation-tool selection
   is deferred by [ADR 0012](adr/0012-defer-strong-isolation-backends.md).
+- Eligibility comes before performance comparison: a candidate must produce a
+  working, valid simulation before throughput, capacity, latency, backlog, or
+  recovery differentiate it from other eligible results. P0 has no composite
+  score.
 - Subscription cost remains unavailable rather than zero. OpenRouter is the
   next metered/reference-cost implementation; quota allocation is later.
 - Interactive `c` checks inspect only local structural evidence and never make
@@ -22,6 +32,11 @@ Do not reopen these without new evidence:
   candidate HTML.
 - Operator experiment TOMLs and generated `results/` remain local and ignored
   by Git.
+- A complete pre-evaluation failure with no candidate or no started evaluator
+  fails fast without a result bundle. A preserved candidate that reaches
+  evaluation still receives a bundle when evaluation fails.
+- Seam completion comes before static reporting breadth, broader city work, or
+  additional product polish.
 
 ## Evidence from live run 1
 
@@ -55,7 +70,7 @@ Do not reopen these without new evidence:
 - Missing callbacks are reported as `unmeasurable`, not as zero throughput.
 - Context-aware offline checks accept CSS custom properties such as
   `--ws:64px` while still rejecting real external URLs.
-- The complete unit and contract suite contains 107 passing tests.
+- The complete unit and contract suite contains 108 passing tests.
 
 ## Fair-shot design guardrails
 
@@ -84,7 +99,22 @@ an undocumented interface.
 
 ## P0-A — next session
 
-### 1. Ship the agent-runnable public gate check
+### 1. Correct the functional eligibility boundary
+
+**Priority:** blocking
+
+- Include capacity-stage failures and recovery failures in the final evaluation
+  outcome rather than considering only immediate assertions.
+- Add fixtures proving that a working-but-overloaded artifact is failed for
+  performance while a non-working artifact is ineligible or unmeasurable.
+- Keep functional eligibility separate from the performance vector; never let
+  high throughput compensate for invalid or dishonest behavior.
+
+**Exit:** the evaluator cannot report `passed` when a qualifying held stage or
+recovery requirement fails, and tests make the working-before-performance rule
+explicit.
+
+### 2. Ship the agent-runnable public gate check
 
 **Priority:** blocking
 
@@ -101,7 +131,7 @@ an undocumented interface.
 without guessing; the scored profile remains private; passing the command
 proves interface readiness but does not predict benchmark capacity.
 
-### 2. Give the model a fair, non-prescriptive acceptance loop
+### 3. Give the model a fair, non-prescriptive acceptance loop
 
 **Priority:** blocking
 
@@ -128,7 +158,7 @@ tooling to reach conformance; a fixture that passes static checks but fails
 `gates/v1` can repair and pass on attempt two; neither the tool nor feedback
 dictates its algorithm or visual design; both attempts remain auditable.
 
-### 3. Extract a real challenge execution boundary
+### 4. Extract a real challenge execution boundary
 
 **Priority:** blocking skeleton work
 
@@ -139,13 +169,15 @@ dictates its algorithm or visual design; both attempts remain auditable.
   capture instructions, and challenge-specific bundle identity.
 - Move Busy Intersection imports and path knowledge out of the generic
   conductor and browser-worker orchestration.
-- Add a descriptor/topology-only 5x5 Rush fixture that traverses this boundary;
-  do not implement the city simulation or production judge yet.
+- Add a Challenge Portability Fixture that traverses this boundary. It is an
+  architectural proof, not a partial city simulation, and must not force a
+  future city to use intersection-specific topology or protocol semantics.
 
 **Exit:** the generic conductor contains no Busy Intersection branch, and the
-intersection plus skeletal city fixture traverse the same challenge contract.
+intersection plus the Challenge Portability Fixture traverse the same generic
+challenge lifecycle without limiting future city-specific protocols.
 
-### 4. Complete harness polymorphism through execution
+### 5. Complete harness polymorphism through execution
 
 **Priority:** high skeleton work
 
@@ -156,13 +188,14 @@ intersection plus skeletal city fixture traverse the same challenge contract.
   conductor.
 - Exercise the complete conductor with two fake harness implementations, not
   only resolver composition tests.
-- Keep P0's sole live implementation Codex; this is contract completion, not a
-  second-harness integration.
+- Keep Codex as the compatibility path while the seam work enables the next
+  real Pi-wiggum/local implementation; this is deliberately narrow harness
+  breadth, not a general integration sweep.
 
 **Exit:** adding a compatible fake harness requires registry work but no
 conductor branch or Codex import.
 
-### 5. Make terminal completion status unmistakable
+### 6. Make terminal completion status unmistakable
 
 **Priority:** high
 
@@ -177,7 +210,24 @@ conductor branch or Codex import.
 **Exit:** an operator can answer “did it work?” without opening JSON or asking
 for bundle inspection.
 
-### 6. Implement `rb build` and the first static report
+### 7. Add current-version harness preflight and the Pi-wiggum/local path
+
+**Priority:** after seam completion
+
+- Add a generic harness update-check/update lifecycle with bounded behavior and
+  no updates during an active run.
+- Keep exact installed version, executable identity, update outcome, and
+  adapter provenance in run evidence.
+- Add Pi-wiggum as the next real harness/workflow path, a local model provider,
+  and a conservative model binding without adding conductor branches.
+- Identify the local serving runtime and model as explicit provider/model
+  configuration rather than hidden machine state.
+
+**Exit:** the same conductor and challenge path can run the Codex and
+Pi-wiggum/local compositions, while each result clearly identifies the exact
+harness, workflow, provider, and model used.
+
+### 8. Implement `rb build` and the first static report
 
 **Priority:** high
 
@@ -194,15 +244,15 @@ for bundle inspection.
 **Exit:** `rb build --source results/inbox --output site` produces a static,
 portable site containing the first live bundle and its recorded animation.
 
-### 7. Reconcile reproducibility claims with the implementation
+### 9. Reconcile reproducibility claims with the implementation
 
 **Priority:** high before canonical publication
 
 **Estimate:** 0.5–1 engineering day
 
 - Keep the configuration lifecycle documented as a target contract while P0
-  implements only read-only subscription detection, scoped materialization,
-  and planned temporary-root cleanup—not generalized transactional rollback.
+  implements only read-only detection, scoped materialization, and planned
+  temporary-root cleanup—not generalized transactional rollback.
 - Pin the supported Python Playwright package exactly, record the installed
   Chromium executable digest, and downgrade mismatches to experimental.
 - Add a lightweight release checklist/test for executable claims in the README
@@ -211,7 +261,7 @@ portable site containing the first live bundle and its recorded animation.
 **Exit:** documentation and bundle provenance distinguish implemented,
 verified, and future behavior without relying on implication.
 
-### 8. Portability pass for macOS and Windows
+### 10. Portability pass for macOS and Windows
 
 **Priority:** high after the Linux vertical slice stabilizes
 

@@ -20,12 +20,15 @@ observed.
 ### Current implementation status
 
 This document describes the target lifecycle required when Ralph Bench adds a
-mutable provider or a harness that writes native configuration. The P0-A
+mutable provider or a harness that writes native configuration. The current
 ChatGPT subscription path is deliberately narrower: it performs read-only
 detection, builds a Codex invocation plan, materializes an owned staged home and
-workspace, and records requested/effective evidence. It does not yet implement
-a general provider `plan/apply/observe/cleanup` transaction or verified
-rollback report. Current bundle cleanup evidence describes the planned owned
+workspace, and records requested/effective evidence. The next real proving path
+is Pi-wiggum with a local model, which will use the same ownership boundary for
+its harness and provider configuration. Neither path should silently inherit
+unrelated user-global configuration. The system does not yet implement a
+general provider `plan/apply/observe/cleanup` transaction or verified rollback
+report. Current bundle cleanup evidence describes the planned owned
 temporary-directory strategy; it must not be interpreted as proof of the full
 transactional lifecycle below.
 

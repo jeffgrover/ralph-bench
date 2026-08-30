@@ -1,6 +1,6 @@
 # ADR 0008: Use Codex CLI, ChatGPT Access, and Luna for the P0 Live SUT
 
-**Status:** Accepted
+**Status:** Accepted; scope amended by [ADR 0014](0014-seam-first-evaluation-and-active-harness.md)
 **Date:** 2026-08-23
 
 ## Context
@@ -37,6 +37,11 @@ proof that the account can invoke Luna; implementation pins the tested version
 and performs a live entitlement preflight.
 
 ## Decision
+
+This record captures the original P0 live-path decision. ADR 0014 preserves
+Codex as the initial compatibility path, changes version handling to
+current-at-run-time, and authorizes Pi-wiggum with a local model as the next
+real proving path after seam completion.
 
 The only required live P0 SUT is:
 

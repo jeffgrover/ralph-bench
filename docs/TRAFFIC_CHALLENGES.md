@@ -2,7 +2,8 @@
 
 **Status:** Accepted
 **Date:** 2026-08-23
-**Protocol:** `gates/v1`
+**Initial protocol:** `gates/v1` for Busy Intersection; future challenges may
+define additional versioned protocols through the challenge boundary.
 
 ## Design intent
 
@@ -20,9 +21,13 @@ routing strategy, geometry within a fixed infrastructure envelope, and visual
 design.
 
 Delivery is intentionally staged. P0-A completes the Busy Intersection
-evaluator and retains The 5x5 Rush as a versioned descriptor/topology fixture
-on the same challenge boundary. P0-B implements the live city evaluator and
-profiles without changing the conductor.
+evaluator and adds a **Challenge Portability Fixture** on the same generic
+challenge boundary. The fixture proves that another challenge can be
+registered, materialized, evaluated, captured, and bundled without
+Busy-specific conductor branches. It is not a partial city simulation. A
+future city evaluator and profile may define its own versioned topology,
+protocol, and measurement objects through the challenge adapter without being
+limited by the intersection's four-gate vocabulary.
 
 The public prompt should describe the experience, constraints, evaluator
 contract, and acceptance criteria. It should not prescribe filenames beyond a
@@ -246,6 +251,10 @@ stable and thresholds can be calibrated from observed artifacts.
   "wow" response?
 
 ## Challenge B: The 5x5 Rush
+
+The 5x5 Rush remains a future city challenge, not the P0 portability fixture.
+Its implementation is intentionally open until the generic challenge boundary
+is complete and the city-specific requirements are understood.
 
 ### Audience
 

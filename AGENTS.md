@@ -48,7 +48,8 @@ Read these before P0 implementation:
   evidence, OpenRouter references, and deferred subscription allocation), and
   ADR 0013 (minimal evaluator-injected gates)
 
-The P0-A planning packet was accepted on 2026-08-23 as amended by ADR 0011.
+The P0-A planning packet was accepted on 2026-08-23 as amended by ADR 0011 and
+ADR 0014.
 Do not silently expand scope through implementation.
 
 ## Architectural constraints
@@ -82,8 +83,10 @@ Do not silently expand scope through implementation.
 - Preserve requested, materialized, effective, and cleanup configuration as
   distinct redacted evidence. Setup must register rollback, and cleanup must be
   attempted after success, failure, cancellation, and timeout.
-- Every repetition receives a unique run ID and produces one immutable,
-  checksummed `.ralph.zip` bundle.
+- Every evaluated repetition receives a unique run ID and produces one
+  immutable, checksummed `.ralph.zip` bundle. A complete pre-evaluation failure
+  with no candidate or no started evaluator fails fast without a diagnostic
+  result bundle.
 - Run identity and metadata come from manifests, never filenames or HTML.
 - The run path does not generate `summary.html` or any other authoritative
   report.
@@ -133,12 +136,15 @@ Do not silently expand scope through implementation.
 - Implement the Busy Intersection vertical slice before city-specific logic.
 - Begin with deterministic fixture artifacts and harness adapters before
   invoking a real model.
-- The only required live P0 SUT is Codex CLI with ChatGPT-managed OpenAI access
-  and `gpt-5.6-luna`, classified as `cloud-subscription`. Reasoning effort is an
-  explicit experiment setting.
+- The initial live P0 SUT is Codex CLI with ChatGPT-managed OpenAI access and
+  `gpt-5.6-luna`, classified as `cloud-subscription`. Reasoning effort is an
+  explicit experiment setting. After seam completion, Pi-wiggum with a local
+  model is the next real SUT used to prove the local harness/provider path.
 - Use `codex exec` non-interactively with JSONL evidence, an explicit model and
   sandbox, ephemeral session state, and isolated or ignored user configuration.
-  Pin and record the tested Codex CLI version.
+  Resolve the most recent available Codex CLI release before each run and
+  record the exact version and executable identity used. Do not update during a
+  run.
 - Authentication is operator-managed. Probe it read-only with
   `codex login status`; never copy, print, archive, or silently replace ChatGPT
   credentials.
@@ -149,13 +155,15 @@ Do not silently expand scope through implementation.
   OpenRouter and may derive a clearly labeled reference cost from an exact
   model mapping, frozen pricing snapshot, complete supported pricing
   components, and token evidence.
-- P0-A completes Busy Intersection. Keep a 5x5 Rush descriptor/topology fixture
-  on the shared challenge boundary, but defer its live evaluator and model run
-  to P0-B.
-- OpenCode, LM Studio, API-key-metered OpenAI, local models, and all other live
-  harness/provider/model integrations are TBD and post-P0 unless the plan is
-  amended.
-- P0 targets staged L1 isolation and must label its limitations honestly.
+- P0-A completes Busy Intersection. Use a Challenge Portability Fixture to
+  prove that future challenges can extend the generic boundary without
+  Busy-specific conductor branches; do not constrain a future city to
+  intersection-specific topology or protocol semantics.
+- OpenCode, broad provider/runtime support, and other live integrations remain
+  deferred. Pi-wiggum with a local model is the explicitly approved next real
+  proving path after seam completion.
+- P0 targets portable L0/unsealed staging and must label its limitations
+  honestly; stronger isolation remains a later evaluated capability.
 - Exact traffic thresholds belong in versioned private judge packs and require
   fixture/reference/pilot calibration.
 - Google Drive, quota-burden reporting, legacy result import, frontier-model
@@ -171,7 +179,9 @@ Do not silently expand scope through implementation.
 - Validate paths, sizes, schemas, checksums, and internal references before
   ingest.
 - Never archive credentials or an agent's scoped home directory.
-- Preserve partial and failed evidence; do not overwrite it with later attempts.
+- Preserve evidence for every candidate that reaches evaluation and do not
+  overwrite it with later attempts. Complete pre-evaluation failures remain
+  operator-visible failures without result bundles.
 - Keep challenge-specific checks out of the conductor core.
 - Ensure deterministic fast-forward evaluation and visible playback use the
   same simulation state/update path.
@@ -182,10 +192,11 @@ P0 tests must cover:
 
 - Client detection, partial/failed discovery, intelligent defaults, wizard
   navigation, TOML round-tripping, cancellation, and non-interactive behavior.
-- Codex CLI version/auth preflight fixtures, JSONL normalization, explicit Luna
-  selection, ChatGPT credential-canary isolation, unavailable subscription-cost
-  status, and preservation of time/token/attempt provenance. OpenRouter billing
-  and reference-price fixtures belong to the next provider slice.
+- Current-version Codex update/auth preflight fixtures, JSONL normalization,
+  explicit Luna selection, ChatGPT credential-canary isolation, unavailable
+  subscription-cost status, and preservation of time/token/attempt provenance.
+  Pi-wiggum/local-provider fixtures belong to the next proving slice; OpenRouter
+  billing and reference-price fixtures remain a later provider slice.
 - Schema/version handling and run state transitions.
 - Unique IDs and non-overwriting repetitions.
 - Attempt preservation and controlled feedback.
@@ -194,7 +205,9 @@ P0 tests must cover:
 - Passing and deliberately broken traffic artifacts.
 - Dishonest or inconsistent artifact telemetry.
 - Load-to-failure, recovery, and metric calculations.
-- Bundle-to-static-site end-to-end behavior.
+- Functional eligibility before performance comparison, including public
+  conformance and private held-load/recovery outcomes.
+- Bundle-to-static-site end-to-end behavior after the seams are complete.
 
 Unit and fixture integration tests must run without a model account, inference
 server, or private judge material.

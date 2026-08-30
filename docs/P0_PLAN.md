@@ -1,9 +1,10 @@
 # P0 Skeleton Plan
 
-**Status:** Accepted, as amended by [ADR 0011](adr/0011-cloud-cost-evidence-and-openrouter-references.md)
+**Status:** Accepted, as amended by [ADR 0011](adr/0011-cloud-cost-evidence-and-openrouter-references.md) and [ADR 0014](adr/0014-seam-first-evaluation-and-active-harness.md)
 **Date:** 2026-08-23
-**P0-A target:** One complete Busy Intersection vertical slice through every
-durable system boundary
+**P0-A target:** A seam-complete Busy Intersection vertical slice through every
+durable system boundary, with the Challenge Portability Fixture proving that
+future challenges can extend the system without Busy-specific orchestration.
 
 ## Objective
 
@@ -18,7 +19,7 @@ events, provider lifecycle ownership, unique run identity, immutable evidence,
 and report-time aggregation. P0 narrows the number of concrete implementations
 without removing those known seams.
 
-The only required live P0-A SUT is:
+The initial live P0-A SUT is:
 
 ```text
 Harness:  Codex CLI
@@ -27,9 +28,17 @@ Model:    gpt-5.6-luna
 Track:    cloud-subscription
 ```
 
-The only complete P0-A challenge evaluator is Busy Intersection. The 5x5 Rush
-descriptor/topology fixture remains required but is not yet implemented in
-P0-A; the complete evaluator becomes the P0-B generalization milestone.
+The only complete P0-A challenge evaluator is Busy Intersection. The former
+“5x5 Rush descriptor/topology fixture” is now the **Challenge Portability
+Fixture**: a small second-challenge adapter proof, not a partial city
+implementation. The complete future-city evaluator remains open and is not a
+P0-A requirement.
+
+The next additional real SUT is Pi-wiggum with a local model. It is introduced
+only after the common harness, provider, model, challenge, evaluation, and
+lifecycle seams are complete. The current Codex path remains a supported
+compatibility path and resolves the most recent available Codex release at run
+time.
 
 ## Skeleton rule: preserve the seam, implement one path
 
@@ -39,16 +48,16 @@ several production variants.
 
 | Seam | Durable contract built now | One P0-A implementation | Deferred breadth |
 |---|---|---|---|
-| SUT composition | Typed harness, provider, and model adapters; registry; capability resolution | Codex + ChatGPT + Luna | Other live clients, providers, models, and third-party loading |
+| SUT composition | Typed harness, provider, and model adapters; registry; capability resolution; current-version harness preflight | Codex + ChatGPT + Luna; Pi-wiggum + local model as the next proving path | Other live clients, providers, models, and third-party loading |
 | Configuration | Requested/materialized/effective/cleanup lifecycle and ownership | Read-only ChatGPT entitlement plus scoped Codex invocation | Mutable LM Studio lifecycle and other native renderers |
 | Agent loop | Preserved attempts and structured feedback boundary | Evaluator-controlled loop, at most two attempts | Native-loop comparison and alternate repair strategies |
 | Isolation | Versioned capability/taint report and conductor-owned evidence | Portable L0 staged-workspace protection with explicit limitations | Selection and implementation of OS/container/VM-backed L1/L2 protection |
 | Storage | Immutable bundle/store boundary | Local `.ralph.zip` inbox | Google Drive and other remote stores |
 | Browser | Versioned browser observation/capture boundary | One pinned Chromium/Playwright worker | Other browsers, capture backends, and viewpoints |
-| Challenge | Versioned challenge plug-in boundary and minimal `gates/v1` monitoring | Busy Intersection | Live 5x5 Rush evaluator and other challenge families |
+| Challenge | Versioned challenge plug-in boundary and challenge-owned monitoring protocols | Busy Intersection plus the Challenge Portability Fixture | Future city evaluator and other challenge families |
 | Load search | Evaluator-owned demand, held stages, failure and recovery semantics | One bounded deterministic stage schedule, no bracket refinement | Multiple production profiles and adaptive refinement |
 | Cost | Typed cost vector, billing/reference provenance, and completeness | P0-A subscription result with cost unavailable plus time/token/attempt evidence | OpenRouter billing/reference implementation, subscription allocation, invoices, token/quota normalization |
-| Reporting | Read-only bundle view model | One polished index and one run-detail page | Rich explorer, full Pareto interaction, alternate themes |
+| Reporting | Read-only bundle view model | One polished index and one run-detail page, after seam completion | Rich explorer, full Pareto interaction, alternate themes |
 | Media | Standard capture record tied to artifact hash | One animated overview plus poster | Multi-angle and side-by-side synchronized playback |
 
 Fakes are not substitute production integrations. They are conformance tools
@@ -67,17 +76,23 @@ P0-A is complete when all of the following are true:
   validator. An explicit run never consults wizard history.
 - Harness, provider, and model adapters compose into a `ResolvedSUT`; adding a
   compatible fake adapter requires no conductor or wizard branch.
-- The real wizard path detects Codex, checks ChatGPT authentication read-only,
-  and offers Luna. It does not ask for a subscription allocation or cost
-  questionnaire.
+- The real wizard path discovers the current Codex release, checks ChatGPT
+  authentication read-only, and offers Luna. It does not ask for a subscription
+  allocation or cost questionnaire.
 - Every repetition and attempt has a unique identity and is never overwritten.
 - A controlled acceptance loop permits at most one repair attempt, gives the
   model public conformance and browser/runtime diagnostics without prescribing
   a solution, and preserves both candidates and their resource use.
+- Functional eligibility is a prerequisite for performance comparison. A
+  working artifact receives independent throughput, capacity, latency, backlog,
+  and recovery measurements; P0 does not combine them into one score.
 - The agent receives a fresh staged workspace containing only public inputs;
   isolation limits and canary results are recorded honestly.
 - A Codex + ChatGPT + Luna run invokes Busy Intersection and preserves complete
   evidence whether the model passes or fails.
+- A pre-evaluation failure with no candidate or no started evaluator fails fast
+  without producing a result bundle. A preserved candidate that reaches
+  evaluation produces a bundle even when its result is failed.
 - Cloud cost evidence records billing mode, route-attributable actual charge
   when evidenced, and any clearly labeled reference cost. An OpenRouter actual
   is an attributable OpenRouter usage debit/charge, not an upstream provider
@@ -105,14 +120,18 @@ P0-A is complete when all of the following are true:
 - The site separates local and cloud cohorts and clearly presents acceptance,
   traffic performance, cost/time, attempts, failures, artifact/capture, and
   provenance.
-- A versioned 5x5 Rush descriptor and topology fixture traverse the same
-  challenge boundary without city branches in the conductor.
+- The Challenge Portability Fixture traverses the same generic challenge
+  boundary without Busy Intersection branches in the conductor and does not
+  constrain the protocol or topology of a future city challenge.
 - Unit and fixture integration tests run without a model account, inference
   server, or private judge pack.
 
 Passing the traffic challenge is not required to prove the live integration;
-a complete, diagnosable model failure is a valid smoke result. Deterministic
-fixture artifacts are authoritative for evaluator acceptance tests.
+a candidate that reaches evaluation may produce a complete, diagnosable model
+failure as a valid smoke result. A total pre-evaluation failure with no
+candidate or no started evaluator fails fast without a result bundle.
+Deterministic fixture artifacts are authoritative for evaluator acceptance
+tests.
 
 ## P0-B definition
 
@@ -124,8 +143,8 @@ P0-B implements The 5x5 Rush over the P0-A seams:
 - Ramp spillback, grid blockage, freeway collapse, fairness, and recovery
   checks.
 - Overview and interchange captures.
-- The same live Codex + ChatGPT + Luna SUT applied to one city run, whether
-  passing or failing.
+- One selected compatible SUT applied to one city run, whether passing or
+  failing. The city must not require a conductor-specific harness choice.
 
 P0-B succeeds only if this work plugs into the challenge, browser, metrics,
 bundle, cost, and reporting contracts without adding city-specific branches to
@@ -425,13 +444,15 @@ The skeleton is protected by tests that cross its seams:
 - A malicious candidate fixture containing script, navigation, and exfiltration
   attempts is offered only as inert/downloadable content and never executes in
   the report shell.
-- A city topology fixture uses the challenge registry and `gates/v1` without
-  a conductor special case.
+- The Challenge Portability Fixture uses the challenge registry and generic
+  challenge lifecycle without a conductor special case. It does not force a
+  future city to use `gates/v1` or intersection-specific semantics.
 
 ## P0-A non-goals
 
 - A complete live 5x5 Rush evaluator or city model run; those are P0-B.
-- Any second live harness, provider, model family, or local inference runtime.
+- Broad additional live harnesses, providers, model families, or local
+  inference runtimes beyond the Pi-wiggum/local proving path.
 - Universal provider/model discovery or a complete model catalog.
 - Arbitrary third-party adapter loading.
 - More than one production traffic profile, adaptive bracket refinement, or a
@@ -461,7 +482,9 @@ The skeleton is protected by tests that cross its seams:
 | Best-effort protection is mistaken for isolation | Publish L0/unsealed provenance prominently; make strong-backend selection a separate reviewed milestone. |
 | Visual polish gets deferred as “just reporting” | Require one coherent site shell and one animated artifact preview in the P0-A exit criteria. |
 | City work destabilizes the core | Finish/freeze P0-A contracts, then require P0-B to plug in without city branches. |
-| Vendor CLI/events change | Pin and record the tested Codex version, preserve raw streams, and maintain parser fixtures. |
+| Vendor CLI/events change | Resolve the current Codex version before each run, record the exact release and executable identity, preserve raw streams, and maintain parser fixtures. |
+| Performance rewards a broken or dishonest artifact | Apply a functional eligibility floor first; compare throughput only for eligible, valid, and sufficiently evidenced runs. |
+| Public tests become a memorization target | Keep the public check focused on interface use and keep production demand/scoring private. |
 
 ## Approved scope checklist
 
@@ -472,12 +495,19 @@ Current implementation gaps are tracked in
 - [x] Evidence-backed harness/provider/model, configuration, bundle, challenge,
       cost, and reporting seams remain in P0-A.
 - [x] Each seam receives one real implementation plus fakes/fixtures.
-- [x] Codex CLI + ChatGPT-managed access + Luna is the only required live SUT.
+- [x] Busy Intersection remains the primary challenge and the future city
+      remains open for extension.
+- [x] The current Codex path resolves the most recent available release and
+      records the exact version used.
+- [x] Pi-wiggum with a local model is the next real SUT to prove the completed
+      seams.
 - [x] Busy Intersection is the only complete P0-A evaluator.
-- [x] The 5x5 Rush contract/fixture is P0-A; full city implementation is P0-B.
+- [x] The Challenge Portability Fixture is a P0-A seam proof; a full city
+      implementation is deferred until a future milestone.
 - [x] Cloud cost evidence is preserved; P0-A does not allocate subscription fees.
 - [x] One controlled repair attempt, one portable L0 staged implementation, one browser,
       one animated capture, one local inbox, and one small static site define the
-      concrete P0-A breadth.
-- [x] Google Drive, quota-burden reporting, frontier judging, other live SUTs,
-      and richer comparison UX remain post-P0-A.
+      eventual concrete P0-A breadth after seam completion.
+- [x] Static reporting breadth and future-city implementation follow seam
+      completion; arbitrary integrations, Google Drive, quota-burden reporting,
+      frontier judging, and richer comparison UX remain deferred.

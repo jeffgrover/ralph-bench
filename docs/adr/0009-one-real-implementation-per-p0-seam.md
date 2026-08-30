@@ -1,6 +1,6 @@
 # ADR 0009: Build One Real Implementation Per Proven P0 Seam
 
-**Status:** Accepted
+**Status:** Accepted; scope amended by [ADR 0014](0014-seam-first-evaluation-and-active-harness.md)
 **Date:** 2026-08-23
 
 ## Context
@@ -24,6 +24,11 @@ vendor harnesses, and extensive boundary schemas. That makes the skeleton
 harder to finish without making it materially more extensible.
 
 ## Decision
+
+This record remains the historical rationale for narrow implementation
+breadth. ADR 0014 keeps the seam-first discipline while making Pi-wiggum with
+a local model the next deliberately limited real proving path after the common
+seams are complete.
 
 Retain the known architectural contracts, but give each major seam exactly one
 real P0-A implementation plus deterministic fakes or fixtures:

@@ -10,25 +10,33 @@ The initial challenge family uses visible traffic simulations at two scales:
 - **Busy Intersection** for local and smaller models.
 - **The 5x5 Rush** for frontier and cloud-class models.
 
-The P0 live system under test is:
+Busy Intersection is the primary current challenge. The 5x5 Rush is a future
+city extension; the P0 seam proof is named the **Challenge Portability
+Fixture**. It exists to prove that future challenges can enter through the
+generic challenge boundary without requiring Busy Intersection-specific
+conductor logic. It does not prescribe the future city's topology or protocol.
+
+The initial live system under test is:
 
 ```text
 Codex CLI x ChatGPT-managed OpenAI access x gpt-5.6-luna
 ```
 
 It is a cloud-subscription path whose P0-A cost is explicitly unavailable;
-time, token, and attempt evidence remain reportable. OpenRouter is the next
-provider slice for billed and normalized reference pricing. Other real
-harnesses, providers, and models remain TBD; deterministic fake adapters
-preserve polymorphic contract coverage during P0.
+time, token, and attempt evidence remain reportable. Codex is resolved to the
+most recent available release before a run and its exact version is recorded.
+After the seams are complete, Pi-wiggum with a local model is the next real
+SUT used to prove the local harness/provider path. OpenRouter remains the next
+provider slice for billed and normalized reference pricing.
 
-P0-A targets one Busy Intersection vertical slice through every durable
-boundary. A descriptor/topology-only 5x5 Rush fixture remains required in P0-A
-to prove the challenge seam before the full P0-B implementation; that fixture
-is not implemented yet.
+P0-A targets a seam-complete Busy Intersection vertical slice. The Challenge
+Portability Fixture remains a small second-challenge boundary proof; it is not
+a partial city simulation and is not implemented yet. Static reporting and
+future city work follow seam completion.
 
 The P0-A planning packet was accepted on 2026-08-23, as amended by [ADR
-0011](docs/adr/0011-cloud-cost-evidence-and-openrouter-references.md), and
+0011](docs/adr/0011-cloud-cost-evidence-and-openrouter-references.md) and
+[ADR 0014](docs/adr/0014-seam-first-evaluation-and-active-harness.md), and
 implementation is underway. P0-A does not allocate subscription fees;
 OpenRouter billing/reference support is the next provider slice.
 
@@ -68,8 +76,10 @@ simulation overview, defaulting to yes. It opens evaluator-owned WebM evidence
 rather than executing candidate HTML. `rb preview` provides the same operation
 later for any validated result bundle. Noninteractive runs never prompt.
 
-The run command creates versioned, immutable result bundles. The build
-command will validate and aggregate those bundles into a static site without
+The run command creates versioned, immutable result bundles for evaluated
+candidates. Complete pre-evaluation failures with no candidate or no started
+evaluator fail fast without creating a diagnostic bundle. The build command
+will validate and aggregate result bundles into a static site without
 modifying the source evidence.
 
 ## Current implementation slice
@@ -111,7 +121,14 @@ The first P0-A contract spine is implemented and tested:
   workspace size, and stderr size) without invoking another model.
 
 `rb build` remains the unimplemented P0-A boundary. Static reporting is the
-next implementation wave.
+next implementation wave after seam completion.
+
+The current seam-completion wave is not yet implemented: evaluator eligibility
+must include capacity and recovery outcomes; public gates conformance and
+browser/runtime feedback must reach the repair loop; Busy-specific knowledge
+must move behind the challenge adapter; and harness execution must be created
+through the adapter boundary. Current-version Codex update preflight and the
+Pi-wiggum/local path follow that work.
 
 ### Platform posture
 

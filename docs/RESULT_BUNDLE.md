@@ -6,17 +6,28 @@
 
 ## Purpose
 
-A result bundle is the immutable, portable evidence produced by one run. It is
-the only input required by downstream validation, aggregation, judging, and
+A result bundle is the immutable, portable evidence produced by one evaluated
+candidate run. It is the only input required by downstream validation,
+aggregation, judging, and
 static reporting, apart from explicitly versioned external judge material.
 
 The run process does not generate `summary.html`. HTML, thumbnails optimized
 for the site, aggregate tables, and indexes are derived outputs stored outside
 the bundle.
 
+## Bundle boundary
+
+The profiler does not create a diagnostic `.ralph.zip` for a complete
+pre-evaluation failure. If no candidate is preserved, or private evaluation
+cannot start, the run fails fast with concise operator-visible evidence and
+leaves no result bundle. Once a candidate has been preserved and evaluation has
+begun, the candidate receives a bundle even when the outcome is failed,
+partial, or otherwise ineligible; that artifact has something meaningful to
+report.
+
 ## Core requirements
 
-- One bundle per run/repetition.
+- One bundle per evaluated run/repetition.
 - Globally unique run ID independent of filenames.
 - Explicit schema versions.
 - Complete SUT, environment, challenge, attempt, and metric provenance.

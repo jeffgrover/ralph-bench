@@ -25,10 +25,13 @@ Codex CLI + ChatGPT-managed access + Luna profile
 Codex CLI + OpenAI + GPT profile
 OpenCode + LM Studio + Qwen profile
 generic command harness + OpenAI-compatible provider + generic model profile
+Pi + Pi-wiggum workflow + local provider + local model profile
 ```
 
-Only the first composition is required live in P0. The others illustrate the
-contract and remain TBD.
+The first composition established the initial live path. The next real path is
+Pi with the Pi-wiggum workflow and a local model; it is added after the shared
+seams are complete to prove that the contracts work beyond Codex. The other
+compositions illustrate the contract and remain TBD.
 
 It must not produce cross-product implementations such as
 `OpenCodeLmStudioQwenRunner`.
@@ -43,7 +46,8 @@ responsibilities differ.
 
 A `HarnessAdapter` represents an agentic coding client and owns:
 
-- Executable detection, versioning, and health checks.
+- Executable detection, current-version discovery/update policy, version
+  fingerprinting, and health checks.
 - Supported provider connection protocols and authentication shapes.
 - Supported effort, reasoning, tool, approval, and loop controls.
 - A schema for harness-specific options.
@@ -51,6 +55,12 @@ A `HarnessAdapter` represents an agentic coding client and owns:
 - Process execution and cancellation behavior.
 - Native event, token, tool, turn, and raw charge/usage normalization.
 - Harness-scoped cleanup and postflight checks.
+
+The default version policy is current-at-run-time: a bounded update check may
+update the harness before execution, never during it. The exact version,
+executable identity, update result, and adapter version are recorded in run
+provenance. A historical version may still appear in evidence for comparison,
+but a stale version is not silently treated as the current harness.
 
 It does not configure a provider, decide which model is available, or embed
 challenge-specific evaluation logic.
@@ -132,6 +142,8 @@ class HarnessAdapter(Protocol):
     descriptor: AdapterDescriptor
 
     def detect(self, context: ProbeContext) -> HarnessProbe: ...
+    def check_for_update(self, context: ProbeContext) -> UpdateProbe: ...
+    def update(self, context: UpdateContext) -> UpdateResult: ...
     def connection_requirements(self) -> tuple[ConnectionRequirement, ...]: ...
     def option_schema(self) -> OptionSchema: ...
     def plan(self, request: HarnessRequest, binding: SUTBinding) -> HarnessPlan: ...
@@ -162,7 +174,8 @@ class ModelAdapter(Protocol):
     def resolve(self, request: ModelRequest, offer: ModelOffer) -> ModelBinding: ...
 ```
 
-The protocols should return typed data and actions. They should not reach back
+The update methods are bounded harness-owned lifecycle actions. They should
+not update during an active run, reach back
 into the conductor, prompt the user, write result bundles, or call another
 adapter through hidden global state.
 
@@ -308,11 +321,12 @@ adapter class names.
 
 P0 includes the three protocols, built-in registry, typed descriptors,
 capability resolver, generic model adapter, fake composition matrix, and the
-Codex CLI + ChatGPT-managed access + `gpt-5.6-luna` live path. That provider
-path supplies honest unavailable-cost evidence as described in
-[`COST_MODEL.md`](COST_MODEL.md). OpenRouter reference/billing integration,
-arbitrary third-party loading, a complete model catalog, and every other real
-composition are post-P0/TBD.
+current-version Codex CLI + ChatGPT-managed access + `gpt-5.6-luna` path. That
+provider path supplies honest unavailable-cost evidence as described in
+[`COST_MODEL.md`](COST_MODEL.md). After seam completion, Pi-wiggum with a local
+model is the next real composition used to prove the local path. OpenRouter
+reference/billing integration, arbitrary third-party loading, a complete model
+catalog, and every other real composition are post-P0/TBD.
 
 The foundational registry, contracts, resolver, fakes, and conformance tests
 are approximately **3–5 engineering days**. This substantially overlaps the

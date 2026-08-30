@@ -45,6 +45,13 @@ reaches a defined breakdown condition, then measures whether the artifact
 recovers. Safety, physical plausibility, and agreement between finish
 notifications and visible movement remain separate recorded-review dimensions.
 
+The evaluation has a functional floor before it has a competitive performance
+ranking. A candidate must use the evaluator interface correctly, produce valid
+observed work, and remain structurally and operationally valid before its
+throughput is compared with other eligible results. “Working” is the admission
+ticket; sustainable throughput, latency, backlog, recovery, resource
+efficiency, and visual quality explain how eligible systems differ.
+
 ### Reliability needs repeated evidence
 
 One run is an anecdote. Experiments produce uniquely identified repetitions,
@@ -164,9 +171,12 @@ recovery. It is also the grand visual challenge: a model city whose spatial
 design, atmosphere, motion, and information layer should make complex network
 behavior inviting and memorable.
 
-The challenge family shares a minimal semantic gate protocol for controlling
-arrivals and observing departures. The larger challenge may extend that narrow
-boundary only where network-scale measurement proves it necessary.
+The current implementation does not build this city. P0 uses a **Challenge
+Portability Fixture** to prove that a second challenge can enter through the
+generic challenge boundary without adding Busy Intersection branches to the
+conductor. The fixture is an architectural proof, not a partial city
+simulation, and does not constrain the future city's topology, evaluation
+protocol, or visual treatment.
 
 ## System under test
 
@@ -181,12 +191,13 @@ recorded as the execution environment. Local time comparisons require a
 matching environment cohort; cloud comparisons retain provider and service-tier
 context.
 
-The proposed live P0 composition is Codex CLI with ChatGPT-managed OpenAI
-access and `gpt-5.6-luna`. It is a flat-subscription cloud cohort whose cost is
-unavailable in P0-A; time, tokens, and attempts remain reportable. OpenRouter
-is the next provider implementation, not part of the P0-A live SUT. All other
-real harness, provider, and model integrations remain TBD while fake adapters
-prove the generic composition contracts.
+The initial live P0 composition is Codex CLI with ChatGPT-managed OpenAI access
+and `gpt-5.6-luna`. It is a flat-subscription cloud cohort whose cost is
+unavailable in P0-A; time, tokens, and attempts remain reportable. Codex is
+resolved to the most recent available release before a run, with the exact
+version and executable identity recorded. After seam completion, Pi-wiggum with
+a local model is the next real SUT used to prove the local harness/provider
+path. OpenRouter remains the next metered provider implementation.
 
 ## Core workflow
 

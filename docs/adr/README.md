@@ -1,8 +1,9 @@
 # Architecture Decision Records
 
 These records capture the foundational decisions approved for Ralph Bench P0-A.
-They were accepted when implementation began on 2026-08-23. Superseded ADRs are
-retained as historical decisions; the current cost decision is ADR 0011.
+They were accepted when implementation began on 2026-08-23. Superseded or
+amended ADRs are retained as historical decisions; the current cost decision is
+ADR 0011 and the current scope/version/measurement refinement is ADR 0014.
 
 | ADR | Decision |
 |---|---|
@@ -19,3 +20,4 @@ retained as historical decisions; the current cost decision is ADR 0011.
 | [0011](0011-cloud-cost-evidence-and-openrouter-references.md) | Preserve cloud cost evidence, use OpenRouter references explicitly, and defer subscription allocation. |
 | [0012](0012-defer-strong-isolation-backends.md) | Use portable L0 protection in P0 and defer strong isolation-tool selection. |
 | [0013](0013-minimal-gates-interface.md) | Replace the rich traffic bridge with evaluator-injected `gates/v1` arrivals, finishes, and monitoring. |
+| [0014](0014-seam-first-evaluation-and-active-harness.md) | Keep Busy Intersection primary, make eligibility precede performance, resolve current harness versions at run time, prove seams with Pi-wiggum/local execution, and defer reporting breadth until the seams are complete. |
