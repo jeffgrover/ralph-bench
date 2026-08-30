@@ -19,7 +19,7 @@ import tempfile
 import time
 from typing import Any, Protocol
 
-from ..execution import HarnessAttemptResult, InvocationAdmission
+from ..execution import HarnessAttemptResult, InvocationAdmission, candidate_has_files
 from .contracts import InvocationPlan
 
 
@@ -532,7 +532,7 @@ class CodexAttemptExecutor:
             reason = "process_status_unknown"
         else:
             reason = "process_exited"
-        candidate = self.workspace if self.workspace.is_dir() else None
+        candidate = self.workspace if candidate_has_files(self.workspace) else None
         return HarnessAttemptResult(candidate, reason, refs)
 
 

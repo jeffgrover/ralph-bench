@@ -28,10 +28,12 @@ generic command harness + OpenAI-compatible provider + generic model profile
 Pi + Pi-wiggum workflow + local provider + local model profile
 ```
 
-The first composition established the initial live path. The next real path is
-Pi with the Pi-wiggum workflow and a local model; it is added after the shared
-seams are complete to prove that the contracts work beyond Codex. The other
-compositions illustrate the contract and remain TBD.
+The first composition established the initial live path. The native Pi-wiggum
+execution path is now prepared as the next real composition, using a local
+model served by LM Studio to prove that the contracts work beyond Codex.
+Wiggum is a native Pi extension, so its identity and dependency versions are
+part of the harness evidence. The other compositions illustrate the contract
+and remain TBD.
 
 It must not produce cross-product implementations such as
 `OpenCodeLmStudioQwenRunner`.
@@ -56,11 +58,13 @@ A `HarnessAdapter` represents an agentic coding client and owns:
 - Native event, token, tool, turn, and raw charge/usage normalization.
 - Harness-scoped cleanup and postflight checks.
 
-The default version policy is current-at-run-time: a bounded update check may
-update the harness before execution, never during it. The exact version,
-executable identity, update result, and adapter version are recorded in run
-provenance. A historical version may still appear in evidence for comparison,
-but a stale version is not silently treated as the current harness.
+The default version policy is current-at-run-time: a bounded update action may
+update the harness and its declared extensions before execution, never during
+it. For Codex this is `codex update`; for Pi this is `pi update` followed by
+`pi update --extensions`. The exact version, executable identity, extension
+identities, update result, and adapter version are recorded in run provenance.
+A historical version may still appear in evidence for comparison, but a stale
+version is not silently treated as the current harness.
 
 It does not configure a provider, decide which model is available, or embed
 challenge-specific evaluation logic.
@@ -89,9 +93,13 @@ and does not allocate subscriptions. Provider adapters do not invent missing
 charges. If billing evidence is absent, the run remains explicitly unavailable
 and is not cost-rankable.
 
-A future LM Studio integration would be one provider adapter. Harness adapters
-would consume its resolved connection binding rather than each implementing LM
-Studio behavior.
+The P0 local proving path uses one LM Studio provider adapter. Its preflight
+owns `lms runtime update --all --yes`, server/model preparation, and read-back
+of effective runtime state. It returns readiness together with an idempotent
+cleanup action that restores only state introduced by the run. Harness adapters
+consume its resolved connection binding rather than each implementing LM Studio
+behavior. The `lms` CLI has no desktop-app update command, so app freshness is
+recorded when observable and otherwise remains an explicit limitation.
 
 ### Model adapter
 
@@ -142,11 +150,11 @@ class HarnessAdapter(Protocol):
     descriptor: AdapterDescriptor
 
     def detect(self, context: ProbeContext) -> HarnessProbe: ...
-    def check_for_update(self, context: ProbeContext) -> UpdateProbe: ...
-    def update(self, context: UpdateContext) -> UpdateResult: ...
+    def ensure_current(self, context: ProbeContext) -> UpdateResult: ...
     def connection_requirements(self) -> tuple[ConnectionRequirement, ...]: ...
     def option_schema(self) -> OptionSchema: ...
     def plan(self, request: HarnessRequest, binding: SUTBinding) -> HarnessPlan: ...
+    def create_attempt_executor(self, context: HarnessExecutionContext) -> AttemptExecutor: ...
     def execute(self, plan: HarnessPlan, context: RunContext) -> HarnessResult: ...
     def cleanup(self, handle: HarnessHandle) -> CleanupResult: ...
 
@@ -155,9 +163,12 @@ class ProviderAdapter(Protocol):
     descriptor: AdapterDescriptor
 
     def detect(self, context: ProbeContext) -> ProviderProbe: ...
+    def ensure_current(self, context: ProbeContext) -> UpdateResult: ...
     def discover_models(self, context: ProbeContext) -> tuple[ModelOffer, ...]: ...
     def option_schema(self) -> OptionSchema: ...
+    def connection_settings(self, context: ProbeContext) -> Mapping[str, object]: ...
     def cost_capabilities(self) -> CostCapabilities: ...
+    def prepare(self, model: str, context: RunContext) -> ProviderPreparation: ...
     def plan(self, request: ProviderRequest) -> ProviderPlan: ...
     def apply(self, plan: ProviderPlan, context: RunContext) -> ProviderHandle: ...
     def observe(self, handle: ProviderHandle) -> EffectiveProviderState: ...
@@ -323,10 +334,11 @@ P0 includes the three protocols, built-in registry, typed descriptors,
 capability resolver, generic model adapter, fake composition matrix, and the
 current-version Codex CLI + ChatGPT-managed access + `gpt-5.6-luna` path. That
 provider path supplies honest unavailable-cost evidence as described in
-[`COST_MODEL.md`](COST_MODEL.md). After seam completion, Pi-wiggum with a local
-model is the next real composition used to prove the local path. OpenRouter
-reference/billing integration, arbitrary third-party loading, a complete model
-catalog, and every other real composition are post-P0/TBD.
+[`COST_MODEL.md`](COST_MODEL.md). The Pi-wiggum/local execution path is now the
+next real composition used to prove the local path; its first run awaits model
+selection. OpenRouter reference/billing integration, arbitrary third-party
+loading, a complete model catalog, and every other real composition are
+post-P0/TBD.
 
 The foundational registry, contracts, resolver, fakes, and conformance tests
 are approximately **3–5 engineering days**. This substantially overlaps the

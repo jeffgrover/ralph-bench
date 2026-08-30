@@ -7,9 +7,16 @@ import shutil
 import tempfile
 import threading
 import unittest
+import zipfile
 from unittest.mock import patch
 
-from ralph_bench.adapters import built_in_registry, resolve_sut
+from ralph_bench.adapters import (
+    LMStudioProviderAdapter,
+    PiHarnessAdapter,
+    built_in_registry,
+    resolve_sut,
+)
+from ralph_bench.adapters.codex import CodexHarnessAdapter
 from ralph_bench.adapters.contracts import ProbeContext, ProcessResult
 from ralph_bench.browser_runtime import BrowserEvaluationArtifacts
 from ralph_bench.bundles import validate_bundle
@@ -76,6 +83,14 @@ class _FakeCodexExecutor:
                 "events/raw/codex-attempt-001.summary.json",
             ),
         )
+
+
+def _fake_executor_factory(context):
+    return _FakeCodexExecutor(
+        workspace=context.workspace,
+        evidence_root=context.evidence_root,
+        prompt=context.prompt,
+    )
 
 
 def _fake_browser(candidate, output, *, raw_evidence, **_kwargs):
@@ -173,21 +188,25 @@ class ConductorTests(unittest.TestCase):
             raw["budget"] = {"max_wall_seconds": 60, "max_attempts": 1}
             raw["output"] = {"inbox": str(root / "inbox")}
             experiment = parse_experiment(raw)
-            registry = built_in_registry()
-            sut = resolve_sut(
-                experiment,
-                registry,
-                context=ProbeContext(process_runner=self._probe),
-            )
             executable = root / "codex"
             executable.write_text("fixture")
             executable.chmod(0o700)
             auth = root / "auth.json"
             auth.write_text("{}")
+            registry = built_in_registry(
+                codex=CodexHarnessAdapter(
+                    executable=str(executable),
+                    attempt_executor_factory=_fake_executor_factory,
+                    credential_reference_factory=lambda: auth,
+                )
+            )
+            sut = resolve_sut(
+                experiment,
+                registry,
+                context=ProbeContext(process_runner=self._probe),
+            )
             output: list[str] = []
             with (
-                patch("ralph_bench.conductor._codex_binary", return_value=executable),
-                patch("ralph_bench.conductor._auth_json", return_value=auth),
                 patch(
                     "ralph_bench.conductor.find_chromium",
                     return_value=root / "chromium",
@@ -195,10 +214,6 @@ class ConductorTests(unittest.TestCase):
                 patch(
                     "ralph_bench.conductor.find_playwright_browsers_path",
                     return_value=root / "playwright",
-                ),
-                patch(
-                    "ralph_bench.conductor.CodexAttemptExecutor",
-                    _FakeCodexExecutor,
                 ),
                 patch(
                     "ralph_bench.conductor.run_browser_evaluation",
@@ -210,6 +225,7 @@ class ConductorTests(unittest.TestCase):
                     sut,
                     registry,
                     output_fn=output.append,
+                    probe_context=ProbeContext(process_runner=self._probe),
                 )
             self.assertEqual(len(summary.runs), 1)
             validation = validate_bundle(summary.runs[0].bundle)
@@ -217,11 +233,112 @@ class ConductorTests(unittest.TestCase):
                 validation.valid,
                 [(item.code, item.path, item.detail) for item in validation.diagnostics],
             )
+            with zipfile.ZipFile(summary.runs[0].bundle) as archive:
+                preflight = json.loads(
+                    archive.read("provenance/toolchain-preflight.json")
+                )
+            self.assertEqual(preflight["schema_version"], "toolchain-preflight/v1")
+            self.assertEqual(preflight["status"], "ready")
             rendered = "\n".join(output)
             self.assertIn("starting initial model attempt", rendered)
             self.assertIn("public artifact checks passed", rendered)
             self.assertIn("recording the overview", rendered)
             self.assertIn("bundle saved", rendered)
+
+    def test_preflight_failure_stops_before_any_bundle_is_created(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            raw = cloud_raw()
+            raw["output"] = {"inbox": str(root / "inbox")}
+            experiment = parse_experiment(raw)
+            registry = built_in_registry()
+            sut = resolve_sut(
+                experiment,
+                registry,
+                context=ProbeContext(process_runner=self._probe),
+            )
+
+            def failed(_argv, _timeout):
+                return ProcessResult(1, "", "update unavailable")
+
+            with self.assertRaisesRegex(Exception, "preflight"):
+                execute_experiment(
+                    experiment,
+                    sut,
+                    registry,
+                    output_fn=lambda _message: None,
+                    probe_context=ProbeContext(process_runner=failed),
+                )
+            self.assertFalse((root / "inbox").exists())
+
+    def test_local_pi_composition_uses_harness_factory_without_conductor_branch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            pi_binary = root / "pi"
+            pi_binary.write_text("fixture")
+            pi_binary.chmod(0o700)
+            raw = cloud_raw(
+                name="local-pi",
+                client="pi",
+                provider="lm-studio",
+                model="local-model",
+                track="local",
+                client_options={"loop": "native", "reasoning_effort": "medium"},
+                budget={"max_wall_seconds": 60, "max_attempts": 1},
+                output={"inbox": str(root / "inbox")},
+            )
+            experiment = parse_experiment(raw)
+
+            def process(argv, _timeout):
+                if argv[0] == str(pi_binary):
+                    if argv[1:] == ("--version",):
+                        return ProcessResult(0, "0.84.4\n")
+                    if argv[1:] == ("list", "--no-approve"):
+                        return ProcessResult(0, "npm:pi-wiggum\nnpm:pi-subagents\n")
+                    return ProcessResult(0, "updated\n")
+                if argv[1:] == ("--version",):
+                    return ProcessResult(0, "CLI commit: fixture\n")
+                if argv[1:4] == ("server", "status", "--json"):
+                    return ProcessResult(0, '{"status":"running"}\n')
+                if argv[1:5] == ("runtime", "update", "--all", "--yes"):
+                    return ProcessResult(0, "runtime is current\n")
+                if argv[1:] == ("ls", "--llm", "--json"):
+                    return ProcessResult(0, '{"models":[{"modelKey":"local-model"}]}\n')
+                if argv[1:] == ("ps", "--json"):
+                    return ProcessResult(0, '{"models":[{"id":"local-model"}]}\n')
+                return ProcessResult(1, "", "unexpected command")
+
+            registry = built_in_registry(
+                pi=PiHarnessAdapter(
+                    executable=str(pi_binary),
+                    process_runner=process,
+                    attempt_executor_factory=_fake_executor_factory,
+                    extension_root=root / "missing-pi-wiggum",
+                ),
+                lmstudio=LMStudioProviderAdapter(process_runner=process),
+            )
+            sut = resolve_sut(
+                experiment,
+                registry,
+                context=ProbeContext(process_runner=process),
+            )
+            with (
+                patch("ralph_bench.conductor.find_chromium", return_value=root / "chromium"),
+                patch(
+                    "ralph_bench.conductor.find_playwright_browsers_path",
+                    return_value=root / "playwright",
+                ),
+                patch("ralph_bench.conductor.run_browser_evaluation", side_effect=_fake_browser),
+            ):
+                summary = execute_experiment(
+                    experiment,
+                    sut,
+                    registry,
+                    output_fn=lambda _message: None,
+                    probe_context=ProbeContext(process_runner=process),
+                )
+            self.assertEqual(len(summary.runs), 1)
+            self.assertTrue(validate_bundle(summary.runs[0].bundle).valid)
 
     def test_progress_timestamp_and_heartbeat_are_low_noise(self):
         ticks = iter((100.0, 165.4))

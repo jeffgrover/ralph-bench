@@ -45,8 +45,9 @@ Read these before P0 implementation:
 - `docs/RESULT_BUNDLE.md`
 - `docs/ISOLATION_MODEL.md`
 - `docs/adr/`, especially ADR 0009 (P0 seam breadth), ADR 0011 (cloud cost
-  evidence, OpenRouter references, and deferred subscription allocation), and
-  ADR 0013 (minimal evaluator-injected gates)
+  evidence, OpenRouter references, and deferred subscription allocation), ADR
+  0013 (minimal evaluator-injected gates), and ADR 0015 (current-toolchain
+  preflight)
 
 The P0-A planning packet was accepted on 2026-08-23 as amended by ADR 0011 and
 ADR 0014.
@@ -148,6 +149,12 @@ Do not silently expand scope through implementation.
 - Authentication is operator-managed. Probe it read-only with
   `codex login status`; never copy, print, archive, or silently replace ChatGPT
   credentials.
+- Every real run refreshes the selected harness before model invocation. Codex
+  uses `codex update`; Pi uses `pi update` followed by
+  `pi update --extensions`. The local provider refreshes its installed runtime
+  where supported and verifies server/model readiness. Discovery and `rb
+  doctor` remain read-only; the LM Studio provider owns bounded server/model
+  start/load mutation and registered rollback.
 - Treat ChatGPT-backed access as a flat subscription whose P0-A per-run USD
   cost is unavailable. Preserve time, token, independent-run, and repair-pass
   evidence; defer subscription/quota accounting. A future OpenRouter adapter
@@ -195,7 +202,7 @@ P0 tests must cover:
 - Current-version Codex update/auth preflight fixtures, JSONL normalization,
   explicit Luna selection, ChatGPT credential-canary isolation, unavailable
   subscription-cost status, and preservation of time/token/attempt provenance.
-  Pi-wiggum/local-provider fixtures belong to the next proving slice; OpenRouter
+  Pi-wiggum/local-provider fixtures cover the native proving slice; OpenRouter
   billing and reference-price fixtures remain a later provider slice.
 - Schema/version handling and run state transitions.
 - Unique IDs and non-overwriting repetitions.

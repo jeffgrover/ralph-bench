@@ -14,10 +14,11 @@ Do not reopen these without new evidence:
   extension; its P0 seam proof is the Challenge Portability Fixture, not a
   partial 5x5 implementation.
 - The initial live SUT is Codex CLI + ChatGPT subscription + GPT-5.6 Luna.
-  Codex resolves the most recent available release before a run and records the
-  exact version and executable identity.
-- After the common seams are complete, Pi-wiggum with a local model is the next
-  real SUT used to prove the local harness/provider path.
+  Codex is refreshed to the most recent available release before a run and
+  records the exact version and executable identity.
+- After the common seams are complete, Pi with the native Pi-wiggum extension
+  and a local model served by LM Studio is the next real SUT used to prove the
+  local harness/provider path.
 - P0 protection: portable L0/unsealed staging. Strong isolation-tool selection
   is deferred by [ADR 0012](adr/0012-defer-strong-isolation-backends.md).
 - Eligibility comes before performance comparison: a candidate must produce a
@@ -37,6 +38,9 @@ Do not reopen these without new evidence:
   evaluation still receives a bundle when evaluation fails.
 - Seam completion comes before static reporting breadth, broader city work, or
   additional product polish.
+- Current-toolchain refresh and local-provider readiness happen before model
+  evaluation, never during an active run. Discovery and `rb doctor` remain
+  read-only.
 
 ## Evidence from live run 1
 
@@ -98,6 +102,30 @@ an undocumented interface.
   implementation choices.
 
 ## P0-A — next session
+
+### 0. Establish current-toolchain and local-provider preflight — implemented
+
+**Priority:** completed prerequisite; first real Pi-wiggum run is next
+
+- Delivered a generic harness/provider lifecycle for current-toolchain refresh
+  before the first model invocation. Codex uses `codex update`; Pi uses
+  `pi update` followed by `pi update --extensions`.
+- Delivered the LM Studio provider boundary around `lms runtime update --all
+  --yes`, `lms server status --json`, `lms server start`, `lms load`, and
+  `lms ps --json` verification.
+- Added a provider-owned, idempotent rollback handle. It restores only the
+  server/model state introduced for the run, including after a failed load.
+- Recorded before/after versions, executable identities, Pi extension/package
+  identities, runtime/server/model state, update results, and unsupported
+  freshness claims as redacted provenance.
+- Added stale, current, unavailable, timeout, and update-failure fixtures
+  without making a generation request. A failed preflight stops before model
+  invocation and does not produce a result bundle.
+
+**Delivered:** the selected harness and local inference runtime are refreshed or
+explicitly proven current before evaluation; the selected model is prepared and
+verified on the serving provider; provider state is restored after the run; all
+toolchain evidence is attributable and no update can occur during an active run.
 
 ### 1. Correct the functional eligibility boundary
 
@@ -177,20 +205,18 @@ dictates its algorithm or visual design; both attempts remain auditable.
 intersection plus the Challenge Portability Fixture traverse the same generic
 challenge lifecycle without limiting future city-specific protocols.
 
-### 5. Complete harness polymorphism through execution
+### 5. Complete harness polymorphism through execution — implemented
 
-**Priority:** high skeleton work
+**Priority:** completed skeleton work
 
 **Estimate:** 1–2 engineering days
 
-- Let the selected harness adapter provide/factory the `AttemptExecutor` and
-  lifecycle evidence instead of constructing `CodexAttemptExecutor` in the
-  conductor.
-- Exercise the complete conductor with two fake harness implementations, not
-  only resolver composition tests.
-- Keep Codex as the compatibility path while the seam work enables the next
-  real Pi-wiggum/local implementation; this is deliberately narrow harness
-  breadth, not a general integration sweep.
+- The selected harness adapter now provides/factories the `AttemptExecutor`; the
+  conductor no longer constructs `CodexAttemptExecutor` or rejects Pi by name.
+- The complete conductor is exercised through Codex and Pi/local compositions
+  with fixture executors.
+- Keep this deliberately narrow harness breadth; broader integrations remain
+  out of scope.
 
 **Exit:** adding a compatible fake harness requires registry work but no
 conductor branch or Codex import.
@@ -210,18 +236,20 @@ conductor branch or Codex import.
 **Exit:** an operator can answer “did it work?” without opening JSON or asking
 for bundle inspection.
 
-### 7. Add current-version harness preflight and the Pi-wiggum/local path
+### 7. Add the Pi-wiggum/local native harness path — implementation ready; live run pending
 
-**Priority:** after seam completion
+**Priority:** next proving action
 
-- Add a generic harness update-check/update lifecycle with bounded behavior and
-  no updates during an active run.
-- Keep exact installed version, executable identity, update outcome, and
-  adapter provenance in run evidence.
-- Add Pi-wiggum as the next real harness/workflow path, a local model provider,
-  and a conservative model binding without adding conductor branches.
-- Identify the local serving runtime and model as explicit provider/model
-  configuration rather than hidden machine state.
+- Pi with the Pi-wiggum extension is now a native harness/workflow path, with a
+  local model provider and conservative model binding, without a conductor
+  branch.
+- Pi JSONL usage, turn, tool, raw-stream, and scoped-provider configuration
+  evidence are normalized behind the harness adapter.
+- Capture Pi's executable/version and Wiggum extension/dependency identities
+  from the preflight toolchain record.
+- Keep the native Wiggum loop distinct from Ralph's evaluator-controlled loop;
+  count its internal iterations against the shared model-work budget.
+- Run the first real local evaluation after selecting and verifying the model.
 
 **Exit:** the same conductor and challenge path can run the Codex and
 Pi-wiggum/local compositions, while each result clearly identifies the exact

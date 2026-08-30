@@ -458,6 +458,7 @@ def _run_experiment_path(
                 registry,
                 output_fn=output_fn,
                 input_stream=input_stream,
+                probe_context=probe_context,
             )
         else:
             summary = runner(

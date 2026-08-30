@@ -72,8 +72,9 @@ work:
    city choice; future city challenges remain open for later extension.
 5. **Client and model controls** — reasoning/effort, tool policy, native versus
    controlled loop, and adapter-specific supported options. Controlled
-   execution is the current P0 path; native-loop execution remains a distinct
-   future implementation until a harness supplies it end to end.
+   execution is the current Codex path. Pi-wiggum is the explicitly approved
+   next native-loop implementation; it remains distinct from Ralph's
+   evaluator-controlled repair loop.
 6. **Experiment basics** — ask for a concise experiment name, repetitions as
    **Independent runs per configuration**, explain that they are aggregated
    to measure variability, and collect a per-run wall-time ceiling.
@@ -169,6 +170,31 @@ Probe implementations must:
 Provider discovery is implemented once by the provider adapter and reused by
 compatible clients. In particular, each harness adapter must not grow its own
 provider probing or configuration strategy.
+
+## Run preflight
+
+Authoring and `rb doctor` are read-only. After `rb run` resolves the saved
+experiment, but before the first model invocation, the conductor performs a
+bounded current-toolchain preflight:
+
+- Codex uses `codex update`; Pi uses `pi update` and then
+  `pi update --extensions`.
+- LM Studio uses `lms runtime update --all --yes` for installed inference
+  runtime extensions. The provider transaction then checks
+  `lms server status --json`, starts a stopped server, loads an unloaded
+  selected model with `lms load <model> --yes`, and verifies the effective
+  state with `lms ps --json`. Its rollback handle unloads only a model it
+  introduced and stops only a server it started.
+- The preflight records exact executable identities, before/after versions,
+  extension/runtime identities, update outcomes, and unsupported freshness
+  claims. It never updates during an active model or browser-evaluation phase.
+- A provider cannot claim that the LM Studio desktop application was updated
+  through `lms`; that app-level limitation is recorded explicitly.
+
+Pi-wiggum is a Pi extension rather than a separate client executable. Its
+extension and dependency versions therefore belong to harness provenance, and
+its native internal repair iterations count against the same bounded
+model-work budget as the rest of the Pi run.
 
 ## Experiment file
 
@@ -281,11 +307,11 @@ P0 includes:
   bundle and provides the same view later without executing candidate HTML.
 
 P0 does not require universal discovery across every legacy client or a live
-online catalog of every provider model. The next real proving path is Pi-wiggum
-with a local model; it is not implemented yet, and its provider/runtime and
-exact model identity will be resolved through the same experiment and adapter
-contracts. Additional adapters may improve their discovery capabilities
-incrementally without changing the experiment schema.
+online catalog of every provider model. The Pi-wiggum/local execution path is
+implemented behind the shared experiment and adapter contracts; its first real
+run remains pending selection of a suitable local model. Additional adapters
+may improve their discovery capabilities incrementally without changing the
+experiment schema.
 
 ## Acceptance tests
 

@@ -34,13 +34,18 @@ class BrowserEvaluationArtifacts:
 
 
 def find_chromium() -> Path:
-    for value in (
+    candidates = (
         os.environ.get("RALPH_BENCH_CHROMIUM"),
         "/usr/bin/google-chrome",
         "/usr/bin/chromium",
         "/usr/bin/chromium-browser",
         "/opt/google/chrome/chrome",
-    ):
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "/Applications/Chromium.app/Contents/MacOS/Chromium",
+        str(Path.home() / "Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
+        str(Path.home() / "Applications/Chromium.app/Contents/MacOS/Chromium"),
+    )
+    for value in candidates:
         if not value:
             continue
         path = Path(value)
@@ -58,6 +63,7 @@ def find_playwright_browsers_path() -> Path:
         if os.environ.get("XDG_CACHE_HOME")
         else None,
         str(Path.home() / ".cache" / "ms-playwright"),
+        str(Path.home() / "Library" / "Caches" / "ms-playwright"),
     )
     for value in candidates:
         if not value or value == "0":
@@ -88,6 +94,18 @@ def _terminate_group(process: subprocess.Popen[Any]) -> None:
                 process.wait(timeout=2)
     except (OSError, subprocess.TimeoutExpired):
         pass
+
+
+def _worker_failure_detail(stderr_path: Path) -> str:
+    """Return a bounded operator-facing worker error before temp cleanup."""
+
+    try:
+        text = stderr_path.read_text(encoding="utf-8", errors="replace").strip()
+    except OSError:
+        return ""
+    if not text:
+        return ""
+    return " ".join(text.split())[-2_000:]
 
 
 def run_browser_evaluation(
@@ -143,6 +161,11 @@ def run_browser_evaluation(
         "TMPDIR": str(worker_tmp),
         "PLAYWRIGHT_BROWSERS_PATH": str(playwright_browsers_path),
     }
+    # The parent CLI is supported from both an installed distribution and a
+    # source checkout.  The worker has a deliberately minimal environment, so
+    # carry only Ralph's import root across rather than inheriting the entire
+    # parent PYTHONPATH (which may expose unrelated operator paths).
+    worker_environment["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
     for key in ("LANG", "LC_ALL", "LC_CTYPE", "TZ"):
         if key in os.environ:
             worker_environment[key] = os.environ[key]
@@ -172,8 +195,10 @@ def run_browser_evaluation(
         shutil.rmtree(worker_tmp, ignore_errors=True)
     wall = time.monotonic() - start
     if returncode != 0:
+        detail = _worker_failure_detail(stderr_path)
+        suffix = f": {detail}" if detail else ""
         raise BrowserRuntimeError(
-            f"browser worker exited with status {returncode}; see {stderr_path.name}"
+            f"browser worker exited with status {returncode}{suffix}"
         )
     paths = {
         "result": output / "result.json",

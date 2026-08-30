@@ -6,22 +6,25 @@ conductor that eventually executes the plan is outside this P0-A slice.
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
+from pathlib import Path
 from typing import Callable
 
 from .contracts import (
-    AdapterDescriptor,
-    ConnectionProbe,
+        AdapterDescriptor,
+        ConnectionProbe,
+        HarnessExecutionContext,
     InvocationPlan,
     ProbeContext,
     ProbeResult,
     ProcessResult,
+    UpdateResult,
 )
 
 
-SUPPORTED_CODEX_VERSIONS = frozenset({"0.149.0"})
 _VERSION_PATTERN = re.compile(
     r"^codex-cli[ \t]+(?P<version>[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?)$"
 )
@@ -55,9 +58,13 @@ class CodexHarnessAdapter:
         self,
         executable: str = "codex",
         process_runner: Callable[[tuple[str, ...], float], ProcessResult] | None = None,
+        attempt_executor_factory: Callable[[HarnessExecutionContext], object] | None = None,
+        credential_reference_factory: Callable[[], Path | None] | None = None,
     ) -> None:
         self.executable = executable
         self._runner = process_runner or _default_runner
+        self._attempt_executor_factory = attempt_executor_factory
+        self._credential_reference_factory = credential_reference_factory
 
     def _run(self, argv: tuple[str, ...], context: ProbeContext) -> ProcessResult:
         return (context.process_runner or self._runner)(argv, context.timeout_seconds)
@@ -91,19 +98,83 @@ class CodexHarnessAdapter:
                 "codex --version returned an unrecognized version format",
                 source="codex --version",
             )
-        if version not in SUPPORTED_CODEX_VERSIONS:
-            supported = ", ".join(sorted(SUPPORTED_CODEX_VERSIONS))
-            return ProbeResult(
-                "unsupported",
-                False,
-                f"Codex CLI {version} is not supported by this adapter; tested: {supported}",
-                version=version,
-                source="codex --version",
-                evidence={"executable": executable},
-            )
         return ProbeResult(
             "ok", True, "Codex CLI detected", version=version,
-            source="codex --version", evidence={"executable": executable},
+            source="codex --version",
+            warnings=(
+                "invocation compatibility is confirmed during current-toolchain preflight",
+            ),
+            evidence={
+                "executable": executable,
+                "resolved_executable": shutil.which(executable) or executable,
+            },
+        )
+
+    def ensure_current(self, context: ProbeContext | None = None) -> UpdateResult:
+        """Refresh Codex before a run, then verify the installed executable."""
+
+        context = context or ProbeContext()
+        executable = context.executable or self.executable
+        before = self.detect(context)
+        resolved_executable = before.evidence.get(
+            "resolved_executable", shutil.which(executable) or executable
+        )
+        command = (executable, "update")
+        if not before.available:
+            return UpdateResult(
+                "unavailable",
+                f"Codex cannot be refreshed: {before.message}",
+                before_version=before.version,
+                source="codex update",
+                commands=(command,),
+                evidence={"executable": executable, "resolved_executable": resolved_executable},
+            )
+        result = self._run(command, context)
+        if result.timed_out:
+            return UpdateResult(
+                "timed-out",
+                "codex update timed out",
+                before_version=before.version,
+                source="codex update",
+                commands=(command,),
+                evidence={"executable": executable, "resolved_executable": resolved_executable},
+            )
+        if result.returncode != 0:
+            return UpdateResult(
+                "failed",
+                "codex update failed",
+                before_version=before.version,
+                source="codex update",
+                commands=(command,),
+                evidence={
+                    "executable": executable,
+                    "resolved_executable": resolved_executable,
+                    "returncode": result.returncode,
+                },
+            )
+        after = self.detect(context)
+        if not after.available:
+            return UpdateResult(
+                "failed",
+                f"Codex became unavailable after update: {after.message}",
+                before_version=before.version,
+                source="codex update",
+                commands=(command,),
+                evidence={"executable": executable, "resolved_executable": resolved_executable},
+            )
+        status = "updated" if before.version != after.version else "current"
+        return UpdateResult(
+            status,
+            "Codex update completed; current executable verified",
+            before_version=before.version,
+            after_version=after.version,
+            source="codex update",
+            commands=(command,),
+            evidence={
+                "executable": executable,
+                "resolved_executable": resolved_executable,
+                "returncode": result.returncode,
+            },
         )
 
     def auth_probe(self, context: ProbeContext | None = None) -> ProbeResult:
@@ -128,6 +199,24 @@ class CodexHarnessAdapter:
 
     def connection_requirements(self) -> tuple[str, ...]:
         return ("chatgpt-subscription",)
+
+    def credential_reference(self) -> Path | None:
+        if self._credential_reference_factory is not None:
+            return self._credential_reference_factory()
+        codex_home_value = os.environ.get("CODEX_HOME")
+        codex_home = Path(codex_home_value) if codex_home_value else Path.home() / ".codex"
+        auth = codex_home / "auth.json"
+        if not auth.is_file() or auth.is_symlink():
+            return None
+        return auth.resolve()
+
+    def environment_overrides(
+        self, scoped_home: Path, credential_reference: Path | None = None
+    ) -> dict[str, str]:
+        del scoped_home
+        if credential_reference is None:
+            return {}
+        return {"CODEX_HOME": str(credential_reference.parent)}
 
     def connection_probe(self, context: ProbeContext | None = None) -> ConnectionProbe:
         auth = self.auth_probe(context)
@@ -161,8 +250,9 @@ class CodexHarnessAdapter:
             raise ValueError(f"unsupported Codex reasoning effort: {reasoning_effort}")
         if sandbox not in {"read-only", "workspace-write"}:
             raise ValueError(f"unsupported Codex sandbox: {sandbox}")
-        # Every option here is supported by Codex CLI 0.149.0.  The -c value is
-        # TOML, including its quoted string, rather than a shell fragment.
+        # The current-toolchain preflight verifies the installed CLI before
+        # this plan is used. The -c value is TOML, including its quoted
+        # string, rather than a shell fragment.
         argv = (
             executable or self.executable,
             "exec",
@@ -189,4 +279,23 @@ class CodexHarnessAdapter:
             working_directory=working_directory,
             stdin_mode="prompt",
             prompt_argument="-",
+        )
+
+    def create_attempt_executor(self, context: HarnessExecutionContext):
+        """Create the Codex-specific executor behind the harness boundary."""
+
+        factory = self._attempt_executor_factory
+        if factory is not None:
+            return factory(context)
+        from .codex_execution import CodexAttemptExecutor
+
+        return CodexAttemptExecutor(
+            plan=context.plan,
+            workspace=context.workspace,
+            evidence_root=context.evidence_root,
+            prompt=context.prompt,
+            environment=context.environment,
+            timeout_seconds=context.timeout_seconds,
+            runner=context.runner,
+            secret_values=context.secret_values,
         )

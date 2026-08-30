@@ -328,6 +328,24 @@ def _iter_candidate_files(root: Path) -> Sequence[Path]:
     return sorted(files, key=lambda path: path.relative_to(root).as_posix())
 
 
+def candidate_has_files(root: Path) -> bool:
+    """Return whether a harness left at least one regular candidate file."""
+
+    if not root.is_dir() or root.is_symlink():
+        return False
+    for current_root, _directory_names, file_names in os.walk(
+        root, followlinks=False
+    ):
+        current = Path(current_root)
+        for name in file_names:
+            try:
+                if stat.S_ISREG((current / name).lstat().st_mode):
+                    return True
+            except OSError:
+                continue
+    return False
+
+
 def candidate_tree_hash(root: Path) -> str:
     if not root.is_dir() or root.is_symlink():
         raise AttemptPreservationError("candidate path must be a real directory")

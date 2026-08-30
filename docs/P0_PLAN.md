@@ -1,6 +1,6 @@
 # P0 Skeleton Plan
 
-**Status:** Accepted, as amended by [ADR 0011](adr/0011-cloud-cost-evidence-and-openrouter-references.md) and [ADR 0014](adr/0014-seam-first-evaluation-and-active-harness.md)
+**Status:** Accepted, as amended by [ADR 0011](adr/0011-cloud-cost-evidence-and-openrouter-references.md), [ADR 0014](adr/0014-seam-first-evaluation-and-active-harness.md), and [ADR 0015](adr/0015-current-toolchain-preflight.md)
 **Date:** 2026-08-23
 **P0-A target:** A seam-complete Busy Intersection vertical slice through every
 durable system boundary, with the Challenge Portability Fixture proving that
@@ -34,11 +34,13 @@ Fixture**: a small second-challenge adapter proof, not a partial city
 implementation. The complete future-city evaluator remains open and is not a
 P0-A requirement.
 
-The next additional real SUT is Pi-wiggum with a local model. It is introduced
-only after the common harness, provider, model, challenge, evaluation, and
-lifecycle seams are complete. The current Codex path remains a supported
-compatibility path and resolves the most recent available Codex release at run
-time.
+The next additional real SUT is Pi with the Pi-wiggum extension and a local
+model served by LM Studio. It is introduced only after the common harness,
+provider, model, challenge, evaluation, and lifecycle seams are complete. The
+current Codex path remains a supported compatibility path. Every real run
+refreshes the selected harness and, for the local path, the installed
+inference runtime before model invocation, then records the exact toolchain
+that actually ran.
 
 ## Skeleton rule: preserve the seam, implement one path
 
@@ -48,9 +50,9 @@ several production variants.
 
 | Seam | Durable contract built now | One P0-A implementation | Deferred breadth |
 |---|---|---|---|
-| SUT composition | Typed harness, provider, and model adapters; registry; capability resolution; current-version harness preflight | Codex + ChatGPT + Luna; Pi-wiggum + local model as the next proving path | Other live clients, providers, models, and third-party loading |
-| Configuration | Requested/materialized/effective/cleanup lifecycle and ownership | Read-only ChatGPT entitlement plus scoped Codex invocation | Mutable LM Studio lifecycle and other native renderers |
-| Agent loop | Preserved attempts and structured feedback boundary | Evaluator-controlled loop, at most two attempts | Native-loop comparison and alternate repair strategies |
+| SUT composition | Typed harness, provider, and model adapters; registry; capability resolution; current-toolchain preflight | Codex + ChatGPT + Luna; Pi + Wiggum extension + LM Studio as the next native proving path | Other live clients, providers, models, and third-party loading |
+| Configuration | Requested/materialized/effective/cleanup lifecycle and ownership | Read-only ChatGPT entitlement plus scoped Codex invocation; provider-owned local runtime preflight | Broader mutable-provider lifecycle and other native renderers |
+| Agent loop | Preserved attempts and structured feedback boundary with explicit loop mode | Evaluator-controlled Codex loop plus the next native Pi-wiggum loop, each with bounded model-work evidence | Other native-loop comparisons and repair strategies |
 | Isolation | Versioned capability/taint report and conductor-owned evidence | Portable L0 staged-workspace protection with explicit limitations | Selection and implementation of OS/container/VM-backed L1/L2 protection |
 | Storage | Immutable bundle/store boundary | Local `.ralph.zip` inbox | Google Drive and other remote stores |
 | Browser | Versioned browser observation/capture boundary | One pinned Chromium/Playwright worker | Other browsers, capture backends, and viewpoints |
@@ -79,6 +81,11 @@ P0-A is complete when all of the following are true:
 - The real wizard path discovers the current Codex release, checks ChatGPT
   authentication read-only, and offers Luna. It does not ask for a subscription
   allocation or cost questionnaire.
+- Before any model invocation, run preflight refreshes the selected harness
+  (`codex update`, or Pi plus its extensions) and the selected local inference
+  runtime where supported (`lms runtime update --all --yes`), verifies provider
+  readiness, and records exact before/after toolchain provenance. No update is
+  performed during an active run.
 - Every repetition and attempt has a unique identity and is never overwritten.
 - A controlled acceptance loop permits at most one repair attempt, gives the
   model public conformance and browser/runtime diagnostics without prescribing
@@ -286,6 +293,30 @@ files or hang.
 
 **Estimate:** 4–5 engineering days.
 
+### WP0.5 — Current toolchain and local provider preflight
+
+**Status:** Implemented for Codex, Pi refresh fixtures, the LM Studio
+runtime/server/model transaction, and the native Pi-wiggum execution/evidence
+path; the first real Pi run remains pending model selection.
+
+Build one generic, bounded preflight lifecycle that refreshes the selected
+harness and declared extensions, updates the installed local inference runtime
+where supported, verifies server/model readiness, and preserves exact
+before/after toolchain evidence. Use `codex update`, `pi update` plus
+`pi update --extensions`, and LM Studio's `lms runtime update --all --yes`.
+The LM Studio provider owns `lms server start`, `lms load <model> --yes`,
+`lms ps --json`, and compensating `lms unload`/`lms server stop` actions. The
+desktop LM Studio app has no `lms` update command and cannot be claimed current
+when its freshness is not observable.
+
+**Exit:** stale, current, timeout, unavailable, and failed-update fixtures
+prove that preflight is bounded, redacted, and completed before model
+invocation; a local selected model is verified by the serving provider; no
+update occurs during an active run; and a preflight failure produces no result
+bundle when no candidate/evaluator exists.
+
+**Estimate:** 2–3 engineering days.
+
 ### WP1 — Conductor, attempts, configuration, and staged protection
 
 Build the run state machine, unique repetitions, at most two preserved
@@ -358,13 +389,13 @@ and never executed by the report shell.
 
 **Estimate:** 3–4 engineering days.
 
-### WP6 — Codex, ChatGPT, Luna, and honest cost evidence
+### WP6 — Current Codex path and honest cost evidence
 
-Build Codex detection/version/auth fixtures, explicit non-interactive Luna
-invocation with JSONL evidence and ephemeral/scoped configuration, event/usage
-normalization, the ChatGPT provider adapter, and Luna descriptor. The live
-subscription path records cost as unavailable and preserves time, token, and
-attempt evidence; it does not allocate plan fees.
+Build the current Codex harness path, update-aware preflight fixtures, explicit
+non-interactive Luna invocation with JSONL evidence and ephemeral/scoped
+configuration, event/usage normalization, the ChatGPT provider adapter, and
+Luna descriptor. The live subscription path records cost as unavailable and
+preserves time, token, and attempt evidence; it does not allocate plan fees.
 
 **Exit:** the wizard authors and launches the live path without exposing
 credentials; a Busy Intersection run validates and renders; its report
@@ -398,10 +429,10 @@ held hostage by the larger challenge.
 ## Sequencing
 
 ```text
-WP0 -> WP1 -> WP2
+WP0 -> WP0.5 -> WP1 -> WP2
           \-> WP3 -> WP4
 WP2 + WP4 -------> WP5
-WP0 + WP1 -------> WP6
+WP0.5 + WP1 -------> WP6
 all -------------> WP7
 P0-A ------------> P0-B city generalization
 ```
@@ -482,7 +513,7 @@ The skeleton is protected by tests that cross its seams:
 | Best-effort protection is mistaken for isolation | Publish L0/unsealed provenance prominently; make strong-backend selection a separate reviewed milestone. |
 | Visual polish gets deferred as “just reporting” | Require one coherent site shell and one animated artifact preview in the P0-A exit criteria. |
 | City work destabilizes the core | Finish/freeze P0-A contracts, then require P0-B to plug in without city branches. |
-| Vendor CLI/events change | Resolve the current Codex version before each run, record the exact release and executable identity, preserve raw streams, and maintain parser fixtures. |
+| Vendor CLI/events or extension/runtime packages change | Refresh the selected harness and declared extensions plus the local inference runtime before each run, record exact before/after identities, preserve raw streams, and maintain parser/command fixtures. |
 | Performance rewards a broken or dishonest artifact | Apply a functional eligibility floor first; compare throughput only for eligible, valid, and sufficiently evidenced runs. |
 | Public tests become a memorization target | Keep the public check focused on interface use and keep production demand/scoring private. |
 
@@ -499,8 +530,11 @@ Current implementation gaps are tracked in
       remains open for extension.
 - [x] The current Codex path resolves the most recent available release and
       records the exact version used.
-- [x] Pi-wiggum with a local model is the next real SUT to prove the completed
-      seams.
+- [x] Current-toolchain preflight refreshes supported harnesses/extensions and
+      local inference runtimes before evaluation; unsupported freshness claims
+      remain explicit.
+- [x] Pi with the native Pi-wiggum extension and a local model is the next real
+      SUT to prove the completed seams.
 - [x] Busy Intersection is the only complete P0-A evaluator.
 - [x] The Challenge Portability Fixture is a P0-A seam proof; a full city
       implementation is deferred until a future milestone.

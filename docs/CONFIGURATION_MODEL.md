@@ -23,14 +23,14 @@ This document describes the target lifecycle required when Ralph Bench adds a
 mutable provider or a harness that writes native configuration. The current
 ChatGPT subscription path is deliberately narrower: it performs read-only
 detection, builds a Codex invocation plan, materializes an owned staged home and
-workspace, and records requested/effective evidence. The next real proving path
-is Pi-wiggum with a local model, which will use the same ownership boundary for
-its harness and provider configuration. Neither path should silently inherit
-unrelated user-global configuration. The system does not yet implement a
-general provider `plan/apply/observe/cleanup` transaction or verified rollback
-report. Current bundle cleanup evidence describes the planned owned
-temporary-directory strategy; it must not be interpreted as proof of the full
-transactional lifecycle below.
+workspace, and records requested/effective evidence. The Pi-wiggum local path
+now materializes scoped Pi provider configuration through the harness boundary.
+The local LM Studio provider refreshes its installed runtime extensions,
+starts/loads only what the run needs, verifies the effective state, and returns
+an idempotent rollback handle. Neither path should silently inherit unrelated
+user-global configuration. The general provider transaction remains
+intentionally small and provider-specific; broader runtime settings and
+multi-model restoration are future extensions.
 
 These adapters participate in the independent polymorphic families defined in
 [`ADAPTER_MODEL.md`](ADAPTER_MODEL.md). Configuration ownership constrains how
@@ -100,12 +100,16 @@ A provider adapter owns provider/runtime behavior, including where supported:
 - Provider authentication references and connection metadata.
 - Read-back of effective settings and restoration of prior mutable state.
 
-For a future mutable provider such as LM Studio, one adapter—not every harness
-adapter—would own provider probing and any approved runtime changes. If a
-provider does not expose a reliable API for a setting, Ralph Bench records that
+For LM Studio, one provider adapter—not every harness adapter—owns provider
+probing and approved runtime changes. Its command-line lifecycle is bounded and
+explicit: `lms runtime update --all --yes`, `lms server status --json`,
+`lms server start` when needed, `lms load <model> --yes`, `lms ps --json`, and
+compensating `lms unload`/`lms server stop` actions. The `lms` CLI cannot update
+the desktop application, so an
+unavailable app-freshness check remains an explicit limitation. If a provider
+does not expose a reliable API for a setting, Ralph Bench records that
 limitation and requires an explicit external precondition or manual
-confirmation. It does not pretend the setting was applied. LM Studio is not a
-required live P0 integration.
+confirmation. It does not pretend the setting was applied.
 
 ### Harness adapter (user-facing client)
 
@@ -162,16 +166,18 @@ For every run, the conductor performs:
 
 1. Validate the experiment without mutating external state.
 2. Detect exact client/provider versions and current health.
-3. Resolve a plan and present any material mutation or uncertainty.
-4. Snapshot only the external state that an adapter is authorized to touch.
-5. Apply provider actions and register compensating restoration actions.
-6. Create a fresh scoped home/config and render client configuration there.
-7. Read back or smoke-check connectivity without a generation request where
+3. Refresh the selected harness, its extensions, and the local inference
+   runtime where supported; register the actions as preflight evidence.
+4. Resolve a plan and present any material mutation or uncertainty.
+5. Snapshot only the external state that an adapter is authorized to touch.
+6. Apply provider actions and register compensating restoration actions.
+7. Create a fresh scoped home/config and render client configuration there.
+8. Read back or smoke-check connectivity without a generation request where
    possible.
-8. Execute the client with a minimal explicit environment.
-9. Capture requested, materialized, and effective configuration evidence.
-10. Remove scoped client state and restore provider state when policy requires.
-11. Verify cleanup and record any residual difference.
+9. Execute the client with a minimal explicit environment.
+10. Capture requested, materialized, and effective configuration evidence.
+11. Remove scoped client state and restore provider state when policy requires.
+12. Verify cleanup and record any residual difference.
 
 Cleanup runs after success, failure, cancellation, and timeout. A failed cleanup
 does not erase the run; it creates a prominent cleanup/configuration failure
@@ -268,7 +274,8 @@ select an accounting fraction.
 The normalized plan/lifecycle, fake transactional adapters, evidence, and tests
 are approximately **3–5 engineering days** and overlap with conductor and
 isolation work. The P0 ChatGPT-managed provider is primarily an authentication,
-entitlement, and provenance adapter rather than a mutable runtime. Each harness
-adapter still needs its own scoped renderer, but does not reimplement provider
-orchestration. Robust support for mutable providers such as LM Studio remains
-future work with a separate estimate after discovery.
+entitlement, and provenance adapter rather than a mutable runtime. The initial
+LM Studio transaction now proves bounded server/model preparation and rollback;
+broader runtime settings, multi-model restoration, and additional mutable
+providers remain future work. Each harness adapter still needs its own scoped
+renderer, but does not reimplement provider orchestration.

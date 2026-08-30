@@ -134,7 +134,7 @@ class CodexExecutionTests(unittest.TestCase):
             self.assertEqual(runner.calls[0]["prompt"], "build the artifact")
             self.assertEqual(runner.calls[0]["cwd"], workspace)
             self.assertEqual(result.terminal_reason, "process_exited")
-            self.assertEqual(result.candidate_path, workspace)
+            self.assertIsNone(result.candidate_path)
             self.assertEqual(len(result.raw_evidence_refs), 3)
             summary = json.loads((root / "events/raw/codex-attempt-001.summary.json").read_text())
             self.assertEqual(summary["usage"]["total_tokens"], 39)

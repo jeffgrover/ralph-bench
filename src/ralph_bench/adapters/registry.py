@@ -7,6 +7,8 @@ from typing import Any
 
 from .chatgpt import ChatGPTProviderAdapter
 from .codex import CodexHarnessAdapter
+from .lmstudio import LMStudioProviderAdapter
+from .pi import PiHarnessAdapter
 from .contracts import HarnessAdapter, ModelAdapter, ProviderAdapter
 from .models import GenericModelAdapter, LunaModelAdapter
 
@@ -43,13 +45,26 @@ class AdapterRegistry:
             raise KeyError(f"unknown {family} adapter: {adapter_id}") from exc
 
 
-def built_in_registry(*, codex: CodexHarnessAdapter | None = None) -> AdapterRegistry:
+def built_in_registry(
+    *,
+    codex: CodexHarnessAdapter | None = None,
+    pi: PiHarnessAdapter | None = None,
+    lmstudio: LMStudioProviderAdapter | None = None,
+) -> AdapterRegistry:
     harness = codex or CodexHarnessAdapter()
+    pi_harness = pi or PiHarnessAdapter()
     provider = ChatGPTProviderAdapter()
+    local_provider = lmstudio or LMStudioProviderAdapter()
     luna = LunaModelAdapter()
     generic = GenericModelAdapter()
     return AdapterRegistry(
-        {harness.descriptor.adapter_id: harness},
-        {provider.descriptor.adapter_id: provider},
+        {
+            harness.descriptor.adapter_id: harness,
+            pi_harness.descriptor.adapter_id: pi_harness,
+        },
+        {
+            provider.descriptor.adapter_id: provider,
+            local_provider.descriptor.adapter_id: local_provider,
+        },
         {luna.descriptor.adapter_id: luna, generic.descriptor.adapter_id: generic},
     )

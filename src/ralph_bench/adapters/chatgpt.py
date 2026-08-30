@@ -6,8 +6,11 @@ from .contracts import (
     AdapterDescriptor,
     CostCapabilities,
     ModelOffer,
+    CleanupResult,
     ProbeContext,
+    ProviderPreparation,
     ProbeResult,
+    UpdateResult,
 )
 
 
@@ -62,7 +65,37 @@ class ChatGPTProviderAdapter:
             ),
         )
 
+    def ensure_current(self, context: ProbeContext | None = None) -> UpdateResult:
+        return UpdateResult(
+            "not-applicable",
+            "ChatGPT provider is managed by the selected harness",
+            source="provider/openai-chatgpt",
+            evidence={"management": "harness"},
+        )
+
+    def prepare(
+        self, model: str, context: ProbeContext | None = None
+    ) -> ProviderPreparation:
+        readiness = ProbeResult(
+            "ready",
+            True,
+            "ChatGPT provider requires no local runtime preparation",
+            source="provider/openai-chatgpt",
+            evidence={"model": model, "management": "harness"},
+        )
+        return ProviderPreparation(
+            readiness,
+            lambda: CleanupResult(
+                "not-applicable",
+                "ChatGPT provider has no local state to restore",
+                source="provider/openai-chatgpt",
+            ),
+        )
+
     def option_schema(self) -> dict[str, object]:
+        return {}
+
+    def connection_settings(self, context: ProbeContext | None = None) -> dict[str, object]:
         return {}
 
     def cost_capabilities(self) -> CostCapabilities:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as package_version
 import json
 import mimetypes
@@ -25,6 +26,18 @@ _MONITOR_INTERVAL_MS = 250
 _READY_TIMEOUT_MS = 5_000
 _VIDEO_FRAME_RATE_FPS = 25
 _CAPTURE_WORKER_PROTOCOL = "browser-worker/v2"
+
+
+def _worker_version() -> str:
+    """Return package evidence without requiring an installed distribution."""
+
+    try:
+        return package_version("ralph-bench")
+    except PackageNotFoundError:
+        # The CLI is intentionally usable from a source checkout during local
+        # development and fixture tests.  Do not turn that valid mode into a
+        # browser infrastructure failure merely because wheel metadata is absent.
+        return "source-checkout"
 
 
 class WorkerError(RuntimeError):
@@ -222,7 +235,7 @@ def _monitor_and_capture(
         "capture_worker": {
             "id": "ralph-bench.browser-worker",
             "protocol": _CAPTURE_WORKER_PROTOCOL,
-            "version": package_version("ralph-bench"),
+            "version": _worker_version(),
         },
         "network_violations": list(router.blocked),
         "runtime_errors": list(runtime_errors),

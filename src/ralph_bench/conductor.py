@@ -19,11 +19,13 @@ from typing import Any
 
 from .adapters import (
     AdapterRegistry,
-    CodexAttemptExecutor,
+    HarnessExecutionContext,
     InvocationPlan,
+    ProbeContext,
     ResolvedSUT,
     credential_secret_values,
 )
+from .preflight import PreflightError, run_sut_preflight
 from .browser_runtime import (
     find_chromium,
     find_playwright_browsers_path,
@@ -118,14 +120,15 @@ def _attempt_status(
     workspace: Path,
     attempt_number: int,
     *,
+    evidence_prefix: str = "codex",
     clock: Callable[[], float] = time.time,
     max_event_bytes: int = 8 * 1024 * 1024,
     max_workspace_entries: int = 10_000,
 ) -> str:
     """Summarize bounded evaluator evidence without emitting model content."""
 
-    event_path = evidence_root / f"codex-attempt-{attempt_number:03d}.jsonl"
-    stderr_path = evidence_root / f"codex-attempt-{attempt_number:03d}.stderr.txt"
+    event_path = evidence_root / f"{evidence_prefix}-attempt-{attempt_number:03d}.jsonl"
+    stderr_path = evidence_root / f"{evidence_prefix}-attempt-{attempt_number:03d}.stderr.txt"
     event_count = 0
     tool_count = 0
     error_count = 0
@@ -361,26 +364,17 @@ def _challenge_source(project_root: Path) -> Path:
     return source
 
 
-def _codex_binary(experiment: Experiment) -> Path:
-    requested = experiment.client_options.executable or "codex"
+def _harness_executable(experiment: Experiment, harness: Any) -> Path:
+    requested = experiment.client_options.executable or getattr(harness, "executable", None)
+    if not isinstance(requested, str) or not requested.strip():
+        raise ConductorError("selected harness does not expose an executable")
     resolved = shutil.which(requested) if not Path(requested).is_absolute() else requested
     if not resolved:
-        raise ConductorError(f"Codex executable was not found: {requested}")
+        raise ConductorError(f"harness executable was not found: {requested}")
     path = Path(resolved).resolve()
     if not path.is_file() or not os.access(path, os.X_OK):
-        raise ConductorError(f"Codex executable is not a regular executable: {path}")
+        raise ConductorError(f"harness executable is not a regular executable: {path}")
     return path
-
-
-def _auth_json() -> Path:
-    codex_home_value = os.environ.get("CODEX_HOME")
-    codex_home = Path(codex_home_value) if codex_home_value else Path.home() / ".codex"
-    auth = codex_home / "auth.json"
-    if not auth.is_file() or auth.is_symlink():
-        raise ConductorError(
-            "Codex file-backed ChatGPT authentication was not found; run `codex login`"
-        )
-    return auth.resolve()
 
 
 def _safe_host_environment() -> dict[str, str]:
@@ -389,14 +383,17 @@ def _safe_host_environment() -> dict[str, str]:
 
 
 def _native_process_environment(
-    *, scoped_home: Path, auth_json: Path
+    *,
+    scoped_home: Path,
+    credential_reference: Path | None = None,
+    overrides: Mapping[str, str] = (),
 ) -> dict[str, str]:
-    """Build the portable P0 child environment with one explicit auth exception.
+    """Build the portable P0 child environment with adapter-owned overrides.
 
-    The actual Codex home is intentionally visible to the Codex parent so it
-    can reuse the operator's ChatGPT login.  Native workspace-write sandboxing
-    does not prove that model-generated tools cannot read it, so the run is
-    recorded as L0/unsealed rather than overstating the protection.
+    A harness may expose one explicit credential/configuration reference. Native
+    workspace-write sandboxing does not prove that model-generated tools cannot
+    read it, so the run is recorded as L0/unsealed rather than overstating the
+    protection.
     """
 
     environment = build_process_environment(
@@ -404,7 +401,9 @@ def _native_process_environment(
         scoped_home=scoped_home,
         allowlist=("LANG", "LC_ALL", "LC_CTYPE", "NO_COLOR", "PATH", "TERM", "TZ"),
     )
-    environment["CODEX_HOME"] = str(auth_json.parent)
+    if credential_reference is not None:
+        environment["CODEX_HOME"] = str(credential_reference.parent)
+    environment.update(dict(overrides))
     return environment
 
 
@@ -482,7 +481,8 @@ def _usage(raw_root: Path) -> dict[str, Any]:
         "turns": 0,
     }
     summaries = 0
-    for path in sorted(raw_root.glob("codex-attempt-*.summary.json")):
+    summary_paths = sorted(raw_root.glob("*-attempt-*.summary.json"))
+    for path in summary_paths:
         try:
             value = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
@@ -557,12 +557,14 @@ def _execute_one(
     project_root: Path,
     inbox: Path,
     temporary_root: Path,
-    codex_binary: Path,
-    auth_json: Path,
+    client_executable: Path,
+    credential_reference: Path | None,
     secret_values: tuple[str, ...],
+    provider_settings: Mapping[str, Any],
     chromium: Path,
     playwright_browsers_path: Path,
     input_stream: Any | None,
+    toolchain_preflight: Mapping[str, Any],
 ) -> CompletedRun:
     run_label = f"Run {repetition}/{experiment.repetitions}"
     seed = balanced_seed_for_repetition(repetition)
@@ -590,11 +592,14 @@ def _execute_one(
         experiment.client_options.reasoning_effort,
         "workspace-write",
         str(staged.workspace),
-        str(codex_binary),
+        str(client_executable),
     )
     native_environment = _native_process_environment(
         scoped_home=staged.scoped_home,
-        auth_json=auth_json,
+        credential_reference=credential_reference,
+        overrides=harness.environment_overrides(
+            staged.scoped_home, credential_reference
+        ),
     )
     isolation = build_isolation_report(
         environment=native_environment,
@@ -616,7 +621,7 @@ def _execute_one(
     prompt_fn, attempt_prompts, attempt_feedback = _prompt_builder(base_prompt)
     deadline = time.monotonic() + experiment.budget.max_wall_seconds
     remaining = lambda: max(0.0, deadline - time.monotonic())
-    codex_executor = CodexAttemptExecutor(
+    executor_context = HarnessExecutionContext(
         plan=plan,
         workspace=staged.workspace,
         evidence_root=raw_root,
@@ -624,9 +629,14 @@ def _execute_one(
         environment=native_environment,
         timeout_seconds=remaining,
         secret_values=secret_values,
+        metadata={
+            "provider_settings": dict(provider_settings),
+            "scoped_home": str(staged.scoped_home),
+        },
     )
+    native_executor = harness.create_attempt_executor(executor_context)
     executor = _AttemptProgress(
-        codex_executor,
+        native_executor,
         reporter,
         repetition=repetition,
         repetitions=experiment.repetitions,
@@ -634,7 +644,10 @@ def _execute_one(
         remaining=remaining,
         input_stream=input_stream,
         status_provider=lambda attempt_number: _attempt_status(
-            raw_root, staged.workspace, attempt_number
+            raw_root,
+            staged.workspace,
+            attempt_number,
+            evidence_prefix=native_plan.evidence_prefix,
         ),
     )
     loop = ControlledAttemptLoop(
@@ -652,10 +665,9 @@ def _execute_one(
 
     candidate = loop_result.selected_candidate_path
     if candidate is None:
-        candidate = staged.conductor_root / "empty-submission"
-        candidate.mkdir()
-        (candidate / "README.txt").write_text(
-            "The harness did not produce a preservable candidate.\n", encoding="utf-8"
+        staged.cleanup()
+        raise ConductorError(
+            f"{run_label}: no preservable candidate was produced; evaluation did not start"
         )
     artifact_hash = candidate_tree_hash(candidate)
 
@@ -839,7 +851,9 @@ def _execute_one(
             "schema_version": "configuration/v1",
             "requested": experiment_to_dict(experiment),
             "effective": {
-                "harness": "codex exec",
+                "harness": sut.harness_id,
+                "invocation": list(native_plan.argv),
+                "loop": experiment.client_options.loop,
                 "reasoning_effort": experiment.client_options.reasoning_effort,
                 "sandbox": native_plan.sandbox,
                 "working_directory": "/workspace",
@@ -851,6 +865,7 @@ def _execute_one(
             },
         },
         "sut-resolution": _sut_provenance(sut),
+        "toolchain-preflight": dict(toolchain_preflight),
         "isolation": isolation.to_metadata(),
     }
     recorder.record(
@@ -934,6 +949,7 @@ def execute_experiment(
     output_fn: Callable[[str], None] = print,
     project_root: Path | None = None,
     input_stream: Any | None = None,
+    probe_context: ProbeContext | None = None,
 ) -> EvaluationRunSummary:
     """Run every repetition and produce one validated bundle per repetition."""
 
@@ -945,47 +961,92 @@ def execute_experiment(
     reporter = ProgressReporter(output_fn)
     experiment_id = _experiment_id(experiment)
     run_ids = expand_repetitions(experiment_id, experiment.repetitions)
-    codex_binary = _codex_binary(experiment)
-    auth_json = _auth_json()
-    secret_values = credential_secret_values(auth_json)
-    chromium = find_chromium()
-    playwright_browsers_path = find_playwright_browsers_path()
-    reporter.emit(
-        "Preflight complete: "
-        f"{sut.harness_id} × {sut.provider_id} × {experiment.model}; "
-        f"{experiment.repetitions} independent run(s), up to "
-        f"{experiment.budget.max_attempts} attempt(s) each"
-    )
-    completed: list[CompletedRun] = []
-    with tempfile.TemporaryDirectory(prefix="ralph-bench-") as temporary:
-        base = Path(temporary)
-        for repetition, run_id in enumerate(run_ids, 1):
-            completed.append(
-                _execute_one(
-                    experiment=experiment,
-                    experiment_id=experiment_id,
-                    sut=sut,
-                    registry=registry,
-                    run_id=run_id,
-                    repetition=repetition,
-                    reporter=reporter,
-                    project_root=project_root,
-                    inbox=inbox,
-                    temporary_root=base,
-                    codex_binary=codex_binary,
-                    auth_json=auth_json,
-                    secret_values=secret_values,
-                    chromium=chromium,
-                    playwright_browsers_path=playwright_browsers_path,
-                    input_stream=sys.stdin if input_stream is None else input_stream,
+    try:
+        preflight_session = run_sut_preflight(
+            experiment,
+            sut,
+            registry,
+            context=probe_context,
+        )
+    except PreflightError as exc:
+        try:
+            cleanup = exc.cleanup()
+        except Exception:
+            cleanup = None
+        if cleanup is not None and cleanup.status not in {"complete", "not-applicable"}:
+            raise ConductorError(
+                f"{exc}; provider cleanup was {cleanup.status}: {cleanup.message}"
+            ) from exc
+        raise ConductorError(str(exc)) from exc
+
+    try:
+        # Resolve executable and capture dependencies only after the selected
+        # toolchain has been refreshed and verified.
+        harness = registry.get("harness", sut.harness_id)
+        client_executable = _harness_executable(experiment, harness)
+        credential_reference = harness.credential_reference()
+        secret_values = (
+            credential_secret_values(credential_reference)
+            if credential_reference is not None
+            else ()
+        )
+        provider = registry.get("provider", sut.provider_id)
+        provider_settings = provider.connection_settings(probe_context)
+        chromium = find_chromium()
+        playwright_browsers_path = find_playwright_browsers_path()
+        reporter.emit(
+            "Preflight complete: "
+            f"{sut.harness_id} × {sut.provider_id} × {experiment.model}; "
+            f"{experiment.repetitions} independent run(s), up to "
+            f"{experiment.budget.max_attempts} attempt(s) each"
+        )
+        completed: list[CompletedRun] = []
+        with tempfile.TemporaryDirectory(prefix="ralph-bench-") as temporary:
+            base = Path(temporary)
+            for repetition, run_id in enumerate(run_ids, 1):
+                completed.append(
+                    _execute_one(
+                        experiment=experiment,
+                        experiment_id=experiment_id,
+                        sut=sut,
+                        registry=registry,
+                        run_id=run_id,
+                        repetition=repetition,
+                        reporter=reporter,
+                        project_root=project_root,
+                        inbox=inbox,
+                        temporary_root=base,
+                        client_executable=client_executable,
+                        credential_reference=credential_reference,
+                        secret_values=secret_values,
+                        provider_settings=provider_settings,
+                        chromium=chromium,
+                        playwright_browsers_path=playwright_browsers_path,
+                        input_stream=sys.stdin if input_stream is None else input_stream,
+                        toolchain_preflight=preflight_session.evidence,
+                    )
                 )
-            )
-    summary = EvaluationRunSummary(experiment_id, tuple(completed))
-    reporter.emit(
-        f"Evaluation complete: {len(summary.runs)} bundle(s), "
-        f"{summary.passed} full pass(es)"
-    )
-    return summary
+        summary = EvaluationRunSummary(experiment_id, tuple(completed))
+        reporter.emit(
+            f"Evaluation complete: {len(summary.runs)} bundle(s), "
+            f"{summary.passed} full pass(es)"
+        )
+        return summary
+    finally:
+        try:
+            cleanup = preflight_session.cleanup()
+        except Exception as exc:
+            # Do not hide a model, evaluator, or cancellation failure with a
+            # cleanup exception; the progress stream still records the issue.
+            reporter.emit(f"Provider cleanup raised an unexpected error: {type(exc).__name__}")
+            if sys.exc_info()[0] is None:
+                raise ConductorError("provider cleanup failed") from exc
+        else:
+            reporter.emit(f"Provider cleanup: {cleanup.status} ({cleanup.message})")
+            if cleanup.status not in {"complete", "not-applicable"} and sys.exc_info()[0] is None:
+                raise ConductorError(
+                    f"provider cleanup was {cleanup.status}: {cleanup.message}"
+                )
 
 
 __all__ = [

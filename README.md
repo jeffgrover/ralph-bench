@@ -23,21 +23,24 @@ Codex CLI x ChatGPT-managed OpenAI access x gpt-5.6-luna
 ```
 
 It is a cloud-subscription path whose P0-A cost is explicitly unavailable;
-time, token, and attempt evidence remain reportable. Codex is resolved to the
+time, token, and attempt evidence remain reportable. Codex is refreshed to the
 most recent available release before a run and its exact version is recorded.
-After the seams are complete, Pi-wiggum with a local model is the next real
-SUT used to prove the local harness/provider path. OpenRouter remains the next
-provider slice for billed and normalized reference pricing.
+The native Pi-wiggum execution and evidence path is now prepared behind the
+same conductor seam. Its first real run, using a local model served by LM
+Studio, will prove the local harness/provider path once a suitable model is
+selected. OpenRouter remains the next provider slice for billed and normalized
+reference pricing.
 
 P0-A targets a seam-complete Busy Intersection vertical slice. The Challenge
 Portability Fixture remains a small second-challenge boundary proof; it is not
 a partial city simulation and is not implemented yet. Static reporting and
-future city work follow seam completion.
+future city work follow seam completion and the first local proving run.
 
 The P0-A planning packet was accepted on 2026-08-23, as amended by [ADR
-0011](docs/adr/0011-cloud-cost-evidence-and-openrouter-references.md) and
+0011](docs/adr/0011-cloud-cost-evidence-and-openrouter-references.md),
 [ADR 0014](docs/adr/0014-seam-first-evaluation-and-active-harness.md), and
-implementation is underway. P0-A does not allocate subscription fees;
+[ADR 0015](docs/adr/0015-current-toolchain-preflight.md); implementation is
+underway. P0-A does not allocate subscription fees;
 OpenRouter billing/reference support is the next provider slice.
 
 ## P0-A design documents
@@ -121,14 +124,16 @@ The first P0-A contract spine is implemented and tested:
   workspace size, and stderr size) without invoking another model.
 
 `rb build` remains the unimplemented P0-A boundary. Static reporting is the
-next implementation wave after seam completion.
+next implementation wave after seam completion. Current-toolchain refresh and
+local-provider readiness are required run-preflight seams before model
+evaluation; discovery and `rb doctor` remain read-only.
 
-The current seam-completion wave is not yet implemented: evaluator eligibility
+The remaining seam-completion wave is not yet implemented: evaluator eligibility
 must include capacity and recovery outcomes; public gates conformance and
 browser/runtime feedback must reach the repair loop; Busy-specific knowledge
 must move behind the challenge adapter; and harness execution must be created
-through the adapter boundary. Current-version Codex update preflight and the
-Pi-wiggum/local path follow that work.
+through the adapter boundary. Current-version Codex update preflight is now in
+the conductor; the Pi-wiggum/local execution path follows the remaining seams.
 
 ### Platform posture
 
