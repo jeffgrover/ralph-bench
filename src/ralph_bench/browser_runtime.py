@@ -130,7 +130,10 @@ def run_browser_evaluation(
         playwright_browsers_path or find_playwright_browsers_path()
     )
     raw_evidence.mkdir(parents=True, exist_ok=True)
-    worker_home = raw_evidence.parent / "browser-home"
+    # Keep each browser attempt's HOME separate. A single run can evaluate an
+    # initial candidate and a repair candidate in succession; sharing this
+    # directory makes the second evaluation fail while creating HOME.
+    worker_home = raw_evidence / "browser-home"
     worker_home.mkdir(mode=0o700)
     # Chrome creates Unix-domain singleton sockets beneath TMPDIR.  Keep this
     # evaluator-owned path short: staged run UUID paths can exceed Linux's

@@ -27,8 +27,8 @@ provider implementation is the next provider slice, not a P0-A requirement.
 Every cloud result carries a versioned cost envelope with at least:
 
 - `status`: `complete`, `provisional`, or `unavailable`.
-- `billing_mode`: `metered_api`, `flat_subscription`, `provider_credits`, or
-  `other_declared`.
+- `billing_mode`: `metered_api`, `flat_subscription`, `provider_credits`,
+  `local`, or `other_declared`.
 - `actual_cost_usd`: nullable route-attributable charge for this run. For an
   OpenRouter request this is an OpenRouter usage debit/charge evidenced by the
   response or generation record, not an upstream provider invoice. When
@@ -62,6 +62,10 @@ separately.
 
 An operator-entered plan fee, a model's public list price, or a token estimate
 does not become `actual_cost_usd`.
+
+Local runs use `billing_mode = "local"` and keep USD amounts unavailable unless
+the local provider supplies an attributable charge. They still report elapsed
+time, attempts, and provider-reported usage when available.
 
 ## OpenRouter reference semantics
 

@@ -20,6 +20,20 @@ class CostEvidenceTests(unittest.TestCase):
         self.assertIn("does not expose", evidence.unavailable_reason)
         self.assertEqual(CostEvidence.from_dict(evidence.as_dict()), evidence)
 
+    def test_local_unavailable_uses_local_billing_mode(self) -> None:
+        evidence = CostEvidence.unavailable_for_billing_mode(
+            billing_mode="local",
+            requested_model="gpt-oss-20b",
+            evidence_references=("events/raw/pi.jsonl",),
+        )
+
+        self.assertEqual(evidence.billing_mode, "local")
+        self.assertEqual(
+            evidence.unavailable_reason,
+            "local inference has no attributable per-run USD charge",
+        )
+        self.assertEqual(CostEvidence.from_dict(evidence.as_dict()), evidence)
+
     def test_actual_and_reference_cost_can_coexist(self) -> None:
         evidence = CostEvidence(
             status="complete",

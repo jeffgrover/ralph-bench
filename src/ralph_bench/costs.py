@@ -2,9 +2,10 @@
 
 Experiment files describe intent; they never ask an operator to invent a
 per-run subscription charge.  A run instead records the cost evidence that
-was actually available.  P0-A implements only the honest unavailable case for
-ChatGPT subscription access.  The nullable actual/reference split is retained
-because OpenRouter is the next provider slice and may supply both values.
+was actually available. P0-A implements honest unavailable cases for ChatGPT
+subscription access and local inference. The nullable actual/reference split
+is retained because OpenRouter is the next provider slice and may supply both
+values.
 """
 
 from __future__ import annotations
@@ -17,7 +18,13 @@ from typing import Any, Iterable, Mapping
 SCHEMA_VERSION = "cost/v1"
 STATUSES = frozenset({"complete", "provisional", "unavailable"})
 BILLING_MODES = frozenset(
-    {"metered_api", "flat_subscription", "provider_credits", "other_declared"}
+    {
+        "metered_api",
+        "flat_subscription",
+        "provider_credits",
+        "local",
+        "other_declared",
+    }
 )
 CURRENCY = "USD"
 
@@ -144,7 +151,7 @@ class CostEvidence:
         ):
             raise CostValidationError(
                 "billing_mode must be metered_api, flat_subscription, "
-                "provider_credits, or other_declared"
+                "provider_credits, local, or other_declared"
             )
         if self.currency != CURRENCY:
             raise CostValidationError("currency must be USD")
@@ -235,6 +242,37 @@ class CostEvidence:
                 )
 
     @classmethod
+    def unavailable_for_billing_mode(
+        cls,
+        *,
+        billing_mode: str,
+        requested_model: str | None = None,
+        evidence_references: Iterable[str] = (),
+    ) -> "CostEvidence":
+        """Create unavailable evidence from the resolved provider billing mode."""
+
+        reasons = {
+            "flat_subscription": (
+                "subscription provider does not expose attributable per-run "
+                "USD cost"
+            ),
+            "local": "local inference has no attributable per-run USD charge",
+            "metered_api": "metered provider did not expose attributable per-run USD cost",
+            "provider_credits": "provider credits did not expose attributable per-run USD cost",
+            "other_declared": "provider did not expose attributable per-run USD cost",
+        }
+
+        return cls(
+            status="unavailable",
+            billing_mode=billing_mode,
+            unavailable_reason=reasons.get(
+                billing_mode, "provider did not expose attributable per-run USD cost"
+            ),
+            requested_model=requested_model,
+            evidence_references=tuple(evidence_references),
+        )
+
+    @classmethod
     def subscription_unmetered(
         cls,
         *,
@@ -243,15 +281,10 @@ class CostEvidence:
     ) -> "CostEvidence":
         """Create the P0-A ChatGPT subscription result."""
 
-        return cls(
-            status="unavailable",
+        return cls.unavailable_for_billing_mode(
             billing_mode="flat_subscription",
-            unavailable_reason=(
-                "subscription provider does not expose attributable per-run "
-                "USD cost"
-            ),
             requested_model=requested_model,
-            evidence_references=tuple(evidence_references),
+            evidence_references=evidence_references,
         )
 
     def as_dict(self) -> dict[str, Any]:

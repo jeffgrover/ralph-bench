@@ -155,6 +155,9 @@ declaration. A future OpenRouter bundle may additionally record the
 requested/canonical model mapping, frozen pricing snapshot, generation ID,
 native token usage, and route-attributable/reference values. An OpenRouter
 actual is an OpenRouter usage debit/charge, not an upstream provider invoice.
+For local-provider paths, `cost.json` instead records `billing_mode = "local"`
+with the same unavailable amount fields and an explicit reason that local
+inference has no attributable per-run USD charge.
 See
 [`COST_MODEL.md`](COST_MODEL.md).
 

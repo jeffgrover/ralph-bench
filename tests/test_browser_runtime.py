@@ -77,6 +77,27 @@ class BrowserRuntimeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             self._invoke(Path(temporary), KeyboardInterrupt())
 
+    def test_successive_browser_attempts_get_distinct_worker_homes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            process = Mock()
+            process.wait.side_effect = KeyboardInterrupt()
+            with (
+                patch("ralph_bench.browser_runtime.subprocess.Popen", return_value=process),
+                patch("ralph_bench.browser_runtime._terminate_group") as terminate,
+            ):
+                for attempt in ("attempt-001", "attempt-002"):
+                    with self.assertRaises(KeyboardInterrupt):
+                        run_browser_evaluation(
+                            root / "candidate",
+                            root / "browser-output" / attempt,
+                            raw_evidence=root / "raw" / attempt,
+                            timeout_seconds=1,
+                            chromium=root / "chromium",
+                            playwright_browsers_path=root / "playwright",
+                        )
+            self.assertEqual(terminate.call_count, 2)
+
 
 if __name__ == "__main__":
     unittest.main()

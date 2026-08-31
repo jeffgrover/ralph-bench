@@ -14,6 +14,7 @@ from .codex_execution import (
 )
 from .contracts import (
     AdapterDescriptor,
+    BILLING_MODE_TRACKS,
     CleanupResult,
     CleanupRunner,
     ConnectionProbe,
@@ -43,6 +44,7 @@ from .resolver import ResolutionError, resolve_sut
 __all__ = [
     "AdapterDescriptor",
     "AdapterRegistry",
+    "BILLING_MODE_TRACKS",
     "ChatGPTProviderAdapter",
     "CleanupResult",
     "CleanupRunner",

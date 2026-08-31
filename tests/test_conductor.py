@@ -365,6 +365,10 @@ class ConductorTests(unittest.TestCase):
                 )
             self.assertEqual(len(summary.runs), 1)
             self.assertTrue(validate_bundle(summary.runs[0].bundle).valid)
+            with zipfile.ZipFile(summary.runs[0].bundle) as archive:
+                cost = json.loads(archive.read("cost.json"))
+            self.assertEqual(cost["billing_mode"], "local")
+            self.assertEqual(cost["status"], "unavailable")
 
     def test_progress_timestamp_and_heartbeat_are_low_noise(self):
         ticks = iter((100.0, 165.4))

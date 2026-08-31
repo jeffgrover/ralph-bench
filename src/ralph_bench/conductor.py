@@ -19,6 +19,7 @@ from typing import Any
 
 from .adapters import (
     AdapterRegistry,
+    BILLING_MODE_TRACKS,
     HarnessExecutionContext,
     InvocationPlan,
     ProbeContext,
@@ -692,6 +693,7 @@ def _execute_one(
     toolchain_preflight: Mapping[str, Any],
 ) -> CompletedRun:
     run_label = f"Run {repetition}/{experiment.repetitions}"
+    provider = registry.get("provider", sut.provider_id)
     seed = balanced_seed_for_repetition(repetition)
     reporter.emit(f"{run_label}: preparing isolated workspace")
     public_source = _challenge_source(project_root)
@@ -893,7 +895,21 @@ def _execute_one(
             }
         )
     )
-    cost = CostEvidence.subscription_unmetered(
+    cost_capabilities = provider.cost_capabilities()
+    billing_mode = next(
+        (
+            mode
+            for mode in cost_capabilities.billing_modes
+            if BILLING_MODE_TRACKS.get(mode) == experiment.track
+        ),
+        None,
+    )
+    if billing_mode is None:
+        raise ConductorError(
+            f"provider cost capabilities do not resolve to experiment track {experiment.track!r}"
+        )
+    cost = CostEvidence.unavailable_for_billing_mode(
+        billing_mode=billing_mode,
         requested_model=experiment.model,
         evidence_references=raw_refs,
     )
