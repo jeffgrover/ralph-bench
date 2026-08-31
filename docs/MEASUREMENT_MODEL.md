@@ -51,6 +51,16 @@ backlog behavior, and recovery. Higher throughput differentiates working
 systems; it cannot compensate for invalid, unsafe, unverifiable, or dishonest
 behavior. Resource efficiency and visual review remain separate dimensions.
 
+The evaluator records `performance_eligible` separately from `outcome`. It is
+true only when the public interface, evaluator-owned arrival delivery,
+completion integrity, runtime/offline checks, and low-load service floor are
+sound and the demand evidence is complete. A functionally working artifact can
+therefore be performance-eligible yet fail overall because it breaks down at a
+held load or does not recover during cooldown; its measured lower capacity is
+still meaningful. An artifact that never establishes a working simulation is
+not performance-eligible and must not be rescued by a reported throughput
+number.
+
 The public smoke/conformance check demonstrates correct interface use. The
 private judge measures performance under demand that is not fully disclosed,
 so the benchmark rewards a generally working simulation rather than a

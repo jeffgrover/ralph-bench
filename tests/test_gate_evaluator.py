@@ -82,6 +82,34 @@ class GateEvaluatorTests(unittest.TestCase):
             "gates-interface-ready",
             {item.assertion_id for item in result.assertions if item.result == "fail"},
         )
+        self.assertFalse(result.performance_eligible)
+
+    def test_overloaded_working_artifact_fails_performance_but_remains_eligible(self) -> None:
+        scenario = small_scenario()
+        monitor = {
+            "ready": True,
+            "issued": issued(scenario),
+            "completions": [
+                {"kind": "car", "id": "car-1", "finish": "south", "completed_ms": 700, "latency_ms": 700},
+                {"kind": "pedestrian", "id": "ped-1", "finish": None, "completed_ms": 800, "latency_ms": 700},
+            ],
+            "invalid": [],
+        }
+        observations = (
+            {"time_ms": 0, "outstanding_cars": 0},
+            {"time_ms": 1_000, "outstanding_cars": 0},
+            {"time_ms": 2_000, "outstanding_cars": 2},
+            {"time_ms": 3_000, "outstanding_cars": 2},
+        )
+        result = evaluate_gate_monitor(scenario, monitor, observations)
+        self.assertFalse(result.passed)
+        self.assertTrue(result.performance_eligible)
+        self.assertEqual(result.measurement_status, "measured")
+        self.assertIn(
+            "capacity:load:completion-ratio",
+            {item.code for item in result.failures},
+        )
+        self.assertIn("cooldown-recovery", {item.code for item in result.failures})
 
     def test_invalid_finish_notification_fails_integrity(self) -> None:
         scenario = small_scenario()

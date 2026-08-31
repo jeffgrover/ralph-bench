@@ -32,6 +32,12 @@ from .browser_runtime import (
     find_playwright_browsers_path,
     run_browser_evaluation,
 )
+from .challenge_adapters import (
+    BusyIntersectionChallengeAdapter,
+    ChallengeAdapter,
+    ChallengeRegistry,
+    built_in_challenge_registry,
+)
 from .bundle_materialization import (
     AttemptBundleEvidence,
     RunBundleEvidence,
@@ -56,8 +62,6 @@ from .isolation import (
     build_isolation_report,
     build_process_environment,
 )
-from .gate_evaluator import check_static_candidate
-from .gates import balanced_seed_for_repetition, build_balanced_gate_scenario
 
 
 class ConductorError(RuntimeError):
@@ -72,6 +76,10 @@ class CompletedRun:
     public_accepted: bool
     simulation_outcome: str
     attempt_count: int
+    selected_attempt: int | None = None
+    measurement_status: str = "unmeasurable"
+    peak_monitored_throughput: float | int | None = None
+    terminal_reason: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -358,13 +366,6 @@ def _project_root() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
-def _challenge_source(project_root: Path) -> Path:
-    source = project_root / "challenges" / "busy-intersection" / "v1" / "public"
-    if not source.is_dir():
-        raise ConductorError(f"Busy Intersection public pack is missing: {source}")
-    return source
-
-
 def _harness_executable(experiment: Experiment, harness: Any) -> Path:
     requested = experiment.client_options.executable or getattr(harness, "executable", None)
     if not isinstance(requested, str) or not requested.strip():
@@ -417,75 +418,6 @@ def _experiment_id(experiment: Experiment) -> str:
     return "exp-" + hashlib.sha256(encoded).hexdigest()[:16]
 
 
-def _public_check(
-    path: Path,
-    reporter: ProgressReporter,
-    *,
-    label: str,
-) -> PublicCheckResult:
-    result = check_static_candidate(path)
-    reporter.emit(
-        f"{label}: public artifact checks " + ("passed" if result.passed else "failed")
-    )
-    failed = [item for item in result.checks if item["result"] == "fail"]
-    feedback = {
-        "summary": (
-            "All public artifact checks passed."
-            if not failed
-            else "Repair every failed public artifact check."
-        ),
-        "checks": [dict(item) for item in result.checks],
-    }
-    return PublicCheckResult(
-        result.passed,
-        feedback,
-        tuple(str(item["id"]) for item in result.checks),
-    )
-
-
-def _browser_repair_detail(assertion_id: str) -> str:
-    """Map evaluator-owned failures to safe, actionable repair guidance.
-
-    The private judge may include exact counts, thresholds, and timing values.
-    Those are evidence for Ralph, not inputs to the model repair loop. Keep the
-    feedback semantic and bounded so a repair can target the broken contract
-    without leaking the scored schedule.
-    """
-
-    details = {
-        "gates-interface-ready": (
-            "Keep the gates/v1 registration active and register both arrival "
-            "callbacks with the evaluator's object-shaped arguments."
-        ),
-        "arrival-delivery": (
-            "Accept every evaluator-issued car and pedestrian promptly and "
-            "create a corresponding visible traveler."
-        ),
-        "completion-integrity": (
-            "Finish each evaluator traveler exactly once, using the requested "
-            "car exit, only after it visibly reaches that finish."
-        ),
-        "browser-runtime-stability": (
-            "Fix startup, console, and page runtime errors while keeping the "
-            "animation loop running."
-        ),
-        "offline-runtime": "Remove network dependencies; the artifact must run offline.",
-        "warmup-car-service": (
-            "Make evaluator-issued cars move continuously from their requested "
-            "entrances to their requested exits and notify Ralph at visible finish."
-        ),
-        "warmup-pedestrian-service": (
-            "Make evaluator-issued pedestrians move across their requested "
-            "crossings and notify Ralph at visible finish."
-        ),
-    }
-    return details.get(
-        assertion_id,
-        "Repair the evaluator-visible traveler behavior while preserving the "
-        "offline runtime and continuous animation.",
-    )
-
-
 def _browser_repair_check(
     static: PublicCheckResult,
     evaluation: Mapping[str, Any],
@@ -493,108 +425,11 @@ def _browser_repair_check(
     *,
     label: str,
 ) -> PublicCheckResult:
-    """Combine static and browser outcomes into bounded repair feedback."""
+    """Compatibility helper for callers of the former Busy-specific function."""
 
-    assertions = evaluation.get("assertions", [])
-    failed_assertions: list[dict[str, Any]] = []
-    assertion_ids: list[str] = list(static.assertion_ids)
-    if isinstance(assertions, list):
-        for assertion in assertions:
-            if not isinstance(assertion, Mapping):
-                continue
-            assertion_id = assertion.get("assertion_id")
-            if not isinstance(assertion_id, str) or not assertion_id.strip():
-                continue
-            if assertion_id not in assertion_ids:
-                assertion_ids.append(assertion_id)
-            if assertion.get("result") == "fail":
-                failed_assertions.append(
-                    {
-                        "id": assertion_id,
-                        "result": "fail",
-                        "detail": _browser_repair_detail(assertion_id),
-                    }
-                )
-
-    passed = static.passed and evaluation.get("outcome") == "passed"
-    if passed:
-        reporter.emit(f"{label}: browser artifact checks passed")
-    else:
-        reporter.emit(f"{label}: browser artifact checks failed")
-    checks = [dict(item) for item in static.feedback.get("checks", [])]
-    checks.extend(failed_assertions)
-    if not checks:
-        checks.append(
-            {
-                "id": "browser-evaluation",
-                "result": "fail",
-                "detail": _browser_repair_detail("browser-evaluation"),
-            }
-        )
-    feedback = {
-        "summary": (
-            "The artifact passed static and browser checks."
-            if passed
-            else "Repair the existing artifact using these bounded evaluator checks."
-        ),
-        "checks": checks,
-    }
-    return PublicCheckResult(passed, feedback, tuple(assertion_ids))
-
-
-def _prompt_builder(
-    base_prompt: str,
-    *,
-    client: str,
-    workspace: Path,
-    public_challenge: Path,
-) -> tuple[
-    Callable[[int, Mapping[str, Any] | None], str],
-    dict[int, str],
-    dict[int, Mapping[str, Any] | None],
-]:
-    prompts: dict[int, str] = {}
-    feedbacks: dict[int, Mapping[str, Any] | None] = {}
-
-    def build(attempt: int, feedback: Mapping[str, Any] | None) -> str:
-        if client in {"pi", "harness/pi"}:
-            # The local 12B proving model is reliable with a short, imperative
-            # implementation handoff. The complete public prompt remains in
-            # the staged challenge pack and is preserved in the bundle; this
-            # compact wrapper keeps the model focused on the minimum viable
-            # artifact and the exact gate callback shapes.
-            text = (
-                "Use the write tool exactly once now to create index.html, then "
-                "stop. Do not explain or plan. Keep it under 3,500 characters: "
-                "standalone offline canvas animation showing a simple four-way "
-                "intersection, moving cars, and pedestrians. When "
-                "window.RalphGates exists, register carArrived({id,entersFrom,"
-                "exitsTo}) and pedestrianArrived({id,crossing,direction}); move "
-                "each received traveler across the canvas and call the matching "
-                "finish method exactly once when it leaves. Always animate. No "
-                "network, comments, libraries, or HUD.\n"
-            )
-        else:
-            text = (
-                base_prompt.rstrip()
-                + f"\n\nWork only in {workspace}. Public challenge files are available "
-                f"read-only at {public_challenge}. Put the complete final static "
-                f"submission directly in {workspace}, including index.html.\n"
-            )
-        if feedback is not None:
-            text += (
-                "\nThis is the single evaluator-controlled repair pass. Open the "
-                "existing index.html, fix it in place using the evaluator "
-                "feedback below, and do not replace the task with a different "
-                "artifact:\n"
-                + json.dumps(dict(feedback), ensure_ascii=False, sort_keys=True, indent=2)
-                + "\n"
-            )
-        prompts[attempt] = text
-        feedbacks[attempt] = None if feedback is None else dict(feedback)
-        return text
-
-    return build, prompts, feedbacks
+    return BusyIntersectionChallengeAdapter().repair_check(
+        static, evaluation, reporter, label=label
+    )
 
 
 def _usage(raw_root: Path) -> dict[str, Any]:
@@ -677,6 +512,7 @@ def _execute_one(
     experiment_id: str,
     sut: ResolvedSUT,
     registry: AdapterRegistry,
+    challenge_adapter: ChallengeAdapter,
     run_id: str,
     repetition: int,
     reporter: ProgressReporter,
@@ -694,9 +530,12 @@ def _execute_one(
 ) -> CompletedRun:
     run_label = f"Run {repetition}/{experiment.repetitions}"
     provider = registry.get("provider", sut.provider_id)
-    seed = balanced_seed_for_repetition(repetition)
+    seed = challenge_adapter.seed_for_repetition(repetition)
     reporter.emit(f"{run_label}: preparing isolated workspace")
-    public_source = _challenge_source(project_root)
+    challenge_run = challenge_adapter.prepare(
+        project_root, experiment.evaluation.scenario_pack, seed
+    )
+    public_source = challenge_run.public_source
     staged = StagedWorkspace.create(
         base_root=temporary_root,
         run_id=run_id,
@@ -746,7 +585,7 @@ def _execute_one(
         prompt_argument="-",
     )
     base_prompt = (staged.public_challenge / "prompt.txt").read_text(encoding="utf-8")
-    prompt_fn, attempt_prompts, attempt_feedback = _prompt_builder(
+    prompt_fn, attempt_prompts, attempt_feedback = challenge_adapter.prompt_builder(
         base_prompt,
         client=experiment.client,
         workspace=staged.workspace,
@@ -789,9 +628,10 @@ def _execute_one(
     browser_results_by_hash: dict[
         str, tuple[BrowserEvaluationArtifacts, str, PublicCheckResult]
     ] = {}
+    public_conformance_by_hash: dict[str, tuple[Mapping[str, Any], str]] = {}
 
     def check_candidate(path: Path) -> PublicCheckResult:
-        static = _public_check(path, reporter, label=run_label)
+        static = challenge_adapter.public_check(path, reporter, label=run_label)
         if not static.passed:
             return static
         artifact_hash = candidate_tree_hash(path)
@@ -803,12 +643,12 @@ def _execute_one(
             return check
         attempt_number = len(browser_artifacts) + 1
         browser_output.mkdir(parents=True, exist_ok=True)
-        artifact = run_browser_evaluation(
+        artifact = challenge_adapter.evaluate(
+            challenge_run,
             path,
             browser_output / f"attempt-{attempt_number:03d}",
             raw_evidence=raw_root / f"browser-attempt-{attempt_number:03d}",
             timeout_seconds=90,
-            seed=seed,
             chromium=chromium,
             playwright_browsers_path=playwright_browsers_path,
         )
@@ -830,11 +670,45 @@ def _execute_one(
                 "wall_seconds": round(artifact.wall_seconds, 6),
             },
         )
-        check = _browser_repair_check(
+        public_output = browser_output / f"attempt-{attempt_number:03d}-conformance"
+        public_raw_evidence = raw_root / f"public-conformance-attempt-{attempt_number:03d}"
+        public_result = challenge_adapter.public_conformance(
+            project_root,
+            path,
+            public_output,
+            raw_evidence=public_raw_evidence,
+            timeout_seconds=90,
+            chromium=chromium,
+            playwright_browsers_path=playwright_browsers_path,
+        )
+        public_result_path = raw_root / f"public-conformance-attempt-{attempt_number:03d}.json"
+        public_result_path.write_text(
+            json.dumps(public_result, ensure_ascii=False, allow_nan=False, sort_keys=True, indent=2)
+            + "\n",
+            encoding="utf-8",
+        )
+        public_ref = f"events/raw/{public_result_path.name}"
+        public_conformance_by_hash[artifact_hash] = (public_result, public_ref)
+        public_evaluation = public_result.get("evaluation")
+        if not isinstance(public_evaluation, Mapping):
+            raise ConductorError("public conformance returned malformed evaluation evidence")
+        recorder.record(
+            phase="public_conformance",
+            event_type="public_conformance.completed",
+            source="browser-worker",
+            attempt=attempt_number,
+            payload={
+                "outcome": public_evaluation.get("outcome"),
+                "artifact_hash": artifact_hash,
+                "evidence_ref": public_ref,
+            },
+        )
+        check = challenge_adapter.repair_check(
             static,
             evaluation,
             reporter,
             label=run_label,
+            public_evaluation=public_evaluation,
         )
         browser_results_by_hash[artifact_hash] = (artifact, browser_ref, check)
         return check
@@ -876,6 +750,9 @@ def _execute_one(
             f"{run_label}: repair candidate was not evaluated; preserving the last evaluated candidate"
         )
     browser, browser_ref = browser_entry
+    public_conformance, public_conformance_ref = public_conformance_by_hash.get(
+        artifact_hash, ({}, "")
+    )
     evaluation = browser.result["evaluation"]
     if not isinstance(evaluation, dict):
         staged.cleanup()
@@ -957,17 +834,7 @@ def _execute_one(
             )
         )
 
-    scenario = build_balanced_gate_scenario(seed)
-    challenge = json.loads(
-        (staged.public_challenge / "challenge.json").read_text(encoding="utf-8")
-    )
-    challenge.update(
-        {
-            "scenario_pack": experiment.evaluation.scenario_pack,
-            "scenario": scenario.to_dict(),
-            "seed": seed,
-        }
-    )
+    challenge = dict(challenge_run.challenge_document)
     capture_metadata = json.loads(
         browser.overview_metadata.read_text(encoding="utf-8")
     )
@@ -991,12 +858,21 @@ def _execute_one(
         "created_at": created,
         "challenge": experiment.challenge,
         "scenario_pack": experiment.evaluation.scenario_pack,
-        "scenario_id": scenario.scenario_id,
-        "scenario_profile": scenario.profile,
+        "scenario_id": challenge_run.scenario_id,
+        "scenario_profile": challenge_run.scenario_profile,
         "outcome": "passed" if overall_passed else "failed",
         "public_accepted": loop_result.accepted,
         "simulation_outcome": simulation_outcome,
         "measurement_status": evaluation.get("measurement_status", "unmeasurable"),
+        "performance_eligible": bool(evaluation.get("performance_eligible", False)),
+        "public_conformance": {
+            "outcome": (
+                public_conformance.get("evaluation", {}).get("outcome")
+                if isinstance(public_conformance.get("evaluation"), Mapping)
+                else "unavailable"
+            ),
+            "evidence_ref": public_conformance_ref or None,
+        },
         "terminal_reason": (
             loop_result.attempts[-1].terminal_reason
             if loop_result.attempts
@@ -1016,6 +892,7 @@ def _execute_one(
     metrics = {
         "schema_version": "metrics/v1",
         "public_accepted": loop_result.accepted,
+        "performance_eligible": bool(evaluation.get("performance_eligible", False)),
         "simulation": evaluation.get("metrics", {}),
         "recovery": evaluation.get("recovery", {}),
         "agent": {
@@ -1081,16 +958,16 @@ def _execute_one(
         assertions={
             "schema_version": "assertions/v1",
             "outcome": simulation_outcome,
-            "scenario_id": scenario.scenario_id,
-            "scenario_profile": scenario.profile,
-            "seed": scenario.seed,
+            "scenario_id": challenge_run.scenario_id,
+            "scenario_profile": challenge_run.scenario_profile,
+            "seed": challenge_run.seed,
             "assertions": evaluation.get("assertions", []),
         },
         capacity_curve={
             "schema_version": "capacity-curve/v1",
-            "scenario_id": scenario.scenario_id,
-            "scenario_profile": scenario.profile,
-            "seed": scenario.seed,
+            "scenario_id": challenge_run.scenario_id,
+            "scenario_profile": challenge_run.scenario_profile,
+            "seed": challenge_run.seed,
             "stages": evaluation.get("capacity_curve", []),
         },
         runtime_observations={
@@ -1099,6 +976,7 @@ def _execute_one(
             "gate_monitor": browser.result.get("monitor", {}),
             "browser": browser.result.get("browser", {}),
             "evidence_refs": [browser_ref],
+            "public_conformance_evidence_ref": public_conformance_ref or None,
         },
         overview_video=browser.overview_video,
         overview_poster=browser.overview_poster,
@@ -1133,6 +1011,22 @@ def _execute_one(
         loop_result.accepted,
         simulation_outcome,
         len(loop_result.attempts),
+        next(
+            (
+                record.attempt_number
+                for record in reversed(loop_result.attempts)
+                if record.candidate_path is not None
+                and record.candidate_path.resolve() == candidate.resolve()
+            ),
+            None,
+        ),
+        str(evaluation.get("measurement_status", "unmeasurable")),
+        (
+            evaluation.get("metrics", {}).get("peak_monitored_throughput")
+            if isinstance(evaluation.get("metrics"), Mapping)
+            else None
+        ),
+        loop_result.attempts[-1].terminal_reason if loop_result.attempts else None,
     )
 
 
@@ -1145,10 +1039,15 @@ def execute_experiment(
     project_root: Path | None = None,
     input_stream: Any | None = None,
     probe_context: ProbeContext | None = None,
+    challenge_registry: ChallengeRegistry | None = None,
 ) -> EvaluationRunSummary:
     """Run every repetition and produce one validated bundle per repetition."""
 
     project_root = (project_root or _project_root()).resolve()
+    challenge_registry = challenge_registry or built_in_challenge_registry(
+        browser_evaluator=run_browser_evaluation
+    )
+    challenge_adapter = challenge_registry.get(experiment.challenge)
     inbox = Path(experiment.output.inbox)
     if not inbox.is_absolute():
         inbox = project_root / inbox
@@ -1205,6 +1104,7 @@ def execute_experiment(
                         experiment_id=experiment_id,
                         sut=sut,
                         registry=registry,
+                        challenge_adapter=challenge_adapter,
                         run_id=run_id,
                         repetition=repetition,
                         reporter=reporter,

@@ -119,7 +119,7 @@ dependencies = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "playwright", specifier = ">=1.62.0" }]
+requires-dist = [{ name = "playwright", specifier = "==1.62.0" }]
 
 [[package]]
 name = "typing-extensions"

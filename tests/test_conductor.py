@@ -129,6 +129,7 @@ def _fake_browser(candidate, output, *, raw_evidence, **_kwargs):
             "seed": seed,
             "outcome": "passed",
             "measurement_status": "measured",
+            "performance_eligible": True,
             "metrics": {"peak_monitored_throughput": 900},
             "recovery": {"passed": True},
             "failures": [],
@@ -238,8 +239,13 @@ class ConductorTests(unittest.TestCase):
                 preflight = json.loads(
                     archive.read("provenance/toolchain-preflight.json")
                 )
+                manifest = json.loads(archive.read("run.json"))
+                event_text = archive.read("events/canonical.jsonl").decode()
             self.assertEqual(preflight["schema_version"], "toolchain-preflight/v1")
             self.assertEqual(preflight["status"], "ready")
+            self.assertEqual(manifest["public_conformance"]["outcome"], "passed")
+            self.assertIn("public-conformance-attempt-001.json", event_text)
+            self.assertIn("public_conformance.completed", event_text)
             rendered = "\n".join(output)
             self.assertIn("starting initial model attempt", rendered)
             self.assertIn("public artifact checks passed", rendered)

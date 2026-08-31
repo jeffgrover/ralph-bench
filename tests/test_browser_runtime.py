@@ -36,6 +36,43 @@ class BrowserRuntimeTests(unittest.TestCase):
                 self.assertEqual(find_chromium(), chromium.resolve())
                 self.assertEqual(find_playwright_browsers_path(), root.resolve())
 
+    def test_managed_playwright_headless_shell_precedes_browser_app(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            managed = (
+                root
+                / "chromium_headless_shell-1228"
+                / "chrome-headless-shell-mac-arm64"
+                / "chrome-headless-shell"
+            )
+            managed.parent.mkdir(parents=True)
+            managed.touch()
+            managed.chmod(0o700)
+            browser_app = (
+                root
+                / "chromium-1228"
+                / "chrome-mac-arm64"
+                / "Google Chrome for Testing.app"
+                / "Contents"
+                / "MacOS"
+                / "Google Chrome for Testing"
+            )
+            browser_app.parent.mkdir(parents=True)
+            browser_app.touch()
+            browser_app.chmod(0o700)
+            ffmpeg = root / "ffmpeg-1011" / "ffmpeg-mac"
+            ffmpeg.parent.mkdir()
+            ffmpeg.touch()
+            ffmpeg.chmod(0o700)
+            with patch.dict(
+                os.environ,
+                {
+                    "RALPH_BENCH_CHROMIUM": "",
+                    "PLAYWRIGHT_BROWSERS_PATH": str(root),
+                },
+            ):
+                self.assertEqual(find_chromium(), managed.resolve())
+
     def _invoke(self, root: Path, wait_error: BaseException) -> Mock:
         process = Mock()
         process.wait.side_effect = wait_error

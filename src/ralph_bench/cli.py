@@ -24,6 +24,7 @@ from .browser_runtime import (
     find_playwright_browsers_path,
 )
 from .challenges import challenge_ids_for, scenario_pack_for
+from .conformance import ConformanceError, run_public_conformance
 from .conductor import ConductorError, EvaluationRunSummary, execute_experiment
 from .experiments import (
     ExperimentError,
@@ -33,6 +34,7 @@ from .experiments import (
     save_experiment,
 )
 from .preview import PreviewError, open_bundle_preview
+from .reporting import ReportBuildError, build_site
 
 
 class WizardCancelled(Exception):
@@ -73,6 +75,14 @@ def _parser() -> argparse.ArgumentParser:
         "--source", type=Path, default=Path("results/inbox"), dest="inbox"
     )
     build.add_argument("--output", type=Path, default=Path("site"))
+    conformance = sub.add_parser(
+        "conformance",
+        help="run the unscored public gates/v1 smoke check against a candidate",
+    )
+    conformance.add_argument("candidate", type=Path)
+    conformance.add_argument(
+        "--json", action="store_true", help="emit machine-readable diagnostics"
+    )
     return parser
 
 
@@ -477,6 +487,22 @@ def _run_experiment_path(
         f"Produced {len(summary.runs)} validated result bundle(s); "
         f"{summary.passed} full pass(es)."
     )
+    for run in summary.runs:
+        status = "PASS" if run.public_accepted and run.simulation_outcome == "passed" else "FAIL"
+        peak = (
+            "—"
+            if run.peak_monitored_throughput is None
+            else str(run.peak_monitored_throughput)
+        )
+        selected = "—" if run.selected_attempt is None else str(run.selected_attempt)
+        repairs = max(0, run.attempt_count - 1)
+        output_fn(
+            f"  {run.run_id}: {status}; selected attempt {selected}; "
+            f"public {'pass' if run.public_accepted else 'fail'}; "
+            f"simulation {run.simulation_outcome}; "
+            f"measurement {run.measurement_status}; peak {peak}/min; "
+            f"repairs {repairs}; bundle {run.bundle}"
+        )
     if (
         summary.runs
         and input_stream is not None
@@ -589,6 +615,40 @@ def main(
             return 2
         output_fn(f"Opened recorded simulation overview: {preview.media_path}")
         return 0
+    if args.command == "conformance":
+        try:
+            result = run_public_conformance(
+                args.candidate,
+                project_root=_project_root_for_cli(),
+            )
+        except (ConformanceError, BrowserRuntimeError, OSError, RuntimeError) as exc:
+            payload = {
+                "schema_version": "conformance/v1",
+                "outcome": "infrastructure_error",
+                "passed": False,
+                "candidate": str(args.candidate),
+                "message": str(exc),
+            }
+            if args.json:
+                output_fn(json.dumps(payload, sort_keys=True))
+            else:
+                output_fn(f"Public conformance infrastructure error: {exc}")
+            return 3
+        if args.json:
+            output_fn(json.dumps(result, sort_keys=True))
+        else:
+            output_fn(
+                "Public gates/v1 conformance: "
+                + ("passed" if result["passed"] else "failed")
+            )
+            for assertion in result.get("assertions", []):
+                if isinstance(assertion, dict):
+                    output_fn(
+                        f"  {assertion.get('assertion_id', 'unknown')}: "
+                        f"{assertion.get('result', 'unknown')} — "
+                        f"{assertion.get('detail', '')}"
+                    )
+        return 0 if result["passed"] else 1
     if args.command == "doctor":
         harness = registry.get("harness", "codex-cli")
         result = harness.detect(probe_context)
@@ -664,10 +724,22 @@ def main(
                 output_fn(f"  {item.code}{location}{detail}")
         return 0 if result.valid else 1
     if args.command == "build":
+        try:
+            result = build_site(args.inbox, args.output)
+        except (ReportBuildError, OSError, RuntimeError) as exc:
+            output_fn(f"Static report build failed: {exc}")
+            return 3
         output_fn(
-            "Static reporting is not implemented in this P0-A CLI slice; "
-            f"no files were read from {args.inbox} or written to {args.output}."
+            f"Built static report at {result.output}: "
+            f"{result.valid_bundle_count} valid bundle(s), "
+            f"{result.invalid_bundle_count} invalid bundle(s) quarantined"
         )
-        return 3
+        return 0
     parser.error("unknown command")
     return 2
+
+
+def _project_root_for_cli() -> Path:
+    """Find the repository root for the checked-in public challenge pack."""
+
+    return Path(__file__).resolve().parents[2]

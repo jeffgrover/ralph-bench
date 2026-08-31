@@ -119,6 +119,7 @@ The manifest should include:
   - requested/effective configuration summary
   - effort and tool policy
 - Run validity and outcome.
+- Functional/performance eligibility decision and measurement status.
 - Attempt count and selected candidate hash.
 - Terminal reason.
 - Isolation level.
@@ -158,6 +159,12 @@ actual is an OpenRouter usage debit/charge, not an upstream provider invoice.
 For local-provider paths, `cost.json` instead records `billing_mode = "local"`
 with the same unavailable amount fields and an explicit reason that local
 inference has no attributable per-run USD charge.
+
+`run.json` and `metrics.json` preserve `performance_eligible` separately from
+the overall outcome. A functionally working artifact may be measured but fail
+a held-load or cooldown requirement; it remains distinguishable from an
+artifact that never established a valid simulation and is ineligible for the
+performance vector.
 See
 [`COST_MODEL.md`](COST_MODEL.md).
 

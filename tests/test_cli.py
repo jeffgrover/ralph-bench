@@ -267,7 +267,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(output[0][0], "{")
         self.assertTrue(json.loads(output[0])["available"])
 
-    def test_bundle_validate_and_build_skeleton_commands_are_registered(self):
+    def test_bundle_validate_and_build_commands_are_registered(self):
         output: list[str] = []
         self.assertEqual(
             main(
@@ -279,10 +279,39 @@ class CliTests(unittest.TestCase):
         )
         self.assertFalse(json.loads(output[0])["valid"])
         output.clear()
-        self.assertEqual(
-            main(["build"], output_fn=output.append, stdin=io.StringIO()), 3
-        )
-        self.assertIn("not implemented", output[0].lower())
+        with tempfile.TemporaryDirectory() as directory:
+            output.clear()
+            destination = Path(directory) / "site"
+            self.assertEqual(
+                main(
+                    ["build", "--source", str(Path(directory) / "missing"), "--output", str(destination)],
+                    output_fn=output.append,
+                    stdin=io.StringIO(),
+                ),
+                0,
+            )
+            self.assertTrue((destination / "index.html").is_file())
+            self.assertIn("0 valid bundle", output[0])
+
+    def test_public_conformance_command_reports_machine_result(self):
+        output: list[str] = []
+        with patch(
+            "ralph_bench.cli.run_public_conformance",
+            return_value={
+                "schema_version": "conformance/v1",
+                "outcome": "failed",
+                "passed": False,
+                "assertions": [],
+            },
+        ) as check:
+            result = main(
+                ["conformance", "/tmp/candidate", "--json"],
+                output_fn=output.append,
+                stdin=io.StringIO(),
+            )
+        self.assertEqual(result, 1)
+        self.assertEqual(json.loads(output[0])["outcome"], "failed")
+        check.assert_called_once()
 
     def test_preview_command_opens_recorded_bundle_media(self):
         output: list[str] = []

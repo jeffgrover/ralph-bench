@@ -27,6 +27,7 @@ rb
 rb configure
 rb configure experiments/cloud-intersection.toml
 rb run experiments/cloud-intersection.toml
+rb conformance tests/fixtures/busy_intersection/passing
 rb bundle validate results/inbox/<run-id>.ralph.zip
 rb build --source results/inbox --output site
 ```
@@ -34,6 +35,20 @@ rb build --source results/inbox --output site
 `rb run` requires an experiment path. The zero-argument `rb` command enters the
 wizard; in a non-interactive environment, commands that need answers fail with
 an actionable message rather than guessing.
+
+`rb conformance <candidate>` runs the checked-in, unscored public
+`gates/v1` smoke scenario against a candidate directory. It exercises both
+arrival callback shapes and both finish methods, then reports stable
+registration, delivery, completion, runtime, and offline assertion IDs. It
+does not run the private load profile, predict capacity, or create a result
+bundle. `--json` emits bounded machine-readable diagnostics for an agent.
+
+`rb build --source <inbox> --output <site>` validates every direct
+`.ralph.zip` input before extracting it into a fresh derived site. Valid runs
+become navigable index/detail pages with evaluator-owned poster/video captures,
+metrics, acceptance evidence, provenance, and explicit artifact downloads.
+Invalid bundles are listed in `data/invalid-bundles.json` and omitted from
+normal views. The report shell never executes candidate HTML or JavaScript.
 
 ## Vocabulary
 
@@ -305,6 +320,14 @@ P0 includes:
   final run's evaluator-recorded WebM overview; Enter means yes. Batch and
   redirected runs never pause. `rb preview <bundle.ralph.zip>` validates the
   bundle and provides the same view later without executing candidate HTML.
+- `rb conformance <candidate>` runs the public unscored smoke schedule for
+  `gates/v1` and reports stable interface, delivery, completion, runtime, and
+  offline diagnostics. It never invokes a model, reveals private demand, or
+  creates a result bundle.
+- `rb build --source <inbox> --output <site>` validates bundles before safe
+  extraction and writes a deterministic derived site. Invalid bundles are
+  quarantined from normal navigation, and candidate markup is never executed
+  by the report shell.
 
 P0 does not require universal discovery across every legacy client or a live
 online catalog of every provider model. The Pi-wiggum/local execution path is
@@ -337,6 +360,11 @@ changing the experiment schema.
 - Zero-argument invocation without a TTY exits clearly and does not hang.
 - An explicit `rb run <file>` is deterministic and does not consult wizard
   history.
+- Public conformance reports the same stable assertion IDs for different
+  implementations, and a report build leaves source bundle bytes unchanged.
+- A controlled attempt preserves the public smoke result, runs the private
+  profile against the same candidate, and combines only bounded assertion IDs
+  and semantic repair details for the next attempt.
 
 ## Estimate
 

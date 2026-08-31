@@ -252,6 +252,7 @@ class EvaluationResult:
     recovery: RecoveryResult
     runtime_observations: tuple[dict[str, Any], ...]
     metrics: Mapping[str, Any]
+    performance_eligible: bool
 
     @property
     def passed(self) -> bool:
@@ -270,6 +271,7 @@ class EvaluationResult:
             "recovery": self.recovery.to_dict(),
             "runtime_observations": [dict(item) for item in self.runtime_observations],
             "metrics": dict(self.metrics),
+            "performance_eligible": self.performance_eligible,
         }
 
 
@@ -415,7 +417,7 @@ def evaluate_gate_monitor(
     )
     car_ratio = warmup_car_completed / len(warmup_cars) if warmup_cars else 1.0
     ped_ratio = warmup_ped_completed / len(warmup_pedestrians) if warmup_pedestrians else 1.0
-    assertions = (
+    base_assertions = (
         _assertion(scenario, "gates-interface-ready", ready, "gates/v1 callbacks registered", "gates/v1 callbacks were not registered"),
         _assertion(scenario, "arrival-delivery", len(issued) == expected_arrivals, f"all {expected_arrivals} arrivals were delivered", f"delivered {len(issued)} of {expected_arrivals} evaluator arrivals"),
         _assertion(scenario, "completion-integrity", not invalid, "completion IDs and finish gates are valid", f"{len(invalid)} invalid completion notification(s) were observed"),
@@ -438,13 +440,70 @@ def evaluate_gate_monitor(
             threshold={"minimum_completion_ratio": thresholds.minimum_warmup_pedestrian_ratio},
         ),
     )
+    capacity = _capacity_curve(scenario, completions, observations, thresholds)
+    recovery = _recovery(scenario, observations)
+    capacity_assertions = tuple(
+        _assertion(
+            scenario,
+            f"capacity-stage-{stage.stage_id}",
+            not stage.failure_codes,
+            f"{stage.stage_id} sustained its offered load",
+            f"{stage.stage_id} failed: {', '.join(stage.failure_codes)}",
+            severity="major",
+            threshold={
+                "stage_completion_ratio": thresholds.stage_completion_ratio,
+                "maximum_backlog_fraction": thresholds.maximum_backlog_fraction,
+            },
+        )
+        for stage in capacity
+        if stage.qualifying or stage.failure_codes
+    )
+    recovery_assertions = (
+        _assertion(
+            scenario,
+            "cooldown-recovery",
+            recovery.passed,
+            recovery.detail,
+            recovery.detail,
+            severity="major",
+        ),
+    ) if recovery.attempted else ()
+    assertions = base_assertions + capacity_assertions + recovery_assertions
+    # Functional eligibility is evaluated before capacity and recovery. A
+    # runnable, correctly wired artifact may still be measured at the load it
+    # can sustain, even when it fails a held stage or cooldown requirement.
+    functional_failures = tuple(
+        item for item in base_assertions if item.result == "fail"
+    )
+    performance_eligible = (
+        not functional_failures
+        and ready
+        and len(issued) == expected_arrivals
+    )
     failures = tuple(
         FailureRecord(item.assertion_id, item.severity, None, item.detail)
         for item in assertions
         if item.result == "fail"
     )
-    capacity = _capacity_curve(scenario, completions, observations, thresholds)
-    recovery = _recovery(scenario, observations)
+    failures += tuple(
+        FailureRecord(
+            f"capacity:{stage.stage_id}:{code}",
+            "major",
+            stage.stage_id,
+            f"{stage.stage_id} failed {code}",
+        )
+        for stage in capacity
+        for code in stage.failure_codes
+    )
+    if recovery.attempted and not recovery.passed:
+        failures += (
+            FailureRecord(
+                "cooldown-recovery",
+                "major",
+                "cooldown",
+                recovery.detail,
+            ),
+        )
     car_completions = [item for item in raw_completions if isinstance(item, Mapping) and item.get("kind") == "car"]
     pedestrian_completions = [item for item in raw_completions if isinstance(item, Mapping) and item.get("kind") == "pedestrian"]
     latencies = sorted(int(item.get("latency_ms", 0)) for item in car_completions)
@@ -453,6 +512,7 @@ def evaluate_gate_monitor(
     measurement_status = "measured" if ready and len(issued) == expected_arrivals else "unmeasurable"
     metrics = {
         "measurement_status": measurement_status,
+        "performance_eligible": performance_eligible,
         "issued_cars": len(scenario.cars),
         "completed_cars": len(car_completions),
         "outstanding_cars": max(0, len(scenario.cars) - len(car_completions)),
@@ -482,6 +542,7 @@ def evaluate_gate_monitor(
         recovery,
         tuple(dict(item) for item in observations),
         metrics,
+        performance_eligible,
     )
 
 

@@ -15,6 +15,7 @@ import time
 from typing import Any
 
 from .capture_validation import capture_metadata_issues, media_issues
+from .gates import GateScenario
 
 
 class BrowserRuntimeError(RuntimeError):
@@ -34,8 +35,45 @@ class BrowserEvaluationArtifacts:
 
 
 def find_chromium() -> Path:
+    # Prefer Playwright's own browser build for evaluator work. On macOS the
+    # user's Google Chrome app can abort while being launched headlessly by a
+    # non-UI parent; the managed Chromium binary is isolated from that app
+    # lifecycle and is the reproducible choice for Ralph.
+    headless_patterns = (
+        "chromium_headless_shell-*/**/chrome-headless-shell",
+        "chromium_headless_shell-*/**/headless_shell",
+    )
+    managed_patterns = (
+        "chromium-*/chrome-linux*/chrome",
+        "chromium-*/chrome-mac*/chrome",
+        "chromium-*/**/Contents/MacOS/Chromium",
+        "chromium-*/**/Contents/MacOS/Google Chrome for Testing",
+    )
+    managed_headless = sorted(
+        {
+            path
+            for root in _playwright_cache_roots()
+            for pattern in headless_patterns
+            for path in root.glob(pattern)
+            if path.is_file() and os.access(path, os.X_OK)
+        },
+        key=lambda path: path.as_posix(),
+        reverse=True,
+    )
+    managed = managed_headless + sorted(
+        {
+            path
+            for root in _playwright_cache_roots()
+            for pattern in managed_patterns
+            for path in root.glob(pattern)
+            if path.is_file() and os.access(path, os.X_OK)
+        },
+        key=lambda path: path.as_posix(),
+        reverse=True,
+    )
     candidates = (
         os.environ.get("RALPH_BENCH_CHROMIUM"),
+        *(str(path) for path in managed),
         "/usr/bin/google-chrome",
         "/usr/bin/chromium",
         "/usr/bin/chromium-browser",
@@ -52,11 +90,12 @@ def find_chromium() -> Path:
         if path.is_file() and os.access(path, os.X_OK):
             return path.resolve()
     raise BrowserRuntimeError(
-        "no supported Chromium executable was found; set RALPH_BENCH_CHROMIUM"
+        "no supported Chromium executable was found; install Playwright Chromium "
+        "or set RALPH_BENCH_CHROMIUM"
     )
 
 
-def find_playwright_browsers_path() -> Path:
+def _playwright_cache_roots() -> tuple[Path, ...]:
     candidates = (
         os.environ.get("PLAYWRIGHT_BROWSERS_PATH"),
         str(Path(os.environ["XDG_CACHE_HOME"]) / "ms-playwright")
@@ -65,6 +104,7 @@ def find_playwright_browsers_path() -> Path:
         str(Path.home() / ".cache" / "ms-playwright"),
         str(Path.home() / "Library" / "Caches" / "ms-playwright"),
     )
+    roots: list[Path] = []
     for value in candidates:
         if not value or value == "0":
             continue
@@ -73,11 +113,18 @@ def find_playwright_browsers_path() -> Path:
             resolved = root.resolve(strict=True)
         except OSError:
             continue
-        if resolved.is_dir() and any(
+        if resolved.is_dir() and resolved not in roots:
+            roots.append(resolved)
+    return tuple(roots)
+
+
+def find_playwright_browsers_path() -> Path:
+    for root in _playwright_cache_roots():
+        if any(
             path.is_file() and os.access(path, os.X_OK)
-            for path in resolved.glob("ffmpeg-*/ffmpeg-*")
+            for path in root.glob("ffmpeg-*/ffmpeg-*")
         ):
-            return resolved
+            return root
     raise BrowserRuntimeError(
         "Playwright's FFmpeg runtime was not found; run `playwright install ffmpeg`"
     )
@@ -96,16 +143,18 @@ def _terminate_group(process: subprocess.Popen[Any]) -> None:
         pass
 
 
-def _worker_failure_detail(stderr_path: Path) -> str:
-    """Return a bounded operator-facing worker error before temp cleanup."""
+def _worker_failure_detail(*paths: Path) -> str:
+    """Return bounded operator-facing worker output before temp cleanup."""
 
-    try:
-        text = stderr_path.read_text(encoding="utf-8", errors="replace").strip()
-    except OSError:
-        return ""
-    if not text:
-        return ""
-    return " ".join(text.split())[-2_000:]
+    chunks: list[str] = []
+    for path in paths:
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace").strip()
+        except OSError:
+            continue
+        if text:
+            chunks.append(text)
+    return " ".join(" ".join(chunks).split())[-2_000:]
 
 
 def run_browser_evaluation(
@@ -117,11 +166,15 @@ def run_browser_evaluation(
     seed: int = 17,
     chromium: Path | None = None,
     playwright_browsers_path: Path | None = None,
+    scenario: GateScenario | None = None,
+    evaluation_mode: str = "gates",
 ) -> BrowserEvaluationArtifacts:
     """Evaluate/capture one candidate in a separately killable process tree."""
 
     if timeout_seconds <= 0:
         raise BrowserRuntimeError("browser timeout must be positive")
+    if evaluation_mode not in {"gates", "conformance"}:
+        raise BrowserRuntimeError(f"unsupported browser evaluation mode: {evaluation_mode!r}")
     candidate = candidate.resolve()
     output = output.resolve()
     raw_evidence = raw_evidence.resolve()
@@ -130,6 +183,13 @@ def run_browser_evaluation(
         playwright_browsers_path or find_playwright_browsers_path()
     )
     raw_evidence.mkdir(parents=True, exist_ok=True)
+    scenario_path: Path | None = None
+    if scenario is not None:
+        scenario_path = raw_evidence / "scenario-input.json"
+        scenario_path.write_text(
+            json.dumps(scenario.to_dict(), ensure_ascii=False, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
     # Keep each browser attempt's HOME separate. A single run can evaluate an
     # initial candidate and a repair candidate in succession; sharing this
     # directory makes the second evaluation fail while creating HOME.
@@ -153,7 +213,11 @@ def run_browser_evaluation(
         str(chromium),
         "--seed",
         str(seed),
+        "--evaluation-mode",
+        evaluation_mode,
     )
+    if scenario_path is not None:
+        argv += ("--scenario", str(scenario_path))
     start = time.monotonic()
     worker_environment = {
         "PATH": os.defpath,
@@ -198,7 +262,7 @@ def run_browser_evaluation(
         shutil.rmtree(worker_tmp, ignore_errors=True)
     wall = time.monotonic() - start
     if returncode != 0:
-        detail = _worker_failure_detail(stderr_path)
+        detail = _worker_failure_detail(stdout_path, stderr_path)
         suffix = f": {detail}" if detail else ""
         raise BrowserRuntimeError(
             f"browser worker exited with status {returncode}{suffix}"

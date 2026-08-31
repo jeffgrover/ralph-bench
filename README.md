@@ -33,8 +33,10 @@ the next provider slice for billed and normalized reference pricing.
 
 P0-A targets a seam-complete Busy Intersection vertical slice. The Challenge
 Portability Fixture remains a small second-challenge boundary proof; it is not
-a partial city simulation and is not implemented yet. Static reporting and
-future city work follow seam completion and the first local proving run.
+a partial city simulation and does not constrain the future city's topology or
+protocol. Static reporting is now implemented as the first derived product
+surface; full future-city work follows the remaining acceptance and portability
+seams.
 
 The P0-A planning packet was accepted on 2026-08-23, as amended by [ADR
 0011](docs/adr/0011-cloud-cost-evidence-and-openrouter-references.md),
@@ -63,6 +65,7 @@ OpenRouter billing/reference support is the next provider slice.
 ```bash
 rb
 rb run experiments/cloud-intersection.toml
+rb conformance tests/fixtures/busy_intersection/passing
 rb preview results/inbox/<run-id>.ralph.zip
 rb build --source results/inbox --output site
 ```
@@ -127,13 +130,26 @@ The first P0-A contract spine is implemented and tested:
   Controlled Pi attempts stop when a new `index.html` candidate is written;
   browser/runtime failures become bounded semantic feedback for the one repair
   attempt, without exposing private load values.
+- Functional eligibility includes the held-load and cooldown outcomes while
+  retaining a separate performance-eligibility flag. A working but overloaded
+  artifact remains measurable but cannot be reported as a full pass.
+- `rb conformance <candidate>` runs the checked-in, unscored public
+  `gates/v1` smoke schedule and reports registration, delivery, completion,
+  runtime, and offline diagnostics without exposing private scoring demand.
+- Challenge-specific public-pack preparation, scenario construction, browser
+  evaluation, repair vocabulary, and prompts traverse a challenge adapter
+  boundary rather than a Busy Intersection branch in the conductor.
+- `rb build --source <inbox> --output <site>` validates bundles read-only and
+  produces a deterministic static report with local/cloud track context,
+  acceptance/failure evidence, resource metrics, provenance, poster/video
+  captures, and explicit artifact download links. Candidate HTML is never
+  executed by the report shell; invalid bundles are quarantined from normal
+  views.
 
-`rb build` remains the unimplemented P0-A boundary. Static reporting is the
-next implementation wave after seam completion. Functional eligibility,
-public conformance tooling, and challenge-adapter separation remain the main
-evaluation seams. Current-toolchain refresh and local-provider readiness are
-required run-preflight seams before model evaluation; discovery and `rb doctor`
-remain read-only.
+The remaining P0-A seams are the portability fixture's full generic lifecycle
+proof, reproducibility/claim hardening, and cross-platform validation.
+Current-toolchain refresh and local-provider readiness are required run-preflight
+seams before model evaluation; discovery and `rb doctor` remain read-only.
 
 The first local proving candidate was attempted with
 `gemma-4-12b-it-mlx`. It reached static and browser evaluation in one run but
@@ -141,7 +157,11 @@ did not complete a passing repair within the bounded local model budget; no
 passing bundle was manufactured. That result is useful calibration: the local
 path and evaluator feedback seam are live, while this model still needs either
 a better tool-call strategy or a stronger model to clear the working-solution
-bar.
+bar. A second local trial with `gpt-oss-20b` reached browser evaluation on both
+attempts but serviced no evaluator demand; its corrected diagnostic bundle is
+preserved in the local results inbox. A successful real-model bundle is not
+required for fixture-driven seam work, but is still needed to calibrate
+real-model capacity comparisons.
 
 ### Platform posture
 
@@ -149,8 +169,10 @@ P0 deliberately has no required OS-specific isolation tool. The protection
 contract is portable best effort; strong L1/L2 backends are deferred until
 their behavior can be designed and compared across Linux, macOS, and Windows.
 The current end-to-end implementation is developed and tested on Linux.
-Windows and macOS still require browser discovery and process-lifecycle
-validation before they can be called supported, but Bubblewrap is no longer a
+Windows and macOS still require broader process-lifecycle validation before
+they can be called supported, but the macOS evaluator now prefers Playwright's
+standalone headless shell. This avoids launching the user's interactive Chrome
+app, which can abort during headless startup. Bubblewrap is no longer a
 prerequisite or an architectural commitment.
 
 For development:

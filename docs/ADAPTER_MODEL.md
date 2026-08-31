@@ -40,6 +40,15 @@ and remain TBD.
 It must not produce cross-product implementations such as
 `OpenCodeLmStudioQwenRunner`.
 
+Challenges are a fourth, independent execution boundary. A challenge adapter
+owns public-pack materialization, scenario construction, challenge-specific
+browser evaluation/capture instructions, repair vocabulary, and prompt details.
+The conductor only coordinates the returned challenge run and its evidence.
+Busy Intersection is the first adapter; a future city may provide a different
+topology, protocol, and scenario object through the same boundary. The
+Challenge Portability Fixture tests that the boundary does not require
+intersection-specific semantics.
+
 ## Polymorphism means separate typed protocols
 
 The three adapter families share descriptor and diagnostic conventions, but

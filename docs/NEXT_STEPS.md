@@ -38,8 +38,9 @@ Do not reopen these without new evidence:
 - A complete pre-evaluation failure with no candidate or no started evaluator
   fails fast without a result bundle. A preserved candidate that reaches
   evaluation still receives a bundle when evaluation fails.
-- Seam completion comes before static reporting breadth, broader city work, or
-  additional product polish.
+- Seam completion still comes before broader city work or additional product
+  polish. A minimal static report now exists so failed and passing evidence is
+  inspectable while the remaining acceptance seams are completed.
 - Current-toolchain refresh and local-provider readiness happen before model
   evaluation, never during an active run. Discovery and `rb doctor` remain
   read-only.
@@ -76,7 +77,8 @@ Do not reopen these without new evidence:
 - Missing callbacks are reported as `unmeasurable`, not as zero throughput.
 - Context-aware offline checks accept CSS custom properties such as
   `--ws:64px` while still rejecting real external URLs.
-- The complete unit and contract suite contains 108 passing tests.
+- The complete unit and contract suite contains 137 passing tests at this
+  checkpoint; the command below is authoritative as the suite grows.
 
 ## Fair-shot design guardrails
 
@@ -143,46 +145,53 @@ toolchain evidence is attributable and no update can occur during an active run.
 - Continue model/tool-call calibration or select a stronger local model; do not
   weaken the evaluator or fabricate a result bundle.
 
-### 1. Correct the functional eligibility boundary
+### 1. Correct the functional eligibility boundary — implemented
 
-**Priority:** blocking
+**Priority:** completed blocking seam
 
-- Include capacity-stage failures and recovery failures in the final evaluation
-  outcome rather than considering only immediate assertions.
-- Add fixtures proving that a working-but-overloaded artifact is failed for
-  performance while a non-working artifact is ineligible or unmeasurable.
+- Capacity-stage and recovery failures now enter the final evaluation outcome.
+- The evaluator exposes `performance_eligible` separately, so a working but
+  overloaded artifact remains measurable while a non-working artifact cannot
+  enter performance comparison.
+- Fixtures cover both the overloaded-working and missing-interface paths.
 - Keep functional eligibility separate from the performance vector; never let
   high throughput compensate for invalid or dishonest behavior.
 
-**Exit:** the evaluator cannot report `passed` when a qualifying held stage or
-recovery requirement fails, and tests make the working-before-performance rule
-explicit.
+**Exit:** met. The evaluator cannot report `passed` when a qualifying held stage
+or recovery requirement fails, and tests make the working-before-performance
+rule explicit.
 
-### 2. Ship the agent-runnable public gate check
+### 2. Ship the agent-runnable public gate check — implemented
 
-**Priority:** blocking
+**Priority:** completed blocking seam
 
 **Estimate:** 0.5–1 engineering day
 
-- Add an agent-runnable command for the small public smoke schedule and concise
-  registration/finish diagnostics without exposing the production load.
-- Exercise that command against both checked-in fixtures and at least two
-  deliberately different implementations.
+- Added `rb conformance <candidate>` with `--json` output for the small public
+  smoke schedule and concise registration/finish diagnostics without exposing
+  the production load.
+- The evaluator is unit-tested against passing and deliberately broken
+  implementations; a real browser run remains operator/environment-dependent.
 - Keep it a contract debugger: report observed callback/identity/exit/runtime
   failures without suggesting a simulation architecture or traffic algorithm.
 
-**Exit:** a model can validate the two arrival callbacks and two finish methods
-without guessing; the scored profile remains private; passing the command
-proves interface readiness but does not predict benchmark capacity.
+**Exit:** met for the public command. A model can validate the two arrival
+callbacks and two finish methods without guessing; the scored profile remains
+private; passing the command proves interface readiness but does not predict
+benchmark capacity.
 
-### 3. Give the model a fair, non-prescriptive acceptance loop
+### 3. Give the model a fair, non-prescriptive acceptance loop — implemented
 
-**Priority:** blocking
+**Priority:** remaining blocking integration
 
 **Estimate:** 2–4 engineering days
 
 - Integrate the public conformance command and representative smoke scenario
-  from step 1 into the staged tool/challenge pack and attempt lifecycle.
+  into the staged challenge adapter and attempt lifecycle.
+- Each static candidate that reaches browser evaluation is checked against the
+  public smoke contract and the private profile. The public result is preserved
+  as raw attempt evidence and its stable failures are included in bounded
+  repair feedback.
 - Give the model bounded browser-console and structured-log inspection so it
   can debug the same artifact state the evaluator will inspect.
 - Evaluate the initial candidate through browser/runtime contract checks before
@@ -197,29 +206,30 @@ proves interface readiness but does not predict benchmark capacity.
 - Decide whether the overview is captured for every attempt or only the final
   selected artifact; keep the decision explicit in bundle provenance.
 
-**Exit:** two deliberately different implementations can use the same public
-tooling to reach conformance; a fixture that passes static checks but fails
-`gates/v1` can repair and pass on attempt two; neither the tool nor feedback
-dictates its algorithm or visual design; both attempts remain auditable.
+**Exit:** met for the P0 acceptance path. Two deliberately different
+implementations can use the same public command to reach or fail conformance;
+the controlled loop preserves the public result, evaluates the private profile,
+and feeds combined public/private contract failures into attempt two without
+leaking private load values. Richer structured-log presentation remains a
+future polish item.
 
-### 4. Extract a real challenge execution boundary
+### 4. Extract a real challenge execution boundary — implemented skeleton
 
-**Priority:** blocking skeleton work
+**Priority:** completed skeleton work
 
 **Estimate:** 2–3 engineering days
 
-- Define a versioned challenge adapter/descriptor owning public-pack
-  materialization, scenario construction, expected topology, evaluation,
-  capture instructions, and challenge-specific bundle identity.
-- Move Busy Intersection imports and path knowledge out of the generic
-  conductor and browser-worker orchestration.
-- Add a Challenge Portability Fixture that traverses this boundary. It is an
-  architectural proof, not a partial city simulation, and must not force a
-  future city to use intersection-specific topology or protocol semantics.
+- Added a versioned challenge adapter boundary owning public-pack
+  materialization, scenario construction, evaluation, capture selection,
+  repair vocabulary, and challenge-specific prompt details.
+- Busy Intersection paths are out of the generic conductor; a future-city
+  protocol/topology fixture exercises the registry and run boundary in tests.
+- The full future-city evaluator remains deferred; the fixture is an
+  architectural proof, not a partial city simulation.
 
-**Exit:** the generic conductor contains no Busy Intersection branch, and the
-intersection plus the Challenge Portability Fixture traverse the same generic
-challenge lifecycle without limiting future city-specific protocols.
+**Exit:** met for the P0 skeleton. The generic conductor contains no
+Busy Intersection public-pack/scenario branch, and the portability fixture
+traverses the generic run boundary without imposing intersection semantics.
 
 ### 5. Complete harness polymorphism through execution — implemented
 
@@ -237,22 +247,22 @@ challenge lifecycle without limiting future city-specific protocols.
 **Exit:** adding a compatible fake harness requires registry work but no
 conductor branch or Codex import.
 
-### 6. Make terminal completion status unmistakable
+### 6. Make terminal completion status unmistakable — implemented
 
-**Priority:** high
+**Priority:** completed high-priority seam
 
 **Estimate:** 0.5–1 engineering day
 
-- Distinguish “bundle produced and validated” from “candidate passed the
-  benchmark” in the final console summary.
-- Print the selected attempt, static acceptance, runtime outcome, peak
-  monitored throughput, repair usage, and bundle path in a compact block.
+- The final console summary distinguishes validated bundle production from a
+  full benchmark pass.
+- It prints selected attempt, public acceptance, simulation outcome,
+  measurement status, peak monitored throughput, repair usage, and bundle path.
 - Keep the default-yes recorded-overview prompt after that summary.
 
-**Exit:** an operator can answer “did it work?” without opening JSON or asking
-for bundle inspection.
+**Exit:** met. An operator can answer “did it work?” without opening JSON or
+asking for bundle inspection.
 
-### 7. Add the Pi-wiggum/local native harness path — implementation ready; live run pending
+### 7. Add the Pi-wiggum/local native harness path — controlled proving complete
 
 **Priority:** next proving action
 
@@ -265,30 +275,33 @@ for bundle inspection.
   from the preflight toolchain record.
 - Keep the native Wiggum loop distinct from Ralph's evaluator-controlled loop;
   count its internal iterations against the shared model-work budget.
-- Run the first real local evaluation after selecting and verifying the model.
+- Two controlled Pi/Wiggum local evaluations have now run after selecting and
+  verifying Gemma and GPT-OSS models. Neither cleared the working-solution bar;
+  both results remain useful calibration evidence. A native TPM-loop run is
+  still optional and deferred with the current hardware.
 
-**Exit:** the same conductor and challenge path can run the Codex and
-Pi-wiggum/local compositions, while each result clearly identifies the exact
-harness, workflow, provider, and model used.
+**Exit:** met for controlled proving. The same conductor and challenge path
+can run the Codex and Pi-wiggum/local compositions, while each result clearly
+identifies the exact harness, workflow, provider, and model used.
 
-### 8. Implement `rb build` and the first static report
+### 8. Implement `rb build` and the first static report — implemented
 
-**Priority:** high
+**Priority:** completed high-priority seam
 
 **Estimate:** 3–5 engineering days
 
-- Read and validate bundles without mutating source evidence.
-- Separate cloud/subscription and local tracks at the top level.
-- Show model/harness/provider, hardware/configuration, time, attempts, tokens,
-  cost availability, throughput/capacity, failure taxonomy, L0 badge, poster,
-  and animated overview with a consistent visual system.
-- Make failure and non-passing results first-class; the first live run should
-  remain interesting and navigable rather than disappear from the report.
+- `rb build` reads and validates bundles without mutating source evidence.
+- The report separates local/cloud context and shows model/harness/provider,
+  configuration/provenance, time, attempts, tokens, cost availability,
+  throughput, failure assertions, L0 status, poster, and animated overview.
+- Failure and non-passing results remain first-class; invalid bundles are
+  quarantined outside normal views.
 
-**Exit:** `rb build --source results/inbox --output site` produces a static,
-portable site containing the first live bundle and its recorded animation.
+**Exit:** met. `rb build --source results/inbox --output site` produces a
+static, portable site containing the preserved live bundles and recorded
+animations.
 
-### 9. Reconcile reproducibility claims with the implementation
+### 9. Reconcile reproducibility claims with the implementation — partially implemented
 
 **Priority:** high before canonical publication
 
@@ -297,8 +310,9 @@ portable site containing the first live bundle and its recorded animation.
 - Keep the configuration lifecycle documented as a target contract while P0
   implements only read-only detection, scoped materialization, and planned
   temporary-root cleanup—not generalized transactional rollback.
-- Pin the supported Python Playwright package exactly, record the installed
-  Chromium executable digest, and downgrade mismatches to experimental.
+- The supported Python Playwright package is pinned exactly, and browser
+  capture now records the Chromium executable digest. Downgrading mismatches
+  to experimental and the release checklist remain.
 - Add a lightweight release checklist/test for executable claims in the README
   and P0 plan so architectural prose cannot silently outrun the code.
 
@@ -311,7 +325,9 @@ verified, and future behavior without relying on implication.
 
 **Estimate:** 2–4 engineering days
 
-- Generalize Chromium/FFmpeg discovery and temporary-directory handling.
+- Chromium/FFmpeg discovery now prefers Playwright's standalone headless shell
+  on macOS/Linux and honors explicit overrides; temporary-directory handling
+  still needs broader validation.
 - Verify process-group cancellation and single-key progress input on each OS.
 - Exercise Codex authentication and native `workspace-write` semantics without
   upgrading the L0 claim.
@@ -339,11 +355,13 @@ Linux, macOS, and Windows/WSL with platform provenance recorded.
 An independent 2026-08-23 comparison with `llm-eval` was checked against the
 current implementation. Its useful findings are reflected above:
 
-- **Confirmed and promoted:** challenge execution is hard-coded; harness
-  polymorphism stops before execution; the public checker/contract pack is
-  incomplete; `rb build` remains absent; configuration and browser-stack docs
+- **Confirmed and promoted:** challenge execution was hard-coded; harness
+  polymorphism stopped before execution; the public checker/contract pack was
+  incomplete; `rb build` was absent; configuration and browser-stack docs
   overstate current implementation; a passing live artifact is still needed
-  to calibrate capacity separation.
+  to calibrate capacity separation. The challenge adapter, public conformance
+  command, acceptance-loop integration, and first static report now address
+  the corresponding seam gaps.
 - **Intentional but monitored:** one live SUT and unavailable subscription cost
   are deliberate P0 scope reductions, provided the execution contracts and
   cost provenance remain honest.

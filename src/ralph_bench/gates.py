@@ -233,6 +233,63 @@ def balanced_seed_for_repetition(repetition: int) -> int:
     return BALANCED_SEEDS[(repetition - 1) % len(BALANCED_SEEDS)]
 
 
+def gate_scenario_from_dict(value: Mapping[str, Any]) -> GateScenario:
+    """Reconstruct a validated evaluator scenario from its JSON form."""
+
+    if not isinstance(value, Mapping):
+        raise GateSchemaError("scenario must be an object")
+    stages_raw = value.get("stages")
+    cars_raw = value.get("cars")
+    pedestrians_raw = value.get("pedestrians")
+    if not isinstance(stages_raw, list) or not isinstance(cars_raw, list) or not isinstance(pedestrians_raw, list):
+        raise GateSchemaError("scenario stages, cars, and pedestrians must be lists")
+    stages = tuple(
+        DemandStage(
+            item["id"],
+            item["start_ms"],
+            item["end_ms"],
+            item["offered_cars_per_minute"],
+            item.get("offered_pedestrians_per_minute", 0),
+            item.get("qualifying", True),
+            item.get("cooldown", False),
+        )
+        for item in stages_raw
+        if isinstance(item, Mapping)
+    )
+    cars = tuple(
+        CarArrival(
+            item["id"],
+            item["entersFrom"],
+            item["exitsTo"],
+            item["arrival_ms"],
+        )
+        for item in cars_raw
+        if isinstance(item, Mapping)
+    )
+    pedestrians = tuple(
+        PedestrianArrival(
+            item["id"],
+            item["crossing"],
+            item["direction"],
+            item["arrival_ms"],
+        )
+        for item in pedestrians_raw
+        if isinstance(item, Mapping)
+    )
+    if len(stages) != len(stages_raw) or len(cars) != len(cars_raw) or len(pedestrians) != len(pedestrians_raw):
+        raise GateSchemaError("scenario entries must be objects")
+    return GateScenario(
+        value["scenario_id"],
+        value["profile"],
+        value["seed"],
+        value["horizon_ms"],
+        stages,
+        cars,
+        pedestrians,
+        value.get("schema_version", GATE_SCENARIO_SCHEMA),
+    )
+
+
 __all__ = [
     "BALANCED_SEEDS",
     "GATES_PROTOCOL",
@@ -247,4 +304,5 @@ __all__ = [
     "balanced_seed_for_repetition",
     "balanced_stages",
     "build_balanced_gate_scenario",
+    "gate_scenario_from_dict",
 ]

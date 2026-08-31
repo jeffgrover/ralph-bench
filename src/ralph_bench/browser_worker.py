@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as package_version
 import json
@@ -16,8 +17,9 @@ from urllib.parse import unquote, urlsplit
 from playwright.sync_api import Page, Route, sync_playwright
 
 from .gate_bridge import GATES_INIT_SCRIPT
+from .conformance import evaluate_public_conformance
 from .gate_evaluator import evaluate_gate_monitor
-from .gates import GateScenario, build_balanced_gate_scenario
+from .gates import GateScenario, build_balanced_gate_scenario, gate_scenario_from_dict
 
 
 _ORIGIN = "http://candidate.invalid"
@@ -38,6 +40,14 @@ def _worker_version() -> str:
         # development and fixture tests.  Do not turn that valid mode into a
         # browser infrastructure failure merely because wheel metadata is absent.
         return "source-checkout"
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        while chunk := stream.read(1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 class WorkerError(RuntimeError):
@@ -135,6 +145,7 @@ def _monitor_and_capture(
     candidate: Path,
     output: Path,
     scenario: GateScenario,
+    evaluation_mode: str,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], list[str], list[dict[str, str]], list[str]]:
     started = time.monotonic()
     video_root = output / ".video"
@@ -205,13 +216,24 @@ def _monitor_and_capture(
         raise WorkerError("Playwright did not create a video artifact")
     video.save_as(str(output / "overview.webm"))
     shutil.rmtree(video_root, ignore_errors=True)
-    evaluation = evaluate_gate_monitor(
-        scenario,
-        monitor,
-        observations,
-        runtime_errors=runtime_errors,
-        network_violations=router.blocked,
-    ).to_dict()
+    if evaluation_mode == "gates":
+        evaluation = evaluate_gate_monitor(
+            scenario,
+            monitor,
+            observations,
+            runtime_errors=runtime_errors,
+            network_violations=router.blocked,
+        ).to_dict()
+    elif evaluation_mode == "conformance":
+        evaluation = evaluate_public_conformance(
+            scenario,
+            monitor,
+            observations,
+            runtime_errors=runtime_errors,
+            network_violations=router.blocked,
+        )
+    else:
+        raise WorkerError(f"unsupported evaluation mode: {evaluation_mode!r}")
     duration_ms = max(1, round((time.monotonic() - started) * 1_000))
     capture = {
         "schema_version": "capture/v1",
@@ -226,7 +248,12 @@ def _monitor_and_capture(
             "end": scenario.horizon_ms,
             "step": _MONITOR_INTERVAL_MS,
         },
-        "simulation_phase": "gates-load-and-capture",
+        "simulation_phase": (
+            "public-conformance"
+            if evaluation_mode == "conformance"
+            else "gates-load-and-capture"
+        ),
+        "evaluation_mode": evaluation_mode,
         "playback_step_ms": _MONITOR_INTERVAL_MS,
         "playback_delay_ms": _MONITOR_INTERVAL_MS,
         "playback_rate": 1,
@@ -246,13 +273,21 @@ def _monitor_and_capture(
     return evaluation, monitor, capture, runtime_errors, console, list(router.blocked)
 
 
-def run_worker(candidate: Path, output: Path, chromium: Path, seed: int) -> dict[str, Any]:
+def run_worker(
+    candidate: Path,
+    output: Path,
+    chromium: Path,
+    seed: int,
+    *,
+    scenario: GateScenario | None = None,
+    evaluation_mode: str = "gates",
+) -> dict[str, Any]:
     if not candidate.is_dir() or candidate.is_symlink():
         raise WorkerError("candidate must be a real directory")
     if output.exists():
         raise WorkerError("browser output directory already exists")
     output.mkdir(parents=True)
-    scenario = build_balanced_gate_scenario(seed)
+    scenario = scenario or build_balanced_gate_scenario(seed)
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(
             executable_path=str(chromium),
@@ -269,13 +304,14 @@ def run_worker(candidate: Path, output: Path, chromium: Path, seed: int) -> dict
         )
         browser_version = browser.version
         evaluation, monitor, capture, errors, console, blocked = _monitor_and_capture(
-            browser, candidate, output, scenario
+            browser, candidate, output, scenario, evaluation_mode
         )
         browser.close()
     capture.update(
         {
             "browser": "chromium",
             "browser_version": browser_version,
+            "executable_sha256": _file_sha256(chromium),
             "playwright_version": package_version("playwright"),
         }
     )
@@ -307,9 +343,27 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--chromium", required=True, type=Path)
     parser.add_argument("--seed", type=int, default=17)
+    parser.add_argument("--scenario", type=Path)
+    parser.add_argument(
+        "--evaluation-mode",
+        choices=("gates", "conformance"),
+        default="gates",
+    )
     args = parser.parse_args(argv)
     try:
-        run_worker(args.candidate, args.output, args.chromium, args.seed)
+        scenario = None
+        if args.scenario is not None:
+            scenario = gate_scenario_from_dict(
+                json.loads(args.scenario.read_text(encoding="utf-8"))
+            )
+        run_worker(
+            args.candidate,
+            args.output,
+            args.chromium,
+            args.seed,
+            scenario=scenario,
+            evaluation_mode=args.evaluation_mode,
+        )
     except Exception as exc:
         print(f"browser worker failed: {type(exc).__name__}: {exc}")
         return 1
