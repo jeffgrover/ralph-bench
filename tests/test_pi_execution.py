@@ -104,15 +104,42 @@ class PiExecutionTests(unittest.TestCase):
             admission = InvocationAdmission(1, recorder)
             result = PiAttemptExecutor(context)(1, None, admission)
             self.assertTrue(admission.started)
-            self.assertTrue(runner.calls[0]["prompt"].startswith("/wiggum "))
+            self.assertEqual(runner.calls[0]["prompt"], "build the artifact")
             self.assertEqual(result.terminal_reason, "process_exited")
             self.assertIsNone(result.candidate_path)
             self.assertEqual(len(result.raw_evidence_refs), 3)
             models = json.loads((agent_dir / "models.json").read_text(encoding="utf-8"))
             self.assertEqual(models["providers"]["lmstudio"]["baseUrl"], "http://127.0.0.1:1234/v1")
+            self.assertEqual(models["providers"]["lmstudio"]["models"][0]["maxTokens"], 4096)
+            self.assertEqual(models["providers"]["lmstudio"]["models"][0]["contextWindow"], 32768)
+            settings = json.loads((agent_dir / "settings.json").read_text(encoding="utf-8"))
+            self.assertEqual(settings["httpIdleTimeoutMs"], 0)
             summary = json.loads((root / "raw/pi-wiggum-attempt-001.summary.json").read_text())
             self.assertEqual(summary["usage"]["total_tokens"], 52)
             self.assertEqual(summary["tool_calls"], 1)
+
+    def test_pi_completion_watcher_requires_a_new_or_changed_candidate(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspace = root / "workspace"
+            workspace.mkdir()
+            candidate = workspace / "index.html"
+            candidate.write_text("old", encoding="utf-8")
+            context = HarnessExecutionContext(
+                plan=InvocationPlan(("pi", "--mode", "json"), working_directory=str(workspace)),
+                workspace=workspace,
+                evidence_root=root / "raw",
+                prompt="repair",
+                environment={"PI_CODING_AGENT_DIR": str(root / "agent")},
+                timeout_seconds=1,
+                runner=_FakeRunner(),
+            )
+            executor = PiAttemptExecutor(context)
+            before = candidate.stat()
+            executor._candidate_marker = (before.st_mtime_ns, before.st_size, before.st_ino)
+            self.assertFalse(executor._candidate_changed())
+            candidate.write_text("rewritten candidate", encoding="utf-8")
+            self.assertTrue(executor._candidate_changed())
 
 
 if __name__ == "__main__":

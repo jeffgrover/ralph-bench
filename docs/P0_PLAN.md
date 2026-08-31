@@ -296,8 +296,10 @@ files or hang.
 ### WP0.5 — Current toolchain and local provider preflight
 
 **Status:** Implemented for Codex, Pi refresh fixtures, the LM Studio
-runtime/server/model transaction, and the native Pi-wiggum execution/evidence
-path; the first real Pi run remains pending model selection.
+runtime/server/model transaction, and the Pi-wiggum execution/evidence path.
+The first Gemma proving attempt reached browser evaluation but did not pass
+within the bounded repair budget. Controlled Pi and native Wiggum loops remain
+explicitly distinct.
 
 Build one generic, bounded preflight lifecycle that refreshes the selected
 harness and declared extensions, updates the installed local inference runtime

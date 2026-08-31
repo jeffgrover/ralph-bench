@@ -25,11 +25,11 @@ Codex CLI x ChatGPT-managed OpenAI access x gpt-5.6-luna
 It is a cloud-subscription path whose P0-A cost is explicitly unavailable;
 time, token, and attempt evidence remain reportable. Codex is refreshed to the
 most recent available release before a run and its exact version is recorded.
-The native Pi-wiggum execution and evidence path is now prepared behind the
-same conductor seam. Its first real run, using a local model served by LM
-Studio, will prove the local harness/provider path once a suitable model is
-selected. OpenRouter remains the next provider slice for billed and normalized
-reference pricing.
+The Pi-wiggum execution and evidence path is also prepared behind the same
+conductor seam. For controlled proving runs, Pi loads the installed Wiggum
+extension guards while Ralph owns the bounded repair loop and browser feedback;
+the Wiggum TPM prompt is reserved for `loop = "native"`. OpenRouter remains
+the next provider slice for billed and normalized reference pricing.
 
 P0-A targets a seam-complete Busy Intersection vertical slice. The Challenge
 Portability Fixture remains a small second-challenge boundary proof; it is not
@@ -122,18 +122,26 @@ The first P0-A contract spine is implemented and tested:
   interactive terminal, pressing `c` during a model attempt prints a local,
   content-free progress check (event/tool/error counts, latest event age,
   workspace size, and stderr size) without invoking another model.
+- Pi refreshes itself and its installed extension graph before a run, writes
+  scoped LM Studio provider configuration, and normalizes Pi JSONL evidence.
+  Controlled Pi attempts stop when a new `index.html` candidate is written;
+  browser/runtime failures become bounded semantic feedback for the one repair
+  attempt, without exposing private load values.
 
 `rb build` remains the unimplemented P0-A boundary. Static reporting is the
-next implementation wave after seam completion. Current-toolchain refresh and
-local-provider readiness are required run-preflight seams before model
-evaluation; discovery and `rb doctor` remain read-only.
+next implementation wave after seam completion. Functional eligibility,
+public conformance tooling, and challenge-adapter separation remain the main
+evaluation seams. Current-toolchain refresh and local-provider readiness are
+required run-preflight seams before model evaluation; discovery and `rb doctor`
+remain read-only.
 
-The remaining seam-completion wave is not yet implemented: evaluator eligibility
-must include capacity and recovery outcomes; public gates conformance and
-browser/runtime feedback must reach the repair loop; Busy-specific knowledge
-must move behind the challenge adapter; and harness execution must be created
-through the adapter boundary. Current-version Codex update preflight is now in
-the conductor; the Pi-wiggum/local execution path follows the remaining seams.
+The first local proving candidate was attempted with
+`gemma-4-12b-it-mlx`. It reached static and browser evaluation in one run but
+did not complete a passing repair within the bounded local model budget; no
+passing bundle was manufactured. That result is useful calibration: the local
+path and evaluator feedback seam are live, while this model still needs either
+a better tool-call strategy or a stronger model to clear the working-solution
+bar.
 
 ### Platform posture
 

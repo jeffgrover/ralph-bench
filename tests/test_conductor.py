@@ -24,12 +24,13 @@ from ralph_bench.capture_validation import PNG_SIGNATURE, WEBM_EBML_SIGNATURE
 from ralph_bench.conductor import (
     ProgressReporter,
     _AttemptProgress,
+    _browser_repair_check,
     _attempt_status,
     _interactive_check_loop,
     execute_experiment,
 )
 from ralph_bench.events import EventRecorder
-from ralph_bench.execution import HarnessAttemptResult, InvocationAdmission
+from ralph_bench.execution import HarnessAttemptResult, InvocationAdmission, PublicCheckResult
 from ralph_bench.experiments import parse_experiment
 from tests.test_experiments import cloud_raw
 
@@ -270,6 +271,31 @@ class ConductorTests(unittest.TestCase):
                     probe_context=ProbeContext(process_runner=failed),
                 )
             self.assertFalse((root / "inbox").exists())
+
+    def test_browser_repair_feedback_is_semantic_and_does_not_leak_private_values(self):
+        messages: list[str] = []
+        static = PublicCheckResult(True, {"summary": "static pass", "checks": []}, ())
+        result = _browser_repair_check(
+            static,
+            {
+                "outcome": "failed",
+                "assertions": [
+                    {
+                        "assertion_id": "warmup-car-service",
+                        "result": "fail",
+                        "detail": "completed 0 of 100; threshold was 75",
+                    }
+                ],
+            },
+            ProgressReporter(messages.append),
+            label="Run 1/1",
+        )
+        self.assertFalse(result.passed)
+        rendered = json.dumps(dict(result.feedback))
+        self.assertIn("warmup-car-service", rendered)
+        self.assertIn("move continuously", rendered)
+        self.assertNotIn("100", rendered)
+        self.assertNotIn("75", rendered)
 
     def test_local_pi_composition_uses_harness_factory_without_conductor_branch(self):
         with tempfile.TemporaryDirectory() as directory:

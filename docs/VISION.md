@@ -195,11 +195,13 @@ The initial live P0 composition is Codex CLI with ChatGPT-managed OpenAI access
 and `gpt-5.6-luna`. It is a flat-subscription cloud cohort whose cost is
 unavailable in P0-A; time, tokens, and attempts remain reportable. Codex is
 updated to the current available release before a run, with the exact version
-and executable identity recorded. After seam completion, Pi with the native
-Pi-wiggum extension and a local model served by LM Studio is the next real SUT
-used to prove the local harness/provider path. The Pi extension graph and LM
-Studio runtime/server/model identities are recorded as part of that SUT.
-OpenRouter remains the next metered provider implementation.
+and executable identity recorded. Pi with the installed Pi-wiggum extension
+and a local model served by LM Studio is the next real SUT used to prove the
+local harness/provider path. Controlled proving runs give Ralph ownership of
+the bounded browser-feedback repair pass; native Wiggum remains a distinct
+loop mode. The Pi extension graph and LM Studio runtime/server/model
+identities are recorded as part of that SUT. OpenRouter remains the next
+metered provider implementation.
 
 ## Core workflow
 

@@ -376,6 +376,7 @@ class HarnessAdapter(Protocol):
         sandbox: str = "workspace-write",
         working_directory: str | None = None,
         executable: str | None = None,
+        loop: str = "controlled",
     ) -> InvocationPlan: ...
 
     def create_attempt_executor(self, context: HarnessExecutionContext) -> Any: ...

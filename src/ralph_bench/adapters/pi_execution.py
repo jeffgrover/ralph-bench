@@ -201,7 +201,7 @@ def parse_pi_jsonl(
 
 
 class PiAttemptExecutor:
-    """Run one native Pi-wiggum invocation for the conductor loop."""
+    """Run one Pi invocation behind Ralph's bounded attempt boundary."""
 
     def __init__(
         self,
@@ -218,7 +218,22 @@ class PiAttemptExecutor:
         self.timeout_seconds = context.timeout_seconds
         self.secret_values = tuple(context.secret_values)
         self.provider_settings = dict(provider_settings or context.metadata.get("provider_settings", {}))
-        self.runner = runner or context.runner or SubprocessExecutor()
+        self.runner = runner or context.runner or SubprocessExecutor(
+            completion_check=self._candidate_changed
+        )
+
+    def _candidate_changed(self) -> bool:
+        """Return true only when this attempt has created or rewritten index.html."""
+
+        candidate = self.workspace / "index.html"
+        try:
+            current = candidate.stat()
+        except OSError:
+            return False
+        marker = getattr(self, "_candidate_marker", None)
+        if marker is None:
+            return True
+        return (current.st_mtime_ns, current.st_size, current.st_ino) != marker
 
     def _materialize_provider_config(self) -> None:
         agent_dir = Path(
@@ -248,9 +263,21 @@ class PiAttemptExecutor:
                 }
             }
         }
+        model = models["providers"][provider_name]["models"][0]
+        model.update(
+            {
+                # Keep the local proving context bounded. Gemma's reliable
+                # tool-writing behavior degrades when Pi is allowed to spend
+                # a long generation narrating a plan instead of editing.
+                "contextWindow": 32768,
+                "maxTokens": 4096,
+            }
+        )
         settings = {
             "defaultProvider": provider_name,
             "defaultModel": self.plan.model,
+            # Slow local inference should not be mistaken for a dead stream.
+            "httpIdleTimeoutMs": 0,
         }
         (agent_dir / "models.json").write_text(
             json.dumps(models, sort_keys=True, indent=2) + "\n", encoding="utf-8"
@@ -274,10 +301,6 @@ class PiAttemptExecutor:
             text += "\n\nEvaluator feedback (repair the current artifact):\n" + json.dumps(
                 dict(feedback), sort_keys=True, ensure_ascii=False
             )
-        # `/wiggum` is the installed pi-wiggum prompt-template entrypoint. The
-        # native workflow owns its internal planning/implementation loop;
-        # Ralph's controlled repair loop remains outside this executor.
-        text = "/wiggum " + text
         stdout_path = self.evidence_root / f"pi-wiggum-attempt-{attempt_number:03d}.jsonl"
         stderr_path = self.evidence_root / f"pi-wiggum-attempt-{attempt_number:03d}.stderr.txt"
         summary_path = self.evidence_root / f"pi-wiggum-attempt-{attempt_number:03d}.summary.json"
@@ -294,6 +317,13 @@ class PiAttemptExecutor:
         timeout = self.timeout_seconds() if callable(self.timeout_seconds) else self.timeout_seconds
         if timeout <= 0:
             raise PiExecutionError("Pi attempt budget is exhausted before process start")
+        candidate = self.workspace / "index.html"
+        try:
+            before = candidate.stat()
+        except OSError:
+            self._candidate_marker = None
+        else:
+            self._candidate_marker = (before.st_mtime_ns, before.st_size, before.st_ino)
         try:
             result = self.runner.run(
                 self.plan.argv,
@@ -317,6 +347,8 @@ class PiAttemptExecutor:
         summary_path.chmod(0o600)
         if result.timed_out:
             reason = "timeout"
+        elif result.termination == "completion_condition_process_group_terminated":
+            reason = "candidate_ready"
         elif result.returncode not in (0, None):
             reason = f"process_exited_{result.returncode}"
         elif result.returncode is None:

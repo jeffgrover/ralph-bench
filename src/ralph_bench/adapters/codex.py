@@ -244,7 +244,10 @@ class CodexHarnessAdapter:
         sandbox: str = "workspace-write",
         working_directory: str | None = None,
         executable: str | None = None,
+        loop: str = "controlled",
     ) -> InvocationPlan:
+        if loop not in {"controlled", "native"}:
+            raise ValueError(f"unsupported Codex loop: {loop}")
         efforts = {"none", "low", "medium", "high", "xhigh", "max"}
         if reasoning_effort not in efforts:
             raise ValueError(f"unsupported Codex reasoning effort: {reasoning_effort}")

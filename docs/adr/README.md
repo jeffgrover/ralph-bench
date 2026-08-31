@@ -23,3 +23,4 @@ the current toolchain-preflight policy is ADR 0015.
 | [0013](0013-minimal-gates-interface.md) | Replace the rich traffic bridge with evaluator-injected `gates/v1` arrivals, finishes, and monitoring. |
 | [0014](0014-seam-first-evaluation-and-active-harness.md) | Keep Busy Intersection primary, make eligibility precede performance, resolve current harness versions at run time, prove seams with Pi-wiggum/local execution, and defer reporting breadth until the seams are complete. |
 | [0015](0015-current-toolchain-preflight.md) | Refresh the selected harness, extensions, and local inference runtime before evaluation, verify provider readiness, and preserve exact toolchain provenance. |
+| [0016](0016-pi-controlled-proving-handoff.md) | Use a bounded controlled Pi handoff for local proving while retaining native Wiggum as a separate loop mode and preserving evaluator feedback boundaries. |

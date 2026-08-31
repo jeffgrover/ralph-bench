@@ -28,11 +28,13 @@ generic command harness + OpenAI-compatible provider + generic model profile
 Pi + Pi-wiggum workflow + local provider + local model profile
 ```
 
-The first composition established the initial live path. The native Pi-wiggum
+The first composition established the initial live path. The Pi/Wiggum local
 execution path is now prepared as the next real composition, using a local
 model served by LM Studio to prove that the contracts work beyond Codex.
 Wiggum is a native Pi extension, so its identity and dependency versions are
-part of the harness evidence. The other compositions illustrate the contract
+part of the harness evidence. Controlled proving runs use Pi's normal tool
+loop and Ralph's bounded repair boundary; the native Wiggum TPM template
+remains a distinct loop mode. The other compositions illustrate the contract
 and remain TBD.
 
 It must not produce cross-product implementations such as
@@ -335,8 +337,9 @@ capability resolver, generic model adapter, fake composition matrix, and the
 current-version Codex CLI + ChatGPT-managed access + `gpt-5.6-luna` path. That
 provider path supplies honest unavailable-cost evidence as described in
 [`COST_MODEL.md`](COST_MODEL.md). The Pi-wiggum/local execution path is now the
-next real composition used to prove the local path; its first run awaits model
-selection. OpenRouter reference/billing integration, arbitrary third-party
+next real composition used to prove the local path; its first Gemma proving
+attempt reached browser evaluation but did not pass within the bounded repair
+budget. OpenRouter reference/billing integration, arbitrary third-party
 loading, a complete model catalog, and every other real composition are
 post-P0/TBD.
 

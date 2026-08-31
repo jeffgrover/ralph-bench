@@ -77,12 +77,18 @@ class SubprocessExecutor:
         popen_factory: Callable[..., subprocess.Popen[Any]] = subprocess.Popen,
         monotonic: Callable[[], float] = time.monotonic,
         terminate_grace_seconds: float = 2.0,
+        completion_check: Callable[[], bool] | None = None,
+        completion_poll_seconds: float = 0.1,
     ) -> None:
         if terminate_grace_seconds <= 0:
             raise ValueError("terminate_grace_seconds must be positive")
+        if completion_poll_seconds <= 0:
+            raise ValueError("completion_poll_seconds must be positive")
         self._popen = popen_factory
         self._monotonic = monotonic
         self._terminate_grace = terminate_grace_seconds
+        self._completion_check = completion_check
+        self._completion_poll_seconds = completion_poll_seconds
 
     def run(
         self,
@@ -156,18 +162,50 @@ class SubprocessExecutor:
                         termination="timeout_process_group_terminated",
                         wall_seconds=self._monotonic() - start,
                     )
-                try:
-                    returncode = process.wait(timeout=remaining)
-                except subprocess.TimeoutExpired:
-                    self._terminate(process)
-                    return ProcessExecutionResult(
-                        process.returncode,
-                        spawned,
-                        prompt_delivered,
-                        timed_out=True,
-                        termination="timeout_process_group_terminated",
-                        wall_seconds=self._monotonic() - start,
-                    )
+                if self._completion_check is None:
+                    try:
+                        returncode = process.wait(timeout=remaining)
+                    except subprocess.TimeoutExpired:
+                        self._terminate(process)
+                        return ProcessExecutionResult(
+                            process.returncode,
+                            spawned,
+                            prompt_delivered,
+                            timed_out=True,
+                            termination="timeout_process_group_terminated",
+                            wall_seconds=self._monotonic() - start,
+                        )
+                else:
+                    returncode = None
+                    while process.poll() is None:
+                        try:
+                            if self._completion_check():
+                                self._terminate(process)
+                                return ProcessExecutionResult(
+                                    process.returncode,
+                                    spawned,
+                                    prompt_delivered,
+                                    termination="completion_condition_process_group_terminated",
+                                    wall_seconds=self._monotonic() - start,
+                                )
+                        except Exception:
+                            # A completion observer is advisory. Preserve the
+                            # normal process result if the observer itself
+                            # cannot inspect the workspace.
+                            pass
+                        elapsed = self._monotonic() - start
+                        if elapsed >= timeout_seconds:
+                            self._terminate(process)
+                            return ProcessExecutionResult(
+                                process.returncode,
+                                spawned,
+                                prompt_delivered,
+                                timed_out=True,
+                                termination="timeout_process_group_terminated",
+                                wall_seconds=elapsed,
+                            )
+                        time.sleep(min(self._completion_poll_seconds, timeout_seconds - elapsed))
+                    returncode = process.returncode
                 return ProcessExecutionResult(
                     returncode,
                     spawned,

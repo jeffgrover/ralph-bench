@@ -16,9 +16,11 @@ Do not reopen these without new evidence:
 - The initial live SUT is Codex CLI + ChatGPT subscription + GPT-5.6 Luna.
   Codex is refreshed to the most recent available release before a run and
   records the exact version and executable identity.
-- After the common seams are complete, Pi with the native Pi-wiggum extension
-  and a local model served by LM Studio is the next real SUT used to prove the
-  local harness/provider path.
+- Pi with the installed Pi-wiggum extension and a local model served by LM
+  Studio is the next real SUT used to prove the local harness/provider path.
+  Controlled proving runs use Pi's normal tool loop so Ralph can apply one
+  evaluator-controlled repair; the native Wiggum TPM prompt remains available
+  as a distinct `loop = "native"` mode.
 - P0 protection: portable L0/unsealed staging. Strong isolation-tool selection
   is deferred by [ADR 0012](adr/0012-defer-strong-isolation-backends.md).
 - Eligibility comes before performance comparison: a candidate must produce a
@@ -105,7 +107,7 @@ an undocumented interface.
 
 ### 0. Establish current-toolchain and local-provider preflight — implemented
 
-**Priority:** completed prerequisite; first real Pi-wiggum run is next
+**Priority:** completed prerequisite; local Pi proving run calibrated
 
 - Delivered a generic harness/provider lifecycle for current-toolchain refresh
   before the first model invocation. Codex uses `codex update`; Pi uses
@@ -126,6 +128,20 @@ an undocumented interface.
 explicitly proven current before evaluation; the selected model is prepared and
 verified on the serving provider; provider state is restored after the run; all
 toolchain evidence is attributable and no update can occur during an active run.
+
+### 0.1. Local Gemma proving result — calibrated, not yet passing
+
+- `gemma-4-12b-it-mlx` was exercised through Pi 0.84.4 with the installed
+  `pi-wiggum` and `pi-subagents` extension graph, after the required refresh
+  preflight.
+- The direct Pi tool path can create a candidate. The bounded conductor now
+  stops Pi when a new candidate entrypoint is written, so post-write model
+  narration does not consume the evaluation budget.
+- A candidate reached browser evaluation and received semantic repair feedback.
+  The model did not complete the repair within the bounded local model budget,
+  so this is an honest below-bar proving result rather than a passing score.
+- Continue model/tool-call calibration or select a stronger local model; do not
+  weaken the evaluator or fabricate a result bundle.
 
 ### 1. Correct the functional eligibility boundary
 

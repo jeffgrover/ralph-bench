@@ -248,6 +248,36 @@ class CodexExecutionTests(unittest.TestCase):
             payload = json.loads((root / "stdout.jsonl").read_text(encoding="utf-8"))
             self.assertEqual(payload["prompt"], "complete prompt\nwith a second line")
 
+    def test_subprocess_completion_condition_stops_after_candidate_write(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            cwd = root / "cwd"
+            cwd.mkdir()
+            runner = SubprocessExecutor(
+                terminate_grace_seconds=0.05,
+                completion_check=lambda: (cwd / "index.html").is_file(),
+            )
+            result = runner.run(
+                (
+                    sys.executable,
+                    "-c",
+                    "from pathlib import Path; import time; Path('index.html').write_text('ok'); time.sleep(30)",
+                ),
+                prompt="prompt",
+                cwd=cwd,
+                env={"PATH": "/usr/bin:/bin"},
+                stdout_path=root / "stdout.jsonl",
+                stderr_path=root / "stderr.txt",
+                timeout_seconds=5,
+                on_prompt_delivered=lambda: None,
+            )
+            self.assertFalse(result.timed_out)
+            self.assertEqual(
+                result.termination,
+                "completion_condition_process_group_terminated",
+            )
+            self.assertTrue((cwd / "index.html").is_file())
+
 
 if __name__ == "__main__":
     unittest.main()

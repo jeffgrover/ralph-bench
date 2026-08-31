@@ -442,7 +442,112 @@ def _public_check(
     )
 
 
-def _prompt_builder(base_prompt: str) -> tuple[
+def _browser_repair_detail(assertion_id: str) -> str:
+    """Map evaluator-owned failures to safe, actionable repair guidance.
+
+    The private judge may include exact counts, thresholds, and timing values.
+    Those are evidence for Ralph, not inputs to the model repair loop. Keep the
+    feedback semantic and bounded so a repair can target the broken contract
+    without leaking the scored schedule.
+    """
+
+    details = {
+        "gates-interface-ready": (
+            "Keep the gates/v1 registration active and register both arrival "
+            "callbacks with the evaluator's object-shaped arguments."
+        ),
+        "arrival-delivery": (
+            "Accept every evaluator-issued car and pedestrian promptly and "
+            "create a corresponding visible traveler."
+        ),
+        "completion-integrity": (
+            "Finish each evaluator traveler exactly once, using the requested "
+            "car exit, only after it visibly reaches that finish."
+        ),
+        "browser-runtime-stability": (
+            "Fix startup, console, and page runtime errors while keeping the "
+            "animation loop running."
+        ),
+        "offline-runtime": "Remove network dependencies; the artifact must run offline.",
+        "warmup-car-service": (
+            "Make evaluator-issued cars move continuously from their requested "
+            "entrances to their requested exits and notify Ralph at visible finish."
+        ),
+        "warmup-pedestrian-service": (
+            "Make evaluator-issued pedestrians move across their requested "
+            "crossings and notify Ralph at visible finish."
+        ),
+    }
+    return details.get(
+        assertion_id,
+        "Repair the evaluator-visible traveler behavior while preserving the "
+        "offline runtime and continuous animation.",
+    )
+
+
+def _browser_repair_check(
+    static: PublicCheckResult,
+    evaluation: Mapping[str, Any],
+    reporter: ProgressReporter,
+    *,
+    label: str,
+) -> PublicCheckResult:
+    """Combine static and browser outcomes into bounded repair feedback."""
+
+    assertions = evaluation.get("assertions", [])
+    failed_assertions: list[dict[str, Any]] = []
+    assertion_ids: list[str] = list(static.assertion_ids)
+    if isinstance(assertions, list):
+        for assertion in assertions:
+            if not isinstance(assertion, Mapping):
+                continue
+            assertion_id = assertion.get("assertion_id")
+            if not isinstance(assertion_id, str) or not assertion_id.strip():
+                continue
+            if assertion_id not in assertion_ids:
+                assertion_ids.append(assertion_id)
+            if assertion.get("result") == "fail":
+                failed_assertions.append(
+                    {
+                        "id": assertion_id,
+                        "result": "fail",
+                        "detail": _browser_repair_detail(assertion_id),
+                    }
+                )
+
+    passed = static.passed and evaluation.get("outcome") == "passed"
+    if passed:
+        reporter.emit(f"{label}: browser artifact checks passed")
+    else:
+        reporter.emit(f"{label}: browser artifact checks failed")
+    checks = [dict(item) for item in static.feedback.get("checks", [])]
+    checks.extend(failed_assertions)
+    if not checks:
+        checks.append(
+            {
+                "id": "browser-evaluation",
+                "result": "fail",
+                "detail": _browser_repair_detail("browser-evaluation"),
+            }
+        )
+    feedback = {
+        "summary": (
+            "The artifact passed static and browser checks."
+            if passed
+            else "Repair the existing artifact using these bounded evaluator checks."
+        ),
+        "checks": checks,
+    }
+    return PublicCheckResult(passed, feedback, tuple(assertion_ids))
+
+
+def _prompt_builder(
+    base_prompt: str,
+    *,
+    client: str,
+    workspace: Path,
+    public_challenge: Path,
+) -> tuple[
     Callable[[int, Mapping[str, Any] | None], str],
     dict[int, str],
     dict[int, Mapping[str, Any] | None],
@@ -451,16 +556,36 @@ def _prompt_builder(base_prompt: str) -> tuple[
     feedbacks: dict[int, Mapping[str, Any] | None] = {}
 
     def build(attempt: int, feedback: Mapping[str, Any] | None) -> str:
-        text = (
-            base_prompt.rstrip()
-            + "\n\nWork only in /workspace. Public challenge files are available "
-            "read-only at /public-challenge. Put the complete final static "
-            "submission directly in /workspace, including index.html.\n"
-        )
+        if client in {"pi", "harness/pi"}:
+            # The local 12B proving model is reliable with a short, imperative
+            # implementation handoff. The complete public prompt remains in
+            # the staged challenge pack and is preserved in the bundle; this
+            # compact wrapper keeps the model focused on the minimum viable
+            # artifact and the exact gate callback shapes.
+            text = (
+                "Use the write tool exactly once now to create index.html, then "
+                "stop. Do not explain or plan. Keep it under 3,500 characters: "
+                "standalone offline canvas animation showing a simple four-way "
+                "intersection, moving cars, and pedestrians. When "
+                "window.RalphGates exists, register carArrived({id,entersFrom,"
+                "exitsTo}) and pedestrianArrived({id,crossing,direction}); move "
+                "each received traveler across the canvas and call the matching "
+                "finish method exactly once when it leaves. Always animate. No "
+                "network, comments, libraries, or HUD.\n"
+            )
+        else:
+            text = (
+                base_prompt.rstrip()
+                + f"\n\nWork only in {workspace}. Public challenge files are available "
+                f"read-only at {public_challenge}. Put the complete final static "
+                f"submission directly in {workspace}, including index.html.\n"
+            )
         if feedback is not None:
             text += (
-                "\nThis is the single evaluator-controlled repair pass. Fix the "
-                "existing workspace in place using this public-check feedback:\n"
+                "\nThis is the single evaluator-controlled repair pass. Open the "
+                "existing index.html, fix it in place using the evaluator "
+                "feedback below, and do not replace the task with a different "
+                "artifact:\n"
                 + json.dumps(dict(feedback), ensure_ascii=False, sort_keys=True, indent=2)
                 + "\n"
             )
@@ -593,6 +718,7 @@ def _execute_one(
         "workspace-write",
         str(staged.workspace),
         str(client_executable),
+        loop=experiment.client_options.loop,
     )
     native_environment = _native_process_environment(
         scoped_home=staged.scoped_home,
@@ -618,7 +744,12 @@ def _execute_one(
         prompt_argument="-",
     )
     base_prompt = (staged.public_challenge / "prompt.txt").read_text(encoding="utf-8")
-    prompt_fn, attempt_prompts, attempt_feedback = _prompt_builder(base_prompt)
+    prompt_fn, attempt_prompts, attempt_feedback = _prompt_builder(
+        base_prompt,
+        client=experiment.client,
+        workspace=staged.workspace,
+        public_challenge=staged.public_challenge,
+    )
     deadline = time.monotonic() + experiment.budget.max_wall_seconds
     remaining = lambda: max(0.0, deadline - time.monotonic())
     executor_context = HarnessExecutionContext(
@@ -650,11 +781,67 @@ def _execute_one(
             evidence_prefix=native_plan.evidence_prefix,
         ),
     )
+    reporter.emit(f"{run_label}: monitoring gate completions and recording the overview")
+    browser_output = staged.conductor_root / "browser"
+    browser_artifacts: dict[str, tuple[BrowserEvaluationArtifacts, str]] = {}
+    browser_results_by_hash: dict[
+        str, tuple[BrowserEvaluationArtifacts, str, PublicCheckResult]
+    ] = {}
+
+    def check_candidate(path: Path) -> PublicCheckResult:
+        static = _public_check(path, reporter, label=run_label)
+        if not static.passed:
+            return static
+        artifact_hash = candidate_tree_hash(path)
+        cached = browser_results_by_hash.get(artifact_hash)
+        if cached is not None:
+            artifact, browser_ref, check = cached
+            browser_artifacts[str(path.resolve())] = (artifact, browser_ref)
+            reporter.emit(f"{run_label}: unchanged candidate reuses browser evaluation")
+            return check
+        attempt_number = len(browser_artifacts) + 1
+        browser_output.mkdir(parents=True, exist_ok=True)
+        artifact = run_browser_evaluation(
+            path,
+            browser_output / f"attempt-{attempt_number:03d}",
+            raw_evidence=raw_root / f"browser-attempt-{attempt_number:03d}",
+            timeout_seconds=90,
+            seed=seed,
+            chromium=chromium,
+            playwright_browsers_path=playwright_browsers_path,
+        )
+        raw_browser = raw_root / f"browser-evaluation-attempt-{attempt_number:03d}.json"
+        shutil.copyfile(artifact.result_path, raw_browser)
+        browser_ref = f"events/raw/{raw_browser.name}"
+        evaluation = artifact.result.get("evaluation")
+        if not isinstance(evaluation, Mapping):
+            raise ConductorError("browser worker returned malformed evaluation evidence")
+        browser_artifacts[str(path.resolve())] = (artifact, browser_ref)
+        recorder.record(
+            phase="private_evaluation",
+            event_type="gate_evaluation.completed",
+            source="browser-worker",
+            attempt=attempt_number,
+            payload={
+                "outcome": evaluation.get("outcome"),
+                "artifact_hash": candidate_tree_hash(path),
+                "wall_seconds": round(artifact.wall_seconds, 6),
+            },
+        )
+        check = _browser_repair_check(
+            static,
+            evaluation,
+            reporter,
+            label=run_label,
+        )
+        browser_results_by_hash[artifact_hash] = (artifact, browser_ref, check)
+        return check
+
+    # Browser evaluation is part of the controlled check now: a failed live
+    # artifact gets bounded, semantic feedback before the one repair attempt.
     loop = ControlledAttemptLoop(
         executor=executor,
-        public_checker=lambda path: _public_check(
-            path, reporter, label=run_label
-        ),
+        public_checker=check_candidate,
         attempt_store=attempt_store,
         recorder=recorder,
         max_attempts=experiment.budget.max_attempts,
@@ -670,37 +857,29 @@ def _execute_one(
             f"{run_label}: no preservable candidate was produced; evaluation did not start"
         )
     artifact_hash = candidate_tree_hash(candidate)
-
-    reporter.emit(f"{run_label}: monitoring gate completions and recording the overview")
-    browser_output = staged.conductor_root / "browser"
-    browser = run_browser_evaluation(
-        candidate,
-        browser_output,
-        raw_evidence=raw_root,
-        timeout_seconds=90,
-        seed=seed,
-        chromium=chromium,
-        playwright_browsers_path=playwright_browsers_path,
-    )
-    raw_browser = raw_root / "browser-evaluation.json"
-    shutil.copyfile(browser.result_path, raw_browser)
-    browser_ref = "events/raw/browser-evaluation.json"
+    browser_entry = browser_artifacts.get(str(candidate.resolve()))
+    if browser_entry is None:
+        # A repair can time out or fail after the first candidate has already
+        # reached the evaluator. Preserve that evaluated candidate and its
+        # evidence instead of discarding a legitimate failed run.
+        if not browser_artifacts:
+            staged.cleanup()
+            raise ConductorError(
+                f"{run_label}: selected candidate was not browser-evaluated; evaluation did not complete"
+            )
+        selected_key, browser_entry = next(reversed(browser_artifacts.items()))
+        candidate = Path(selected_key)
+        artifact_hash = candidate_tree_hash(candidate)
+        reporter.emit(
+            f"{run_label}: repair candidate was not evaluated; preserving the last evaluated candidate"
+        )
+    browser, browser_ref = browser_entry
     evaluation = browser.result["evaluation"]
     if not isinstance(evaluation, dict):
         staged.cleanup()
         raise ConductorError("browser worker returned malformed evaluation evidence")
     evaluation = _browser_refs(evaluation, browser_ref)
     assert isinstance(evaluation, dict)
-    recorder.record(
-        phase="private_evaluation",
-        event_type="gate_evaluation.completed",
-        source="browser-worker",
-        payload={
-            "outcome": evaluation.get("outcome"),
-            "artifact_hash": artifact_hash,
-            "wall_seconds": round(browser.wall_seconds, 6),
-        },
-    )
 
     usage = _usage(raw_root)
     raw_refs = tuple(

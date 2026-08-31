@@ -102,7 +102,7 @@ class PiHarnessAdapter:
         capabilities=("jsonl-events", "native-loop", "explicit-model", "local-provider"),
         detection="executable",
         limitations=(
-            "Pi-wiggum is a native extension workflow; its first live proving run awaits model selection",
+            "Pi-wiggum is installed and refreshed as a Pi extension; controlled proving runs use Pi's normal tool loop so evaluator feedback can drive one bounded repair",
         ),
     )
 
@@ -294,7 +294,7 @@ class PiHarnessAdapter:
     def option_schema(self) -> dict[str, object]:
         return {
             "reasoning_effort": {"values": ("none", "low", "medium", "high", "xhigh", "max")},
-            "loop": {"values": ("native",)},
+            "loop": {"values": ("controlled", "native")},
         }
 
     def plan(
@@ -304,7 +304,10 @@ class PiHarnessAdapter:
         sandbox: str = "workspace-write",
         working_directory: str | None = None,
         executable: str | None = None,
+        loop: str = "native",
     ) -> InvocationPlan:
+        if loop not in {"controlled", "native"}:
+            raise ValueError(f"unsupported Pi loop: {loop}")
         if reasoning_effort not in {"none", "low", "medium", "high", "xhigh", "max"}:
             raise ValueError(f"unsupported Pi thinking level: {reasoning_effort}")
         if sandbox not in {"read-only", "workspace-write"}:
@@ -319,6 +322,19 @@ class PiHarnessAdapter:
             "--model", model,
             "--thinking", "off" if reasoning_effort == "none" else reasoning_effort,
         ]
+        if loop == "controlled":
+            # The proving prompt only needs one mutation primitive. Keeping
+            # the tool schema narrow gives a small local model more context
+            # for the artifact itself and prevents it from wandering into
+            # planning/subagent work before the evaluator can check it.
+            argv_parts.extend(
+                (
+                    "--tools",
+                    "write",
+                    "--system-prompt",
+                    "You are a direct file-writing assistant. Use exactly one complete write tool call immediately for the user's requested artifact. Never explain, plan, think aloud, or emit a second turn. Keep index.html under 3500 characters, concise and functional.",
+                )
+            )
         resources = (
             self.extension_root / "extensions" / "plan-mode-guard.ts",
             self.extension_root / "extensions" / "stop-guard.ts",
@@ -330,11 +346,12 @@ class PiHarnessAdapter:
                 argv_parts.extend(("--extension", str(resource)))
             else:
                 warnings.append(f"Pi native resource is missing: {resource.name}")
-        prompt_template = self.extension_root / "prompts" / "wiggum.md"
-        if prompt_template.is_file():
-            argv_parts.extend(("--prompt-template", str(prompt_template)))
-        else:
-            warnings.append("Pi-wiggum prompt template is missing")
+        if loop == "native":
+            prompt_template = self.extension_root / "prompts" / "wiggum.md"
+            if prompt_template.is_file():
+                argv_parts.extend(("--prompt-template", str(prompt_template)))
+            else:
+                warnings.append("Pi-wiggum prompt template is missing")
         return InvocationPlan(
             argv=tuple(argv_parts),
             model=model,

@@ -308,10 +308,11 @@ P0 includes:
 
 P0 does not require universal discovery across every legacy client or a live
 online catalog of every provider model. The Pi-wiggum/local execution path is
-implemented behind the shared experiment and adapter contracts; its first real
-run remains pending selection of a suitable local model. Additional adapters
-may improve their discovery capabilities incrementally without changing the
-experiment schema.
+implemented behind the shared experiment and adapter contracts. Its controlled
+proving mode uses Pi's normal tool loop plus Ralph's bounded browser-feedback
+repair pass; its native Wiggum prompt remains a separate loop mode. Additional
+adapters may improve their discovery capabilities incrementally without
+changing the experiment schema.
 
 ## Acceptance tests
 
