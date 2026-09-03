@@ -62,7 +62,10 @@ ProcessRunner = Callable[[tuple[str, ...], float], ProcessResult]
 
 @dataclass(frozen=True)
 class ProbeContext:
-    timeout_seconds: float = 3.0
+    # Toolchain refreshes (notably `codex update`) may download a release and
+    # legitimately take longer than a lightweight status probe. Keep the
+    # bound finite while allowing the normal update path to complete.
+    timeout_seconds: float = 30.0
     executable: str | None = None
     process_runner: ProcessRunner | None = None
     metadata: Mapping[str, Any] = field(default_factory=dict)

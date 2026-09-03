@@ -16,6 +16,7 @@ import stat
 import tempfile
 import unicodedata
 import zipfile
+import zlib
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Mapping, Optional, Sequence
@@ -700,10 +701,24 @@ def _write_deterministic_zip(payload: Mapping[str, Path], destination: Path,
             info.create_system = 3
             info.create_version = info.extract_version = 20
             info.flag_bits = 0x800
-            info.compress_type = zipfile.ZIP_DEFLATED
+            # Highly repetitive model-generated HTML/JSON can compress beyond
+            # the validator's zip-bomb ratio limit. Store such legitimate
+            # entries instead of weakening that safety limit.
+            compressed_size = len(zlib.compress(data, level=9)) if data else 0
+            compression = (
+                zipfile.ZIP_STORED
+                if data and compressed_size and len(data) / compressed_size > limits.max_compression_ratio
+                else zipfile.ZIP_DEFLATED
+            )
+            info.compress_type = compression
             info.external_attr = 0o100644 << 16
             info.extra = info.comment = b""
-            archive.writestr(info, data, compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+            archive.writestr(
+                info,
+                data,
+                compress_type=compression,
+                compresslevel=9 if compression == zipfile.ZIP_DEFLATED else None,
+            )
         info = zipfile.ZipInfo(CHECKSUMS_NAME, (1980, 1, 1, 0, 0, 0))
         info.create_system = 3
         info.create_version = info.extract_version = 20
