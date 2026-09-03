@@ -45,7 +45,7 @@ class ContractIntegrationTests(unittest.TestCase):
                 )
                 return HarnessAttemptResult(candidate, "process_exited")
 
-            def check(preserved):
+            def check(_attempt_number, preserved):
                 passed = (
                     preserved / "index.html"
                 ).read_text(encoding="utf-8") == "attempt 2"

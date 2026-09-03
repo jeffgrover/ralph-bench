@@ -25,6 +25,7 @@ from ralph_bench.conductor import (
     ProgressReporter,
     _AttemptProgress,
     _browser_repair_check,
+    _ModelWorkBudget,
     _attempt_status,
     _interactive_check_loop,
     execute_experiment,
@@ -410,6 +411,20 @@ class ConductorTests(unittest.TestCase):
         self.assertEqual(sum("still running" in item for item in output), 1)
         self.assertIn("starting initial model attempt 1/2", "\n".join(output))
         self.assertIn("model attempt 1 finished", "\n".join(output))
+
+    def test_model_budget_excludes_public_check_wall_time(self):
+        now = [10.0]
+        budget = _ModelWorkBudget(100, clock=lambda: now[0])
+        budget.start()
+        now[0] += 25
+        self.assertEqual(budget.remaining(), 75)
+        budget.stop()
+        now[0] += 300  # Evaluator/browser work between model attempts.
+        self.assertEqual(budget.remaining(), 75)
+        budget.start()
+        now[0] += 5
+        budget.stop()
+        self.assertEqual(budget.consumed, 30)
 
     def test_local_attempt_check_summarizes_structure_without_model_content(self):
         with tempfile.TemporaryDirectory() as directory:

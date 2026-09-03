@@ -208,6 +208,7 @@ class PublicCheckResult:
     passed: bool
     feedback: Mapping[str, Any] = field(default_factory=dict)
     assertion_ids: tuple[str, ...] = ()
+    raw_evidence_refs: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         try:
@@ -229,8 +230,16 @@ class PublicCheckResult:
             assertions
         ):
             raise ExecutionError("public assertion IDs must be non-empty and unique")
+        references = tuple(self.raw_evidence_refs)
+        if any(not item.strip() for item in references) or len(set(references)) != len(
+            references
+        ):
+            raise ExecutionError(
+                "public-check evidence references must be non-empty and unique"
+            )
         object.__setattr__(self, "feedback", MappingProxyType(detached))
         object.__setattr__(self, "assertion_ids", assertions)
+        object.__setattr__(self, "raw_evidence_refs", references)
 
 
 @dataclass(frozen=True, slots=True)
@@ -260,7 +269,9 @@ class AttemptExecutor(Protocol):
 
 
 class PublicChecker(Protocol):
-    def __call__(self, candidate_path: Path) -> PublicCheckResult: ...
+    def __call__(
+        self, attempt_number: int, candidate_path: Path
+    ) -> PublicCheckResult: ...
 
 
 class InvocationAdmission:
@@ -418,6 +429,7 @@ class AttemptRecord:
     candidate_tree_hash: str | None
     public_check: PublicCheckResult | None
     raw_evidence_refs: tuple[str, ...]
+    public_check_evidence_refs: tuple[str, ...] = ()
     failure: AttemptFailure | None = None
 
 
@@ -509,7 +521,7 @@ class ControlledAttemptLoop:
                     failure = AttemptFailure("candidate_preservation", type(exc).__name__)
                 if preserved_path is not None:
                     try:
-                        check = self._public_checker(preserved_path)
+                        check = self._public_checker(attempt_number, preserved_path)
                         accepted = check.passed
                     except Exception as exc:
                         failure = AttemptFailure("public_check", type(exc).__name__)
@@ -523,6 +535,9 @@ class ControlledAttemptLoop:
                 candidate_tree_hash=tree_hash,
                 public_check=check,
                 raw_evidence_refs=result.raw_evidence_refs,
+                public_check_evidence_refs=(
+                    () if check is None else check.raw_evidence_refs
+                ),
                 failure=failure,
             )
             records.append(record)

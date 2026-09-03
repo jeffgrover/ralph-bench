@@ -177,15 +177,15 @@ class GateScenario:
 
 
 def balanced_stages() -> tuple[DemandStage, ...]:
-    """Short wall-clock stages for P0 calibration and recorded review."""
+    """Wall-clock stages long enough to observe a complete visual signal cycle."""
 
     return (
-        DemandStage("warmup", 0, 8_000, 30, 8),
-        DemandStage("load-1", 8_000, 16_000, 60, 15),
-        DemandStage("load-2", 16_000, 24_000, 90, 20),
-        DemandStage("load-3", 24_000, 32_000, 120, 25),
-        DemandStage("load-4", 32_000, 40_000, 150, 30),
-        DemandStage("cooldown", 40_000, 50_000, 0, 0, False, True),
+        DemandStage("warmup", 0, 20_000, 15, 3),
+        DemandStage("load-1", 20_000, 40_000, 30, 6),
+        DemandStage("load-2", 40_000, 60_000, 45, 9),
+        DemandStage("load-3", 60_000, 80_000, 60, 12),
+        DemandStage("load-4", 80_000, 100_000, 90, 18),
+        DemandStage("cooldown", 100_000, 130_000, 0, 0, False, True),
     )
 
 

@@ -182,7 +182,10 @@ def _monitor_and_capture(
             arrivals = _arrival_schedule(scenario)
             next_arrival = 0
             run_started = time.monotonic()
-            poster_target = 34_000
+            final_load_stage = next(
+                item for item in reversed(scenario.stages) if not item.cooldown
+            )
+            poster_target = final_load_stage.start_ms + final_load_stage.duration_ms // 2
             while True:
                 elapsed_ms = min(
                     scenario.horizon_ms,

@@ -143,8 +143,8 @@ class GateThresholds:
     minimum_warmup_completion_ratio: float = 0.75
     minimum_warmup_pedestrian_ratio: float = 0.5
     stage_completion_ratio: float = 0.70
-    completion_grace_ms: int = 3_000
-    maximum_backlog_fraction: float = 0.50
+    completion_grace_ms: int = 10_000
+    maximum_backlog_fraction: float = 0.60
 
 
 @dataclass(frozen=True, slots=True)

@@ -92,7 +92,7 @@ class ExecutionTests(unittest.TestCase):
                 )
                 return HarnessAttemptResult(live_candidate, "process_exited")
 
-            def check(candidate):
+            def check(_attempt_number, candidate):
                 content = (candidate / "index.html").read_text(encoding="utf-8")
                 passed = content == "attempt 2"
                 return PublicCheckResult(
@@ -134,7 +134,7 @@ class ExecutionTests(unittest.TestCase):
 
             result = ControlledAttemptLoop(
                 executor=execute,
-                public_checker=lambda _path: self.fail("checker must not run"),
+                public_checker=lambda _number, _path: self.fail("checker must not run"),
                 attempt_store=AttemptStore(Path(temporary) / "attempts"),
                 recorder=EventRecorder(IncrementingClock()),
             ).run()
@@ -154,7 +154,7 @@ class ExecutionTests(unittest.TestCase):
             recorder = EventRecorder(IncrementingClock())
             result = ControlledAttemptLoop(
                 executor=execute,
-                public_checker=lambda _path: self.fail("checker must not run"),
+                public_checker=lambda _number, _path: self.fail("checker must not run"),
                 attempt_store=AttemptStore(Path(temporary) / "attempts"),
                 recorder=recorder,
             ).run()
@@ -182,7 +182,7 @@ class ExecutionTests(unittest.TestCase):
 
             ControlledAttemptLoop(
                 executor=execute,
-                public_checker=lambda _path: self.fail("checker must not run"),
+                public_checker=lambda _number, _path: self.fail("checker must not run"),
                 attempt_store=AttemptStore(Path(temporary) / "attempts"),
                 recorder=EventRecorder(IncrementingClock()),
             ).run()

@@ -42,6 +42,14 @@ stops so recovery can be observed. The exact scored schedule and thresholds are
 not public inputs. Ralph records the same live run it monitors; reported
 finishes must agree with visible behavior.
 
+After each attempt Ralph runs the small unscored schedule in
+scenario-pack.json to verify offline loading, callback registration, arrival
+delivery, both finish-notification paths and browser runtime health. If it
+fails and a repair attempt remains, you receive the observed public diagnostics
+before repairing the same workspace. Browser launch may be restricted inside
+the coding harness; do not substitute a hand-built browser probe. The public
+check does not reveal or predict the scored load.
+
 You may choose a confident 2D, 2.5D or 3D direction. Make the composition,
 typography, palette, motion, controls and information hierarchy intentional.
 Visual polish is reviewed separately from measurable service and throughput;

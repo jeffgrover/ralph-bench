@@ -116,6 +116,54 @@ class ProgressReporter:
             self._output(f"[rb {minutes:02d}:{seconds:02d}] {message}")
 
 
+class _ModelWorkBudget:
+    """Count only time spent inside model/harness attempts, not judging."""
+
+    def __init__(
+        self,
+        maximum_seconds: float,
+        *,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
+        if maximum_seconds <= 0:
+            raise ValueError("model work budget must be positive")
+        self._maximum = float(maximum_seconds)
+        self._clock = clock
+        self._consumed = 0.0
+        self._active_since: float | None = None
+        self._lock = threading.Lock()
+
+    def start(self) -> None:
+        with self._lock:
+            if self._active_since is not None:
+                raise RuntimeError("model work budget is already active")
+            self._active_since = self._clock()
+
+    def stop(self) -> float:
+        with self._lock:
+            if self._active_since is None:
+                raise RuntimeError("model work budget is not active")
+            elapsed = max(0.0, self._clock() - self._active_since)
+            self._consumed += elapsed
+            self._active_since = None
+            return elapsed
+
+    def remaining(self) -> float:
+        with self._lock:
+            consumed = self._consumed
+            if self._active_since is not None:
+                consumed += max(0.0, self._clock() - self._active_since)
+            return max(0.0, self._maximum - consumed)
+
+    @property
+    def consumed(self) -> float:
+        with self._lock:
+            consumed = self._consumed
+            if self._active_since is not None:
+                consumed += max(0.0, self._clock() - self._active_since)
+            return consumed
+
+
 def _format_byte_count(value: int) -> str:
     if value < 1024:
         return f"{value} B"
@@ -285,6 +333,7 @@ class _AttemptProgress:
         heartbeat_seconds: float = 60.0,
         input_stream: Any | None = None,
         status_provider: Callable[[int], str] | None = None,
+        model_budget: _ModelWorkBudget | None = None,
     ) -> None:
         self._executor = executor
         self._reporter = reporter
@@ -294,6 +343,7 @@ class _AttemptProgress:
         self._heartbeat_seconds = heartbeat_seconds
         self._input_stream = input_stream
         self._status_provider = status_provider
+        self._model_budget = model_budget
 
     def __call__(
         self,
@@ -343,6 +393,8 @@ class _AttemptProgress:
                     f"{self._run_label}: press c to check local progress; Ctrl-C cancels"
                 )
         started = time.monotonic()
+        if self._model_budget is not None:
+            self._model_budget.start()
         try:
             result = self._executor(attempt_number, feedback, admission)
         except Exception:
@@ -351,6 +403,8 @@ class _AttemptProgress:
             )
             raise
         finally:
+            if self._model_budget is not None:
+                self._model_budget.stop()
             stop.set()
             thread.join(timeout=0.2)
             if check_thread is not None:
@@ -591,8 +645,8 @@ def _execute_one(
         workspace=staged.workspace,
         public_challenge=staged.public_challenge,
     )
-    deadline = time.monotonic() + experiment.budget.max_wall_seconds
-    remaining = lambda: max(0.0, deadline - time.monotonic())
+    model_budget = _ModelWorkBudget(experiment.budget.max_wall_seconds)
+    remaining = model_budget.remaining
     executor_context = HarnessExecutionContext(
         plan=plan,
         workspace=staged.workspace,
@@ -621,6 +675,7 @@ def _execute_one(
             attempt_number,
             evidence_prefix=native_plan.evidence_prefix,
         ),
+        model_budget=model_budget,
     )
     reporter.emit(f"{run_label}: monitoring gate completions and recording the overview")
     browser_output = staged.conductor_root / "browser"
@@ -629,8 +684,11 @@ def _execute_one(
         str, tuple[BrowserEvaluationArtifacts, str, PublicCheckResult]
     ] = {}
     public_conformance_by_hash: dict[str, tuple[Mapping[str, Any], str]] = {}
+    evaluation_timeout = max(
+        90.0, challenge_run.scenario.horizon_ms / 1_000 + 45.0
+    )
 
-    def check_candidate(path: Path) -> PublicCheckResult:
+    def check_candidate(attempt_number: int, path: Path) -> PublicCheckResult:
         static = challenge_adapter.public_check(path, reporter, label=run_label)
         if not static.passed:
             return static
@@ -641,14 +699,13 @@ def _execute_one(
             browser_artifacts[str(path.resolve())] = (artifact, browser_ref)
             reporter.emit(f"{run_label}: unchanged candidate reuses browser evaluation")
             return check
-        attempt_number = len(browser_artifacts) + 1
         browser_output.mkdir(parents=True, exist_ok=True)
         artifact = challenge_adapter.evaluate(
             challenge_run,
             path,
             browser_output / f"attempt-{attempt_number:03d}",
             raw_evidence=raw_root / f"browser-attempt-{attempt_number:03d}",
-            timeout_seconds=90,
+            timeout_seconds=evaluation_timeout,
             chromium=chromium,
             playwright_browsers_path=playwright_browsers_path,
         )
@@ -677,7 +734,7 @@ def _execute_one(
             path,
             public_output,
             raw_evidence=public_raw_evidence,
-            timeout_seconds=90,
+            timeout_seconds=evaluation_timeout,
             chromium=chromium,
             playwright_browsers_path=playwright_browsers_path,
         )
@@ -722,9 +779,8 @@ def _execute_one(
         recorder=recorder,
         max_attempts=experiment.budget.max_attempts,
     )
-    loop_started = time.monotonic()
     loop_result = loop.run()
-    agent_wall = time.monotonic() - loop_started
+    agent_wall = model_budget.consumed
 
     candidate = loop_result.selected_candidate_path
     if candidate is None:
@@ -804,6 +860,7 @@ def _execute_one(
                 "passed": check.passed,
                 "status": "complete",
                 "assertion_ids": list(check.assertion_ids),
+                "evidence_refs": list(check.raw_evidence_refs),
                 **dict(check.feedback),
             }
         )
@@ -818,6 +875,9 @@ def _execute_one(
                     "generation_started_evidence": record.invocation_evidence_ref,
                     "candidate_tree_hash": record.candidate_tree_hash,
                     "raw_evidence_refs": list(record.raw_evidence_refs),
+                    "public_check_evidence_refs": list(
+                        record.public_check_evidence_refs
+                    ),
                     "failure": (
                         None
                         if record.failure is None
