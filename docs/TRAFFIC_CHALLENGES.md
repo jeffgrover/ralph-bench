@@ -1,9 +1,15 @@
 # Traffic Challenge Specifications
 
-**Status:** Accepted
-**Date:** 2026-08-23
-**Initial protocol:** `gates/v1` for Busy Intersection; future challenges may
-define additional versioned protocols through the challenge boundary.
+**Status:** Accepted direction, amended by [ADR 0017](adr/0017-traffic-validity-before-performance.md)
+**Updated:** 2026-09-05
+**Executable challenge:** `busy-intersection/v1`, using `gates/v1`.
+**Refactor target:** `busy-intersection/v2`, retaining `gates/v1`.
+
+The Busy Intersection requirements below define the v2 target. They are not
+implemented acceptance checks yet. The v1 public pack, registry, evaluator,
+and historical results retain their original meaning until the staged
+[refactor](NEXT_STEPS.md#refactor-phases) is complete. A current `passed` or
+`performance_eligible` result does not establish physical traffic validity.
 
 ## Design intent
 
@@ -34,6 +40,47 @@ contract, and acceptance criteria. It should not prescribe filenames beyond a
 single browser entry point, implementation passes, class names, global
 variables, or a reference architecture.
 
+## Traffic model
+
+A traffic simulation moves finite bodies through shared space over time,
+subject to geometry, other travelers, and right of way. Moving sprites or
+acknowledging requests is insufficient. These terms describe required
+behavior; they are not additional API objects or prescribed code classes.
+
+| Term | Meaning and owner |
+|---|---|
+| World | Roads, directed lanes, permitted turning paths, stop lines, crosswalks, and sidewalks in meters. The challenge bounds the infrastructure; the artifact implements it. |
+| Traveler | A car or pedestrian with an occupied footprint, position, direction, and motion. The artifact maintains one continuous traveler for each admitted request. |
+| Trip request | Evaluator-issued identity and destination. A request remains outstanding while waiting to enter and while traveling. |
+| Dynamics | Motion constrained by available space, speed limits, other travelers, and signals. The artifact chooses its algorithms. |
+| Right of way | Permission to enter a movement or crossing. Permission never allows a collision or entry into a blocked exit. |
+| Scenario | Evaluator-owned arrivals, timing, load stages, and recovery demand. The artifact cannot select or discard its workload. |
+
+A request waits outside the modeled road until entry space is available; it
+must not spawn on another traveler. Once admitted, it occupies road or
+crosswalk space until its whole footprint reaches the requested destination.
+An on-road queue contains actual bodies. Ralph's **outstanding demand** also
+includes requests waiting to enter; it is not a measurement of queue length.
+No request may be silently dropped, teleported, or acknowledged without travel.
+
+## Required traffic validity
+
+Every rule applies during warm-up, held load, overload, and recovery. Overload
+may increase waiting and reduce service; it never relaxes these requirements.
+
+| Requirement | Passing behavior | Deliberate counterexample |
+|---|---|---|
+| Collision avoidance | Car bodies never contact or overlap other cars or pedestrian footprints, including during spawning, turns, braking, and queues. Separate center points are insufficient. | Crossing cars intersect; a turning car passes through a pedestrian. |
+| Signal compliance | Cars obey the movement signals and stop lines; pedestrians obey crossing phases. Visible signals govern actual motion. | A car enters on red while an unrelated signal animation changes color. |
+| Lane discipline | The whole car follows its directed lane or a continuous permitted turn into the correct receiving lane. | A car cuts over a sidewalk, crosses into opposing approach traffic, or changes position to bypass a queue. |
+| Physical scale | Rendered bodies, occupied footprints, lane geometry, and motion share the public physical units and bounds below. | Tiny collision bodies under large sprites, shrinking cars under load, or oversized lanes. |
+| Trip integrity | Each accepted finish corresponds to the full requested trip in the evaluated world. | The callback immediately reports completion, or a car disappears before reaching its exit. |
+
+An observed violation fails traffic validity regardless of throughput or
+appearance. Absence of a detected violation is not automatically a pass.
+Evidence that cannot establish the required behavior remains pending or
+unverifiable under the [measurement model](MEASUREMENT_MODEL.md#eligibility-before-performance).
+
 ## Shared artifact contract
 
 ### Entrypoint and runtime
@@ -53,12 +100,12 @@ variables, or a reference architecture.
 
 ```javascript
 RalphGates.register({
-  carArrived({ id, entersFrom, exitsTo }) { /* add the requested car */ },
-  pedestrianArrived({ id, crossing, direction }) { /* add the pedestrian */ }
+  carArrived({ id, entersFrom, exitsTo }) { /* retain request; admit when safe */ },
+  pedestrianArrived({ id, crossing, direction }) { /* retain request; admit when safe */ }
 });
 
-RalphGates.carFinished(id, exit);
-RalphGates.pedestrianFinished(id);
+RalphGates.carFinished(id, exit); // whole car has cleared the requested exit
+RalphGates.pedestrianFinished(id); // whole pedestrian has reached the far sidewalk
 ```
 
 Vehicle entrances and exits are `north`, `east`, `south`, and `west`; evaluator
@@ -129,21 +176,23 @@ throughput and latency from its own timestamps rather than candidate counters.
 An artifact that does not register the two callbacks is `unmeasurable`, not a
 zero-throughput simulation.
 
-### Physical interpretation
+### What gates establish
 
-P0 `gates/v1` deliberately does not standardize vehicle dimensions,
-acceleration, braking, or internal geometry. Plausibility, safety, visible
-agreement with finish notifications, and attempts to inflate throughput using
-teleportation or implausible scale are reviewed from the recorded run. Later
-versions may add optional traveler attributes when pilot evidence justifies
-them; they must not complicate v1 retroactively.
+The ledger validates identity, kind, destination, uniqueness, and notification
+timing. It cannot establish that a body traveled, avoided a collision, stayed
+in a lane, obeyed a signal, or used realistic dimensions. Physical constraints
+belong to the challenge revision; retaining `gates/v1` does not waive them.
+Candidate counters, scale labels, and claims are not independent verification.
 
 ## Challenge A: Busy Intersection
 
 ### Audience
 
-Local and smaller models, with a shorter wall-time budget and several repeated
-runs.
+The same traffic task applies to local and cloud models. Model-work budgets
+and client tool policies are explicit experiment settings. A limited local
+model receives the complete challenge and an honest failure or incomplete
+result if it cannot satisfy it. Adapter-specific handoffs must not replace the
+simulation with a smaller animation assignment.
 
 ### Experience
 
@@ -168,7 +217,8 @@ experience rather than a debugging canvas.
 - Continuous lane-following and turning motion.
 - Queuing, braking, starting, and bounded vehicle spacing.
 - Evaluator-supplied car and pedestrian arrival callbacks.
-- Pause, reset, simulation speed, and visible basic status.
+- Visible basic status; optional demo controls obey the evaluation-time rules
+  below.
 - A useful default view from which behavior is understandable.
 
 ### Visual opportunity
@@ -193,25 +243,112 @@ instrumentation.
 
 ### Infrastructure envelope
 
-The P0-A manifest will fix the footprint, maximum lanes per approach, stop-line
-regions, crossing regions, vehicle dimensions, and road speed. No grade
-separation is permitted. Exact lane allocation within the budget remains an
-artifact design choice until calibration shows whether stronger normalization
-is needed.
+These are the public v2 baseline for fixture calibration. They are benchmark
+choices, not a claim to reproduce every road or vehicle. Freeze them in the
+v2 public pack before activation; do not reuse v1 load thresholds without
+calibration. Changes after activation require a new challenge revision.
+
+| Property | Baseline and allowed variation |
+|---|---|
+| Modeled footprint | 120 m by 120 m, centered on one at-grade four-way intersection. Four vehicle entrance/exit gates lie at the road ends on the boundary, 60 m from the center. Decorative scenery cannot add road storage. |
+| Lane budget | Right-hand traffic; one inbound and one outbound lane on each approach. No extra turn lanes, bypasses, grade separation, or hidden roads. |
+| Lane width | 3.3 m nominal; 3.2–3.4 m allowed. Width is the usable travel lane, excluding sidewalks and decorative shoulders. |
+| Car body | 4.6 m long by 1.8 m wide nominal; length 4.4–4.8 m and width 1.7–1.9 m allowed. The collision footprint covers the visible body. |
+| Pedestrian footprint | A ground footprint at least 0.6 m across. Car/pedestrian separation uses this occupied space, not a point. |
+| Crossing and stop-line regions | One marked crosswalk across each approach, centered 8–12 m from the junction center and 3 m wide along the road. Stop lines lie 14–18 m from the center, before the crosswalk in the incoming direction. |
+| Speed bounds | Cars at most 30 km/h (approximately 8.33 m/s), at most 15 km/h (approximately 4.17 m/s) through turns; pedestrians at most 1.4 m/s. Stopping and queuing are expected. |
+
+The car baseline is rounded from a production sedan: Toyota's 2022 Corolla
+saloon specification lists 4,630 mm length and 1,780 mm width.
+[Toyota technical specification, p. 4](https://media.toyota.co.uk/wp-content/uploads/sites/5/pdf/220111M-Corolla-Tech-Spec.pdf).
+The lane range fits within the 10–12 ft (3.048–3.658 m) range described in
+[FHWA's Road Diet Informational Guide, section 4.1.4](https://highways.dot.gov/safety/other/road-diets/road-diet-informational-guide/4-designing-road-diet).
+The tolerances, footprint, lane budget, pedestrian footprint, crossing regions,
+and speed caps are benchmark selections to be exercised by the reference
+fixture, not values mandated by those sources.
+
+Choose dimensions within these bounds once per artifact; do not change them
+with load. Use one meter scale for visible geometry, occupied bodies, and
+motion. Perspective and pixel scale remain free. Provide a readable ground
+scale reference and a view that permits review of lanes, bodies, stop lines,
+signals, and all crossings. Review must corroborate scale with geometry and
+preserved implementation evidence; printing a plausible scale label is
+insufficient. Curves must fit the entire car, not just its center point.
+Frame the boundary gates with enough visual margin to observe a whole body
+entering or clearing the world; that margin provides no additional road
+storage.
+
+### Right of way and motion
+
+These simplified benchmark rules are shared by every candidate:
+
+- Red forbids new entry beyond the stop line, including right turns. A car
+  already lawfully inside the junction may clear it.
+- Green permits the indicated movement only when the path and receiving lane
+  have room. Turning traffic yields to conflicting travelers already entitled
+  to proceed. A green light does not grant unconditional entry.
+- Yellow permits clearing; an approaching car must stop if it can do so
+  without abrupt or unsafe braking. Otherwise it may continue to clear.
+  Release no conflicting movement until previous traffic has cleared.
+- Pedestrians start crossing only during WALK and may finish after WALK ends.
+  Vehicles must yield to pedestrians still crossing; a new vehicle phase must
+  not strand or endanger them.
+- Vehicles follow continuous forward paths with plausible acceleration,
+  braking, and turning. No jumps, instant reversals, lane shortcuts, passing
+  through bodies between frames, or speed multipliers under load.
+
+The artifact chooses phase order, durations, protected turns, and control
+strategy within these rules. A simple controller is sufficient if every
+requested movement and crossing receives service at qualifying demand.
+
+### Evaluation time
+
+One world second corresponds to one elapsed evaluation second. Ralph schedules
+arrivals and records completion times using monotonic elapsed time while
+recording the same live browser run. The artifact owns its update loop; it
+must not accelerate traffic to inflate completions. Demo pause, speed, and
+reset controls must not alter an evaluated run. Page reload starts a new run.
+
+Ledger sampling and captured frame rate are observation intervals, not
+simulation steps. The current browser worker does not provide deterministic
+fast-forward simulation. Slow or missing frames limit the evidence; they do
+not authorize teleportation or a claim that hidden motion has been verified.
 
 ### Automated measurement checks
 
 - Arrival callbacks register successfully.
 - Issued IDs, completion IDs, and requested car exits reconcile.
 - No unknown, duplicate, wrong-kind, or wrong-exit completion.
-- Low-load cars and pedestrians visibly receive service.
+- Low-load cars and pedestrians produce valid finish notifications.
 - Outstanding demand, completion latency, throughput, breakdown, and recovery
   remain observable through the evaluator-owned ledger.
 - Browser/runtime stability.
 
-Collision avoidance, signal compliance, pedestrian safety, plausible motion,
-and visible agreement with reported finishes are P0 human/frontier visual
-review dimensions rather than a candidate-authored telemetry contract.
+These checks establish protocol/runtime conformance and demand accounting.
+They do not establish the required traffic validity above.
+
+### Traffic review and evidence
+
+Until an independent detector is validated against the corresponding
+counterexamples, require an explicit human traffic review for each evaluated
+run. Preserve the artifact hash, scenario and seed, ledger, and the recording
+of that same run. Review records identify the reviewer, rubric version,
+coverage, finding for each required rule, and supporting capture timestamps or
+artifact evidence. Later review belongs outside the immutable run bundle.
+
+Review covers entry, queuing, straight and turning movements, all crossings,
+signal transitions, finishes, and the load/recovery intervals being reported.
+A poster, a few attractive frames, source inspection alone, candidate claims,
+or a different demo run cannot establish those behaviors. If resolution,
+occlusion, missing intervals, or ambiguous traveler/finish correspondence
+prevents a finding, record it as unverifiable. A review pass means the stated
+rubric and coverage were satisfied; it is not a mathematical proof of all
+unobserved states. Automated frontier judging remains deferred.
+
+The existing passing fixture demonstrates protocol conformance only. A
+credible evaluator-owned reference and deliberately broken fixtures must
+exercise the observation method for every rule before v2 comparisons begin.
+See [measurement and eligibility](MEASUREMENT_MODEL.md#eligibility-before-performance).
 
 ### Critical operational checks
 
@@ -224,26 +361,22 @@ review dimensions rather than a candidate-authored telemetry contract.
 ### Demand profile ladder
 
 1. **Balanced:** similar demand on all approaches with a representative
-   movement mix. This is the one production P0-A profile, evaluated across a
-   small fixed seed set.
+   movement mix. This is the initial v2 calibration target, across a small
+   fixed seed set.
 2. **Asymmetric:** one dominant direction tests actuated behavior and fairness.
 3. **Turn-heavy:** increased conflicting left turns.
 4. **Pedestrian pulse:** a fixed pedestrian burst tests compatibility and delay.
 
-P0-A retains fixtures/schema support for all four but ranks only Balanced.
-Additional production profiles are introduced after the end-to-end skeleton is
-stable and thresholds can be calibrated from observed artifacts.
+The other profiles remain calibration cases until separately validated and
+versioned for comparisons. A list of proposed profiles is not evidence of an
+implemented or calibrated production judge.
 
 ### Human visual questions
 
 - Does the artifact have an appealing and distinctive visual identity?
 - Do layout, spacing, palette, typography, and controls feel intentional?
 - Is the chosen 2D, 2.5D, or 3D treatment used effectively?
-- Do drivers stop and start in the right places?
-- Are turns and braking physically plausible?
 - Can the signal state be understood immediately?
-- Do pedestrians behave cautiously and legibly?
-- Do queues build and dissipate like real traffic?
 - Is the traffic information useful without becoming cluttered or dominant?
 - Are motion, transitions, and feedback satisfying to watch?
 - Does the scene feel designed rather than assembled only to satisfy counters?
@@ -430,8 +563,9 @@ authoritative traffic metrics.
 
 P0 will not ask an automated model judge to convert visual quality into a
 supposedly objective number. It will foreground the runnable artifact and
-standardized captures so a human can make an informed interpretation alongside
-deterministic traffic results.
+standardized captures alongside measured demand results and the explicit
+traffic-validity review. Aesthetic review does not replace that required
+review.
 
 The review experience should invite consideration of:
 
@@ -462,7 +596,8 @@ responsibility is to preserve and present the evidence exceptionally well.
 ### Public challenge pack
 
 - Narrative prompt.
-- Infrastructure constraints.
+- Infrastructure constraints, dimensions and tolerances, time convention,
+  right-of-way rules, and traffic-validity rubric.
 - The complete four-method `gates/v1` contract and semantic gate diagram.
 - Starter/vendor assets.
 - Public smoke checks.
@@ -518,9 +653,11 @@ every comparable SUT.
 
 ## Threshold calibration
 
-Exact vehicle counts, stage durations, speed limits, storage sizes, delay
-limits, failure windows, and passing capacity thresholds are deliberately not
-fixed in this planning document. They must be calibrated using:
+Physical bounds and correctness rules are public. Hidden schedules may vary
+demand but must not alter car size, road geometry bounds, speed limits, signal
+rules, or acceptance requirements. Stage durations, demand rates, delay
+limits, failure windows, and passing capacity thresholds must be calibrated
+against the public envelope using:
 
 1. Deterministic fixture artifacts.
 2. At least one evaluator-owned viable implementation kept outside the public
@@ -529,5 +666,7 @@ fixed in this planning document. They must be calibrated using:
 4. Visual inspection to reject technically passing but physically implausible
    behavior.
 
-Any threshold change creates a new judge-pack version and does not silently
-rewrite historical results.
+Any scoring-threshold change creates a new judge-pack version. A physical or
+acceptance-contract change creates a new challenge revision as well. Neither
+silently rewrites historical results. Fixture-only tests must remain runnable
+without model accounts, an inference server, or private reference material.

@@ -1,7 +1,7 @@
 # Ralph Bench Vision
 
-**Status:** Accepted
-**Date:** 2026-08-23
+**Status:** Accepted, amended by [ADR 0017](adr/0017-traffic-validity-before-performance.md)
+**Updated:** 2026-09-05
 
 ## Purpose
 
@@ -19,8 +19,14 @@ The benchmark asks a more useful question:
 The initial benchmark uses browser-based visual traffic simulations because
 they combine spatial reasoning, state management, scheduling, routing,
 debugging, information design, and software craftsmanship with a result that
-humans can understand at a glance. The local intersection may be 2D, 2.5D, or
-3D; the frontier city is intended as a grand spatial showcase.
+humans can inspect. Busy Intersection is the current focus for both local and
+cloud models and may be 2D, 2.5D, or 3D. The city remains a future extension.
+
+The [traffic contract](TRAFFIC_CHALLENGES.md) defines a simulation as finite
+bodies moving through shared space under lane, signal, and safety constraints.
+The refactor targets `busy-intersection/v2`. The executable v1 path currently
+measures gate participation and load behavior; it does not yet establish the
+required physical validity.
 
 ## Product principles
 
@@ -42,12 +48,13 @@ The traffic challenges have an in-simulation optimization target:
 **sustainable monitored vehicle throughput**. The evaluator increases
 externally controlled traffic demand until observed completion or backlog
 reaches a defined breakdown condition, then measures whether the artifact
-recovers. Safety, physical plausibility, and agreement between finish
-notifications and visible movement remain separate recorded-review dimensions.
+recovers. Collision avoidance, signal compliance, lane discipline, realistic
+scale, and truthful trip completion are mandatory traffic-validity gates,
+including during overload. A callback ledger alone cannot establish them.
 
 The evaluation has a functional floor before it has a competitive performance
 ranking. A candidate must use the evaluator interface correctly, produce valid
-observed work, and remain structurally and operationally valid before its
+observed work, and pass an evidenced traffic review before its
 throughput is compared with other eligible results. “Working” is the admission
 ticket; sustainable throughput, latency, backlog, recovery, resource
 efficiency, and visual quality explain how eligible systems differ.
@@ -72,9 +79,11 @@ allocation/quota accounting is deferred.
 
 ### The artifact remains available to human judgment
 
-Deterministic checks establish validity and measurable behavior. Standardized
-captures and runnable artifacts let people judge physical plausibility,
-legibility, creativity, and the everyday fidelity of the simulation. Layout,
+Automated checks establish protocol conformance and measured demand behavior.
+An explicit traffic review establishes physical validity to its stated
+coverage until independent detectors are validated. Missing or inconclusive
+review remains pending or unverifiable. Separately, standardized captures and
+runnable artifacts let people judge legibility and creativity. Layout,
 composition, color, typography, information hierarchy, motion, atmosphere,
 polish, originality, and delight are legitimate dimensions of excellence. They
 remain separate from traffic correctness: visual beauty cannot rescue an
@@ -135,7 +144,7 @@ Ralph Bench keeps distinct dimensions rather than prematurely flattening them
 into a single opaque number:
 
 1. **Validity** — isolation, provenance, originality, and evidence integrity.
-2. **Acceptance** — critical functional and runtime requirements.
+2. **Acceptance** — protocol/runtime conformance and evidenced traffic validity.
 3. **Artifact performance** — traffic capacity, delay, fairness, and recovery.
 4. **Agent reliability** — pass rate across repetitions and scenarios.
 5. **Agent efficiency** — time-to-green locally or cost/reference-to-green in

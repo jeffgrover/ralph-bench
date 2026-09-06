@@ -1,7 +1,12 @@
 # Measurement Model
 
-**Status:** Accepted
-**Date:** 2026-08-23
+**Status:** Accepted, amended by [ADR 0017](adr/0017-traffic-validity-before-performance.md)
+**Updated:** 2026-09-05
+
+The traffic-acceptance requirements below target `busy-intersection/v2`.
+Implementation is staged. Current v1 bundles retain their original schemas
+and protocol/load outcomes; neither `passed` nor `performance_eligible` in
+those bundles proves physical traffic validity.
 
 ## Goals
 
@@ -39,33 +44,43 @@ reliability denominators when the cause is demonstrably outside the SUT.
 
 ### Eligibility before performance
 
-The primary value proposition is layered. First, the SUT must create a working
-simulation that participates correctly in evaluator-owned demand. This is an
-eligibility floor, not a pool of points. A candidate that does not register the
-public interface, produce valid observed completions, or remain runnable is
-failed, unmeasurable, or otherwise ineligible for performance comparison.
+The report must distinguish four questions:
 
-Only eligible, sufficiently evidenced artifacts receive the performance
-vector: sustainable throughput, qualifying offered load, completion latency,
-backlog behavior, and recovery. Higher throughput differentiates working
-systems; it cannot compensate for invalid, unsafe, unverifiable, or dishonest
-behavior. Resource efficiency and visual review remain separate dimensions.
+| Dimension | Evidence | Meaning |
+|---|---|---|
+| Protocol conformance | Static/runtime checks and evaluator-owned arrival/finish ledger | The artifact runs and uses the interface correctly. This cannot establish physical traffic validity. |
+| Traffic validity | Explicit review against the [traffic contract](TRAFFIC_CHALLENGES.md#required-traffic-validity), with run/artifact identity and evidence references | The required physical behavior and truthful travel are established to the stated review coverage. |
+| Load performance | Versioned demand stages, notification timing, outstanding demand, and recovery evidence | Capacity, latency, backlog, and recovery under the tested load. |
+| Visual quality | Separate human aesthetic review | Legibility, composition, motion presentation, polish, originality, and delight. |
 
-The evaluator records `performance_eligible` separately from `outcome`. It is
-true only when the public interface, evaluator-owned arrival delivery,
-completion integrity, runtime/offline checks, and low-load service floor are
-sound and the demand evidence is complete. A functionally working artifact can
-therefore be performance-eligible yet fail overall because it breaks down at a
-held load or does not recover during cooldown; its measured lower capacity is
-still meaningful. An artifact that never establishes a working simulation is
-not performance-eligible and must not be rescued by a reported throughput
-number.
+The target traffic-review states are `pending`, `pass`, `fail`, and
+`unverifiable`. Missing review is pending; insufficient or inconsistent
+evidence is unverifiable. Every required rule needs an evidenced finding.
+Any demonstrated violation makes the aggregate fail, even when other rules
+remain unreviewed. A pass requires all rules and the reported intervals to be
+covered. Review records identify their author, rubric version, artifact hash,
+run, scenario, intervals, and supporting evidence. These states describe the
+new contract; phase 4 will introduce the versioned representation.
 
-The public smoke/conformance check demonstrates correct interface use. The
-private judge measures performance under demand that is not fully disclosed,
-so the benchmark rewards a generally working simulation rather than a
-candidate tuned only to the public schedule. Relative comparisons are derived
-from immutable absolute measurements at report time.
+V2 performance eligibility requires protocol/runtime conformance, complete
+demand evidence, the low-load service floor, and a traffic-validity pass.
+A safe, valid artifact may fail a held-load or recovery requirement while
+still yielding meaningful lower capacity. A physical violation anywhere in
+that evaluated run makes it ineligible; higher-load collisions cannot be
+excused by selecting a clean lower-load interval.
+
+Failed, pending, and unverifiable runs retain diagnostic measurements but do
+not enter traffic performance comparisons, rankings, or Pareto frontiers.
+Official ranking additionally requires the existing provenance and isolation
+policy: L0/unsealed results remain experimental. A reviewed L0 result may be
+shown in an explicitly experimental comparison with compatible evidence.
+Historical v1 results remain labeled under their original contract and are
+excluded from v2 comparisons.
+
+The public conformance tool debugs interface use. Private schedules exercise
+service and performance without hiding correctness requirements. Neither
+check supplies the missing physical review. Higher throughput or visual
+polish cannot compensate for unsafe or dishonest travel.
 
 ### 3. Acceptance
 
@@ -75,7 +90,7 @@ Assertions are structured records with:
 - Severity: `critical`, `major`, `minor`, or `diagnostic`.
 - Result: `pass`, `fail`, `error`, or `not_run`.
 - Detector and evidence references.
-- Scenario, seed, simulation interval, and threshold.
+- Scenario, seed, elapsed evaluation interval, and threshold or public rule.
 
 Critical failures make the artifact ineligible for a passing outcome. P0 will
 show assertion coverage but will not convert regex-like implementation signals
@@ -103,11 +118,14 @@ frontier-model qualitative judging is deferred.
 
 ## Sustainable monitored throughput
 
-The primary in-simulation metric is:
+The automatically measured quantity is:
 
-> Evaluator-requested cars visibly finishing at their requested gate per
-> evaluation minute while the issued/completed/outstanding ledger remains
-> consistent and the artifact continues serving low-load pedestrians.
+> Valid car finish notifications per elapsed evaluation minute, with an
+> internally consistent issued/completed/outstanding ledger.
+
+Only after traffic validity and service requirements pass may this support a
+claim of sustainable traffic throughput under the tested load. Until then it
+is diagnostic notification throughput.
 
 A P0 `gates/v1` completion counts only when it:
 
@@ -118,11 +136,29 @@ A P0 `gates/v1` completion counts only when it:
 
 Ralph owns issue and completion timestamps and samples its ledger throughout
 the same live run recorded for review. The candidate does not provide topology,
-snapshots, queues, event logs, or aggregate counters. Collision avoidance,
-signal compliance, pedestrian safety, motion plausibility, and agreement
-between finish notifications and visible behavior remain separate human or
-frontier visual-review dimensions in P0. A missing interface produces
-`unmeasurable`, not a measured throughput of zero.
+snapshots, queues, event logs, or aggregate counters. The required physical
+review is separate evidence that gates cannot supply. A missing interface
+produces `unmeasurable`, not a measured throughput of zero.
+
+## Evaluation clock and observations
+
+Use monotonic elapsed time for arrival delivery, finish timing, stage windows,
+and the denominator of completion rates. The world runs at one second per
+elapsed evaluation second as defined by the
+[traffic contract](TRAFFIC_CHALLENGES.md#evaluation-time). Preserve planned
+arrival times separately from actual observed delivery times where scheduling
+jitter matters. Candidate clocks do not establish authoritative duration.
+
+The live worker samples a ledger and records the same browser run. Sampling
+interval, media frame rate, and video playback rate do not determine a physics
+step or prove deterministic simulation. Existing capture fields named
+`simulated_horizon_ms`, `poster_simulation_ms`, and `simulation_interval_ms`
+describe legacy elapsed-run observations. Phase 4 will version and clarify
+that metadata while retaining historical readers.
+
+Missing intervals and excessive observation delay must be visible as evidence
+limitations. A scheduled horizon or finish notification cannot prove that
+unobserved physical motion was correct.
 
 ## Load-to-failure protocol
 

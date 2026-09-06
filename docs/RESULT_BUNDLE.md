@@ -7,9 +7,9 @@
 ## Purpose
 
 A result bundle is the immutable, portable evidence produced by one evaluated
-candidate run. It is the only input required by downstream validation,
-aggregation, judging, and
-static reporting, apart from explicitly versioned external judge material.
+candidate run. Downstream validation and reporting consume it read-only.
+Versioned external judge material and later human-review records are separate
+inputs; missing review cannot be inferred from the bundle's protocol outcome.
 
 The run process does not generate `summary.html`. HTML, thumbnails optimized
 for the site, aggregate tables, and indexes are derived outputs stored outside
@@ -159,14 +159,17 @@ actual is an OpenRouter usage debit/charge, not an upstream provider invoice.
 For local-provider paths, `cost.json` instead records `billing_mode = "local"`
 with the same unavailable amount fields and an explicit reason that local
 inference has no attributable per-run USD charge.
+See [`COST_MODEL.md`](COST_MODEL.md).
 
-`run.json` and `metrics.json` preserve `performance_eligible` separately from
-the overall outcome. A functionally working artifact may be measured but fail
-a held-load or cooldown requirement; it remains distinguishable from an
-artifact that never established a valid simulation and is ineligible for the
-performance vector.
-See
-[`COST_MODEL.md`](COST_MODEL.md).
+Current v1 `run.json` and `metrics.json` preserve `performance_eligible`
+separately from the overall outcome. This describes the original
+protocol/runtime and low-load floor, not verified physical traffic validity.
+The [v2 eligibility contract](MEASUREMENT_MODEL.md#eligibility-before-performance)
+adds required traffic review. Phase 4 will version the representation and
+retain historical readers; old fields must not be interpreted as a physical
+pass. Later human reviews remain separate from the immutable ZIP, tied to the
+run ID, artifact tree hash, and reviewed evidence. Reporting cannot insert
+review evidence into an existing bundle.
 
 ## Canonical events
 
@@ -223,11 +226,15 @@ standalone demonstration when the interface is absent.
 ## Capture evidence
 
 Every capture record identifies the evaluated artifact tree hash, challenge,
-scenario/profile, seed, simulation interval and phase, playback rate, duration,
+scenario/profile, seed, evaluation interval and phase, playback rate, duration,
 frame rate, viewport, browser/Playwright versions, and capture-worker version.
 The overview poster and animation must be produced from the same evaluated
 artifact and requested scenario. Media is human-review evidence, not an
 authoritative traffic counter.
+
+Legacy metadata uses simulation-oriented field names for elapsed-run
+observations. The [clock contract](MEASUREMENT_MODEL.md#evaluation-clock-and-observations)
+requires accurate labels in the future schema without changing old bundles.
 
 ## Evaluation evidence
 

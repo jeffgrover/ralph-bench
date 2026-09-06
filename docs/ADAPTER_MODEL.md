@@ -49,6 +49,12 @@ topology, protocol, and scenario object through the same boundary. The
 Challenge Portability Fixture tests that the boundary does not require
 intersection-specific semantics.
 
+[ADR 0017](adr/0017-traffic-validity-before-performance.md) requires every
+client to receive the same complete versioned challenge. Harness-specific tool
+or loop instructions must preserve that assignment. A reduced tool-call
+calibration task needs separate identity and provenance, outside benchmark
+comparisons.
+
 ## Polymorphism means separate typed protocols
 
 The three adapter families share descriptor and diagnostic conventions, but

@@ -3,6 +3,11 @@
 **Status:** Accepted for the P0 local proving path  
 **Date:** 2026-08-30
 
+[ADR 0017](0017-traffic-validity-before-performance.md) requires the complete
+shared challenge for benchmark runs. Reduced handoffs may be used only as
+separately identified calibration tasks. Controlled/native loop and evidence
+boundaries remain in force. The decision below is retained as history.
+
 ## Context
 
 Pi-wiggum is an installed Pi extension graph, not a separate client. Its TPM

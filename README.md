@@ -16,6 +16,14 @@ Fixture**. It exists to prove that future challenges can enter through the
 generic challenge boundary without requiring Busy Intersection-specific
 conductor logic. It does not prescribe the future city's topology or protocol.
 
+The [simplicity refactor](docs/NEXT_STEPS.md#refactor-phases) targets
+`busy-intersection/v2`: cars must avoid cars and pedestrians, obey signals,
+follow lanes, and use realistic physical scale. The
+[traffic contract](docs/TRAFFIC_CHALLENGES.md) defines these requirements.
+The current executable v1 challenge and its `passed`/`performance_eligible`
+results establish protocol/load behavior, not physical traffic validity.
+Phase 1 documents the new contract; implementation follows in separate phases.
+
 The initial live system under test is:
 
 ```text
@@ -41,7 +49,8 @@ seams.
 The P0-A planning packet was accepted on 2026-08-23, as amended by [ADR
 0011](docs/adr/0011-cloud-cost-evidence-and-openrouter-references.md),
 [ADR 0014](docs/adr/0014-seam-first-evaluation-and-active-harness.md), and
-[ADR 0015](docs/adr/0015-current-toolchain-preflight.md); implementation is
+[ADR 0015](docs/adr/0015-current-toolchain-preflight.md), and
+[ADR 0017](docs/adr/0017-traffic-validity-before-performance.md); implementation is
 underway. P0-A does not allocate subscription fees;
 OpenRouter billing/reference support is the next provider slice.
 
