@@ -169,7 +169,7 @@ class BusyIntersectionChallengeAdapter:
     """The P0-A gates/v1 challenge implementation."""
 
     challenge_id = "busy-intersection/v1"
-    scenario_pack = "traffic-intersection-p0a"
+    scenario_pack = "traffic-intersection-p0a-calibrated"
 
     def __init__(
         self,

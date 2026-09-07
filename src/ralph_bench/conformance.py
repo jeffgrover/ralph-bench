@@ -300,7 +300,7 @@ def run_public_conformance(
         return {
             "schema_version": "conformance/v1",
             "challenge": "busy-intersection/v1",
-            "scenario_pack": "traffic-intersection-p0a",
+            "scenario_pack": "traffic-intersection-p0a-calibrated",
             "scenario_id": scenario.scenario_id,
             "outcome": evaluation.get("outcome"),
             "passed": evaluation.get("outcome") == "passed",

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from math import ceil
 import os
 from pathlib import Path
 import re
@@ -134,9 +135,10 @@ validate_candidate = check_static_candidate
 class GateThresholds:
     minimum_warmup_completion_ratio: float = 0.75
     minimum_warmup_pedestrian_ratio: float = 0.5
-    stage_completion_ratio: float = 0.70
-    completion_grace_ms: int = 10_000
+    # Completion ratio is retained as a diagnostic, not a capacity verdict.
+    completion_grace_ms: int = 30_000
     maximum_backlog_fraction: float = 0.60
+    maximum_backlog_growth_fraction: float = 0.50
 
 
 @dataclass(frozen=True, slots=True)
@@ -191,7 +193,9 @@ class CapacityStageResult:
     completed: int
     completion_ratio: float
     observed_throughput_per_minute: float
+    outstanding_at_start: int
     outstanding_at_end: int
+    backlog_delta: int
     max_completion_ms: int | None
     qualifying: bool
     failure_codes: tuple[str, ...]
@@ -204,7 +208,9 @@ class CapacityStageResult:
             "completed": self.completed,
             "completion_ratio": self.completion_ratio,
             "observed_throughput_per_minute": self.observed_throughput_per_minute,
+            "outstanding_at_start": self.outstanding_at_start,
             "outstanding_at_end": self.outstanding_at_end,
+            "backlog_delta": self.backlog_delta,
             "max_completion_ms": self.max_completion_ms,
             "qualifying": self.qualifying,
             "failure_codes": list(self.failure_codes),
@@ -302,6 +308,9 @@ def _capacity_curve(
     results: list[CapacityStageResult] = []
     for stage in scenario.stages:
         cohort = [item for item in scenario.cars if stage.start_ms <= item.arrival_ms < stage.end_ms]
+        # The completion window describes latency, not a pass/fail capacity
+        # deadline; a held stage qualifies when its evaluator-owned backlog is
+        # stable and bounded.
         grace_end = min(scenario.horizon_ms, stage.end_ms + thresholds.completion_grace_ms)
         completed = [
             completions[item.id]
@@ -315,14 +324,17 @@ def _capacity_curve(
             if item.get("kind") == "car"
         )
         throughput = completed_during_stage * 60_000 / stage.duration_ms
+        outstanding_at_start = _outstanding_at(observations, stage.start_ms)
         outstanding = _outstanding_at(observations, stage.end_ms)
+        backlog_delta = outstanding - outstanding_at_start
         issued_to_end = sum(item.arrival_ms < stage.end_ms for item in scenario.cars)
         failures: list[str] = []
-        if stage.qualifying and ratio < thresholds.stage_completion_ratio:
-            failures.append("completion-ratio")
+        growth_limit = max(1, round(len(cohort) * thresholds.maximum_backlog_growth_fraction))
+        if stage.qualifying and backlog_delta > growth_limit:
+            failures.append("backlog-growth")
         backlog_limit = max(2, round(issued_to_end * thresholds.maximum_backlog_fraction))
         if stage.qualifying and outstanding > backlog_limit:
-            failures.append("backlog-growth")
+            failures.append("backlog-fraction")
         latencies = [int(item.get("latency_ms", 0)) for item in completed]
         results.append(
             CapacityStageResult(
@@ -332,7 +344,9 @@ def _capacity_curve(
                 len(completed),
                 round(ratio, 6),
                 round(throughput, 6),
+                outstanding_at_start,
                 outstanding,
+                backlog_delta,
                 max(latencies, default=None),
                 stage.qualifying and not failures,
                 tuple(failures),
@@ -443,8 +457,9 @@ def evaluate_gate_monitor(
             f"{stage.stage_id} failed: {', '.join(stage.failure_codes)}",
             severity="major",
             threshold={
-                "stage_completion_ratio": thresholds.stage_completion_ratio,
+                "completion_observation_ms": thresholds.completion_grace_ms,
                 "maximum_backlog_fraction": thresholds.maximum_backlog_fraction,
+                "maximum_backlog_growth_fraction": thresholds.maximum_backlog_growth_fraction,
             },
         )
         for stage in capacity
@@ -500,8 +515,14 @@ def evaluate_gate_monitor(
     pedestrian_completions = [item for item in raw_completions if isinstance(item, Mapping) and item.get("kind") == "pedestrian"]
     latencies = sorted(int(item.get("latency_ms", 0)) for item in car_completions)
     qualifying = [item for item in capacity if item.qualifying]
+    measured = [
+        item
+        for item, stage in zip(capacity, scenario.stages)
+        if not stage.cooldown
+    ]
     outcome = "passed" if not failures else "failed"
     measurement_status = "measured" if ready and len(issued) == expected_arrivals else "unmeasurable"
+    p95_index = max(0, min(len(latencies) - 1, ceil(len(latencies) * 0.95) - 1)) if latencies else None
     metrics = {
         "measurement_status": measurement_status,
         "performance_eligible": performance_eligible,
@@ -513,8 +534,13 @@ def evaluate_gate_monitor(
         "outstanding_pedestrians": max(0, len(scenario.pedestrians) - len(pedestrian_completions)),
         "invalid_completions": len(invalid),
         "median_car_completion_ms": median(latencies) if latencies else None,
+        "p95_car_completion_ms": latencies[p95_index] if p95_index is not None else None,
         "maximum_car_completion_ms": max(latencies, default=None),
         "peak_monitored_throughput": max(
+            (item.observed_throughput_per_minute for item in measured),
+            default=0,
+        ),
+        "peak_qualifying_throughput": max(
             (item.observed_throughput_per_minute for item in qualifying),
             default=0,
         ),

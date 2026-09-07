@@ -106,10 +106,35 @@ class GateEvaluatorTests(unittest.TestCase):
         self.assertTrue(result.performance_eligible)
         self.assertEqual(result.measurement_status, "measured")
         self.assertIn(
-            "capacity:load:completion-ratio",
+            "capacity:load:backlog-growth",
             {item.code for item in result.failures},
         )
         self.assertIn("cooldown-recovery", {item.code for item in result.failures})
+
+    def test_capacity_reports_late_completion_as_latency_not_stage_failure(self) -> None:
+        scenario = small_scenario()
+        result = evaluate_gate_monitor(
+            scenario,
+            {
+                "ready": True,
+                "issued": issued(scenario),
+                "completions": [
+                    {"kind": "car", "id": "car-1", "finish": "south", "completed_ms": 700, "latency_ms": 700},
+                    {"kind": "pedestrian", "id": "ped-1", "finish": None, "completed_ms": 800, "latency_ms": 700},
+                    {"kind": "car", "id": "car-2", "finish": "west", "completed_ms": 2_900, "latency_ms": 1_800},
+                ],
+                "invalid": [],
+            },
+            (
+                {"time_ms": 0, "outstanding_cars": 1},
+                {"time_ms": 1_000, "outstanding_cars": 0},
+                {"time_ms": 2_000, "outstanding_cars": 1},
+                {"time_ms": 3_000, "outstanding_cars": 0},
+            ),
+        )
+        self.assertTrue(result.passed, result.to_dict())
+        self.assertEqual(result.capacity_curve[1].backlog_delta, 1)
+        self.assertEqual(result.metrics["p95_car_completion_ms"], 1_800)
 
     def test_invalid_finish_notification_fails_integrity(self) -> None:
         scenario = small_scenario()

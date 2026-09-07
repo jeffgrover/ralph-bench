@@ -1,6 +1,7 @@
 # Human traffic review and calibration
 
-**Status:** Implemented review validation; recorded physical calibration remains outstanding.
+**Status:** Implemented review validation and first signal-compliant capacity
+recalibration; broader multi-model calibration remains outstanding.
 
 The current browser worker records the evaluator-owned `gates/v1` ledger. That
 ledger proves arrival identity, finish identity, timing, backlog, and recovery
@@ -22,6 +23,33 @@ trace observed 66 vehicles/minute at peak, first failed to keep pace at the
 These numbers are a starting observation, not frozen thresholds;
 repeat on the target platforms and complete the human review below before
 activating v2.
+
+This historical trace is retained for protocol regression only. Because its
+physical behavior was not reviewed under the clarified signal rule, its high
+throughput must not set the physical-capacity baseline.
+
+## Signal-compliant recalibration — 2026-09-07
+
+The first frontier-model artifact reviewed as visually reference-quality was
+run `47b2c2f4-9dfc-4810-b296-72d42acddbbd`. Its protocol, arrival ledger,
+runtime, offline, and completion-integrity checks passed. It completed 77/80
+cars and 16/16 pedestrians by the 130-second horizon, while the human review
+found the traffic behavior smooth, safe, and signal-compliant.
+
+The old per-cohort completion gate was too strict for that behavior: each
+20-second stage allowed only a 10-second completion grace, even though a full
+signal cycle is about 33 seconds and some free-flow routes take roughly
+12–14 seconds before signal or queue delay. The evaluator now treats the
+30-second completion ratio as diagnostic latency evidence, and qualifies a
+held stage by evaluator-owned backlog behavior instead: backlog growth may not
+exceed half of that stage's newly offered cars, and total backlog remains
+bounded. The 90/minute stage remains a deliberate overload probe.
+
+Capacity reports now retain both observed peak throughput and the lower peak
+among qualifying stages; completion latency includes median, P95, and maximum
+car latency. These changes preserve hard protocol/runtime/traffic-validity
+gates while preventing late-but-eventually-completed trips from being mistaken
+for a capacity failure.
 
 ## Review contract: traffic-review/v2, traffic-human/v1 rubric
 

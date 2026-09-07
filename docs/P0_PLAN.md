@@ -205,7 +205,7 @@ max_wall_seconds = 1200
 max_attempts = 2
 
 [evaluation]
-scenario_pack = "traffic-intersection-p0a"
+scenario_pack = "traffic-intersection-p0a-calibrated"
 
 [output]
 inbox = "results/inbox"

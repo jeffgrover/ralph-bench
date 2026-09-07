@@ -207,19 +207,27 @@ participates in breakdown and recovery evidence.
 
 ### Breakdown capacity
 
-The highest offered demand rate that remains qualifying for the complete held
-stage and recovery requirements.
+The highest offered demand rate whose held stage remains stable under the
+evaluator-owned backlog rules and whose cooldown recovers outstanding demand.
+The stage completion ratio remains a diagnostic latency observation; it is not
+itself a capacity verdict. P0-A uses a 30-second observation grace (roughly a
+full signal cycle) and fails a held stage when backlog growth exceeds half of
+that stage's newly offered cars or total backlog exceeds its bounded fraction.
 
 ```text
 breakdown_capacity = highest qualifying offered cars / evaluation minute
 ```
 
-### Peak sustainable monitored throughput
+### Peak monitored throughput
 
-The highest valid completion rate observed at a qualifying load:
+The highest valid completion rate observed during a non-cooldown load stage.
+This raw diagnostic value remains visible even when that stage is the first
+breakdown point. A separate qualifying peak is retained for comparison views:
 
 ```text
-peak_sustainable_throughput = valid car finishes / evaluation minute
+peak_monitored_throughput = valid car finishes / evaluation minute
+peak_qualifying_throughput = peak_monitored_throughput restricted to
+                              qualifying stages
 ```
 
 Offered capacity and completion throughput are not interchangeable. A network
@@ -238,7 +246,7 @@ Sustained capacity failures include:
 
 - Persistent visible blockage.
 - Growing evaluator-owned outstanding backlog beyond the allowed window.
-- Completion/service ratio below the versioned bound.
+- Backlog growth beyond the versioned held-stage bound.
 - Failure to drain outstanding demand during recovery.
 
 Runtime failures include browser exceptions, event-loop stalls, runaway entity
@@ -253,7 +261,7 @@ P0 derives directly from `gates/v1`:
 
 - Issued, completed, invalid, and outstanding travelers.
 - Completion rate by load stage and traveler kind.
-- Median and maximum completion latency.
+- Median, P95, and maximum completion latency.
 - First stage with sustained backlog/service failure.
 - Outstanding demand at cooldown start/end and clear time.
 

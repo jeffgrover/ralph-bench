@@ -26,12 +26,12 @@ _PROFILES = {
     ("busy-intersection/v1", "cloud-subscription"): ChallengeProfile(
         "busy-intersection/v1",
         "cloud-subscription",
-        "traffic-intersection-p0a",
+        "traffic-intersection-p0a-calibrated",
     ),
     ("busy-intersection/v1", "local"): ChallengeProfile(
         "busy-intersection/v1",
         "local",
-        "traffic-intersection-p0a",
+        "traffic-intersection-p0a-calibrated",
     ),
 }
 

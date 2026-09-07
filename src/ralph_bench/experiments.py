@@ -37,7 +37,7 @@ class Budget:
 
 @dataclass(frozen=True)
 class Evaluation:
-    scenario_pack: str = "traffic-intersection-p0a"
+    scenario_pack: str = "traffic-intersection-p0a-calibrated"
 
 
 @dataclass(frozen=True)

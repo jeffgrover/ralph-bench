@@ -314,6 +314,7 @@ def _render_index(records: list[dict[str, Any]]) -> str:
         run_dir = item["report_directory"]
         simulation = item["metrics"].get("simulation", {})
         peak = _number(simulation.get("peak_monitored_throughput")) if isinstance(simulation, dict) else None
+        qualifying_peak = _number(simulation.get("peak_qualifying_throughput")) if isinstance(simulation, dict) else None
         review = item.get("traffic_review", {})
         review_status = _text(review.get("status"), "pending") if isinstance(review, dict) else "pending"
         comparison = "official" if item.get("official_ranking_eligible") else (
@@ -329,7 +330,7 @@ def _render_index(records: list[dict[str, Any]]) -> str:
             f"<td>{html.escape(_text(item.get('protocol_conformance', {}).get('status') if isinstance(item.get('protocol_conformance'), dict) else None, 'unavailable'))}</td>"
             f"<td>{html.escape(review_status)}<br>"
             f"<span class=\"muted\">{html.escape(comparison)}</span><br>"
-            f"<span class=\"muted\">peak {html.escape(str(peak if peak is not None else '—'))}/min</span></td>"
+            f"<span class=\"muted\">observed {html.escape(str(peak if peak is not None else '—'))}/min · qualifying {html.escape(str(qualifying_peak if qualifying_peak is not None else '—'))}/min</span></td>"
             f"<td>{html.escape(str(item['attempt_count']))}</td>"
             "</tr>"
         )
@@ -420,7 +421,8 @@ def _render_run(record: dict[str, Any]) -> str:
 <body><main><p><a href="../../index.html">← all runs</a></p>
 <div class="run-header"><div><div class="eyebrow">{html.escape(record['challenge'])}</div><h1>{html.escape(record['run_id'])}</h1><p class="lede">{html.escape(record['model'])} through {html.escape(record['client'])} × {html.escape(record['provider'])} on the {html.escape(record['track'])} track.</p></div><div class="status {status_class}">{html.escape(record['outcome'])}</div></div>
 <div class="grid"><div class="card"><span class="value">{html.escape(str(record['attempt_count']))}</span><span class="label">attempts</span></div>
-<div class="card"><span class="value">{html.escape(str(_number(simulation.get('peak_monitored_throughput'), '—') if isinstance(simulation, dict) else '—'))}</span><span class="label">peak vehicles/min</span></div>
+<div class="card"><span class="value">{html.escape(str(_number(simulation.get('peak_monitored_throughput'), '—') if isinstance(simulation, dict) else '—'))}</span><span class="label">observed vehicles/min</span></div>
+<div class="card"><span class="value">{html.escape(str(_number(simulation.get('peak_qualifying_throughput'), '—') if isinstance(simulation, dict) else '—'))}</span><span class="label">qualifying vehicles/min</span></div>
 <div class="card"><span class="value">{html.escape(str(_number(agent.get('wall_seconds'), '—') if isinstance(agent, dict) else '—'))}</span><span class="label">agent seconds</span></div>
 <div class="card"><span class="value">{html.escape(str(_number(agent.get('usage', {}).get('total_tokens'), '—') if isinstance(agent, dict) and isinstance(agent.get('usage'), dict) else '—'))}</span><span class="label">reported tokens</span></div>
 <div class="card"><span class="value">{html.escape(elapsed_text)}</span><span class="label">{html.escape(elapsed_label)}</span></div>

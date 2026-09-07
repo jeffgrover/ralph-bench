@@ -258,7 +258,7 @@ class TrafficReviewTests(unittest.TestCase):
     def test_comparison_requires_public_private_and_standard_policy(self):
         run = {"run_id": "run-1", "selected_candidate_hash": "a" * 64,
                "scenario_id": "busy-intersection-balanced", "seed": 17,
-               "challenge": "busy-intersection/v1", "scenario_pack": "traffic-intersection-p0a",
+               "challenge": "busy-intersection/v1", "scenario_pack": "traffic-intersection-p0a-calibrated",
                "scenario_profile": "balanced", "public_conformance": {"status": "passed"},
                "performance_eligible": True, "measurement_status": "measured"}
         review = resolve_traffic_review(run, [ReviewDocument("r.json", self._review())])

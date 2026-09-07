@@ -31,7 +31,7 @@ These are outstanding benchmark validation, not completed by unit tests.
   remains closed. Physical benchmark calibration remains outstanding below.
 - Removed the unused synthetic detector; implemented scenario-bound,
   recording-backed human findings and conservative comparison eligibility.
-- Regression suite: 151 tests pass. Historical artifact
+- Regression suite: 157 tests pass. Historical artifact
   `fa18b063-dff1-4f91-8ef5-1ee1dd95d10a` passed all six public browser checks
   with no runtime/network errors. This is not proof of physical validity.
 - Final report ingests four bundles with zero invalid bundles.
@@ -50,8 +50,15 @@ These are outstanding benchmark validation, not completed by unit tests.
   zero invalid completions, a 66 vehicles/minute observed peak, first overload
   at the 90 vehicles/minute offered stage, and recovery of all backlog in 14.8
   seconds. This establishes a reproducible protocol/load baseline only; its
-  physical-validity review is still pending. The source is intentionally not
+  physical-validity review is still pending, so its throughput does not set
+  the physical-capacity baseline. The source is intentionally not
   committed because P0 isolation is L0/unsealed.
+- Recalibrated the held-stage evaluator against the first human-reviewed,
+  signal-compliant Astra artifact (`47b2c2f4-9dfc-4810-b296-72d42acddbbd`).
+  Completion ratio is now latency evidence over a 30-second observation grace;
+  capacity uses bounded backlog growth and recovery. Raw and qualifying peak
+  throughput are reported separately, so a first overload stage remains useful
+  evidence rather than hiding its observed service rate.
 
 ## Next validation work, in order
 

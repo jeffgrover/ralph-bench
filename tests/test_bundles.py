@@ -57,7 +57,7 @@ class BundleTests(unittest.TestCase):
                 "run_id": "run-1",
                 "selected_candidate_hash": artifact_hash,
                 "challenge": "busy-intersection/v1",
-                "scenario_pack": "traffic-intersection-p0a",
+                "scenario_pack": "traffic-intersection-p0a-calibrated",
                 "scenario_id": scenario_id,
                 "scenario_profile": profile,
                 "seed": seed,
@@ -66,7 +66,7 @@ class BundleTests(unittest.TestCase):
         values["challenge.json"] = json.dumps(
             {
                 "challenge_id": "busy-intersection/v1",
-                "scenario_pack": "traffic-intersection-p0a",
+                "scenario_pack": "traffic-intersection-p0a-calibrated",
                 "scenario": {
                     "scenario_id": scenario_id,
                     "profile": profile,

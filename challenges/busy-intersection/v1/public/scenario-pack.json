@@ -1,6 +1,6 @@
 {
   "schema_version": "gates-smoke/v1",
-  "scenario_pack": "traffic-intersection-p0a",
+  "scenario_pack": "traffic-intersection-p0a-calibrated",
   "challenge": "busy-intersection/v1",
   "protocol": "gates/v1",
   "purpose": "public unscored interface smoke example",

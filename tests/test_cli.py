@@ -396,10 +396,10 @@ class CliTests(unittest.TestCase):
             self.assertEqual(experiment.budget.max_wall_seconds, 900)
             self.assertEqual(experiment.budget.max_attempts, 2)
             self.assertEqual(
-                experiment.evaluation.scenario_pack, "traffic-intersection-p0a"
+                experiment.evaluation.scenario_pack, "traffic-intersection-p0a-calibrated"
             )
             self.assertIn(
-                "Evaluation profile: traffic-intersection-p0a",
+                "Evaluation profile: traffic-intersection-p0a-calibrated",
                 "\n".join(output),
             )
             self.assertNotIn("subscription cost policy", "\n".join(output).lower())
