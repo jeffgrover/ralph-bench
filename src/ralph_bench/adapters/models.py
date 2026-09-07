@@ -11,17 +11,21 @@ from .contracts import (
 )
 
 
-class LunaModelAdapter:
-    descriptor = AdapterDescriptor(
-        "model/gpt-5.6-luna",
-        "model",
-        "GPT-5.6 Luna",
-        capabilities=("reasoning", "tool-use"),
-        detection="descriptor",
-    )
+class KnownOpenAIModelAdapter:
+    """Known Codex model descriptors with the same P0 capability contract."""
+
+    def __init__(self, model_id: str, label: str) -> None:
+        self.model_id = model_id
+        self.descriptor = AdapterDescriptor(
+            f"model/{model_id}",
+            "model",
+            label,
+            capabilities=("reasoning", "tool-use"),
+            detection="descriptor",
+        )
 
     def match(self, offer: ModelOffer) -> bool:
-        return offer.provider_model_id == "gpt-5.6-luna"
+        return offer.provider_model_id == self.model_id
 
     def capabilities(self, offer: ModelOffer) -> ModelCapabilities:
         return ModelCapabilities(
@@ -38,9 +42,29 @@ class LunaModelAdapter:
         return ModelBinding(
             self.descriptor.adapter_id,
             offer.provider_model_id,
-            "gpt-5.6-luna",
+            self.model_id,
             self.capabilities(offer),
         )
+
+
+class LunaModelAdapter(KnownOpenAIModelAdapter):
+    def __init__(self) -> None:
+        super().__init__("gpt-5.6-luna", "GPT-5.6 Luna")
+
+
+class TerraModelAdapter(KnownOpenAIModelAdapter):
+    def __init__(self) -> None:
+        super().__init__("gpt-5.6-terra", "GPT-5.6 Terra")
+
+
+class SolModelAdapter(KnownOpenAIModelAdapter):
+    def __init__(self) -> None:
+        super().__init__("gpt-5.6-sol", "GPT-5.6 Sol")
+
+
+class AstraModelAdapter(KnownOpenAIModelAdapter):
+    def __init__(self) -> None:
+        super().__init__("gpt-6-astra", "GPT-6 Astra")
 
 
 class GenericModelAdapter:

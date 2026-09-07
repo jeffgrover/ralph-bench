@@ -1,0 +1,72 @@
+{
+  "schema_version": "traffic-review/v2",
+  "rubric_version": "traffic-human/v1",
+  "status": "fail",
+  "run_id": "fa18b063-dff1-4f91-8ef5-1ee1dd95d10a",
+  "artifact_hash": "b628c86979c144021abbcb5d0014e23202b0b5d3d5f4b2993a77037b7533015e",
+  "scenario_id": "busy-intersection-gates-balanced",
+  "seed": 17,
+  "reviewer": "Jeff Grover",
+  "reason": "This looks okay in general, but the details are all wrong.",
+  "evidence_refs": [
+    "captures/overview.webm"
+  ],
+  "reviewed_intervals": [
+    "evaluation 0–130409 ms"
+  ],
+  "coverage_ms": [
+    [
+      0,
+      130409
+    ]
+  ],
+  "coverage_complete": false,
+  "findings": {
+    "collision-avoidance": {
+      "status": "fail",
+      "detail": "The cars overlap when they collide and make no attempt to avoid it, they just pass right through each other and continue on.",
+      "evidence_refs": [
+        "captures/overview.webm"
+      ],
+      "confidence": 5
+    },
+    "signal-compliance": {
+      "status": "fail",
+      "detail": "The cars seem to completely ignore the signals and never stop",
+      "evidence_refs": [
+        "captures/overview.webm"
+      ],
+      "confidence": 5
+    },
+    "lane-discipline": {
+      "status": "fail",
+      "detail": "The cars seem to be slightly obeying \"English traffic rules\" (lef-hand lane) ... but this is confusing to someone in the  US like me.",
+      "evidence_refs": [
+        "captures/overview.webm"
+      ],
+      "confidence": 4
+    },
+    "physical-scale": {
+      "status": "fail",
+      "detail": "The road is about 5-6 times too big for the cars",
+      "evidence_refs": [
+        "captures/overview.webm"
+      ],
+      "confidence": 5
+    },
+    "trip-integrity": {
+      "status": "unverifiable",
+      "detail": "I cannot easily compare where the cars intend to go",
+      "evidence_refs": [
+        "captures/overview.webm"
+      ],
+      "confidence": 5
+    }
+  },
+  "visual_review": {
+    "clarity": 3,
+    "motion": 2,
+    "attractiveness": 4,
+    "notes": "The visuals are okay, but not great... and the proportions are way off."
+  }
+}

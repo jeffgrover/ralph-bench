@@ -41,6 +41,11 @@ extension guards while Ralph owns the bounded repair loop and browser feedback;
 the Wiggum TPM prompt is reserved for `loop = "native"`. OpenRouter remains
 the next provider slice for billed and normalized reference pricing.
 
+The ChatGPT/Codex adapter also offers explicit profiles for GPT-5.6 Terra,
+GPT-5.6 Sol, and GPT-6 Astra. `experiments/codex-astra.toml` is a ready
+high-reasoning Astra proving configuration; subscription cost remains
+unavailable in P0-A.
+
 P0-A targets a seam-complete Busy Intersection vertical slice. The Challenge
 Portability Fixture remains a small second-challenge boundary proof; it is not
 a partial city simulation and does not constrain the future city's topology or
@@ -79,6 +84,7 @@ OpenRouter billing/reference support is the next provider slice.
 rb
 rb run experiments/cloud-intersection.toml
 rb conformance tests/fixtures/busy_intersection/passing
+rb review results/inbox/<run-id>.ralph.zip
 rb preview results/inbox/<run-id>.ralph.zip
 rb build --source results/inbox --output site
 # Optional, read-only traffic-validity sidecars:
@@ -102,6 +108,15 @@ candidates. Complete pre-evaluation failures with no candidate or no started
 evaluator fail fast without creating a diagnostic bundle. The build command
 will validate and aggregate result bundles into a static site without
 modifying the source evidence.
+
+`rb review <bundle-or-run-directory>` starts a short-lived local review server,
+extracts/serves only the recording and metadata needed by the page, and loads
+them automatically. The page still has one fallback picker for another run.
+Mark pass/fail/unverifiable findings with timestamp evidence, add free-form
+visual notes, then lock the review to download a `traffic-review/v2` sidecar
+for `rb build --reviews`. The page's confidence and visual-quality sliders are
+context only; they never override an explicit traffic finding. With no source,
+`rb review --no-open` remains available for opening the blank page directly.
 
 ## Current implementation slice
 

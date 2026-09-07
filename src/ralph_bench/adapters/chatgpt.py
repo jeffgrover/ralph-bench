@@ -63,6 +63,27 @@ class ChatGPTProviderAdapter:
                 freshness="static",
                 capabilities=("reasoning", "tool-use"),
             ),
+            ModelOffer(
+                "gpt-5.6-terra",
+                "GPT-5.6 Terra",
+                source="Codex-supported P0 descriptor",
+                freshness="static",
+                capabilities=("reasoning", "tool-use"),
+            ),
+            ModelOffer(
+                "gpt-5.6-sol",
+                "GPT-5.6 Sol",
+                source="Codex-supported P0 descriptor",
+                freshness="static",
+                capabilities=("reasoning", "tool-use"),
+            ),
+            ModelOffer(
+                "gpt-6-astra",
+                "GPT-6 Astra",
+                source="Codex-supported P0 descriptor",
+                freshness="static",
+                capabilities=("reasoning", "tool-use"),
+            ),
         )
 
     def ensure_current(self, context: ProbeContext | None = None) -> UpdateResult:

@@ -25,6 +25,17 @@ activating v2.
 
 ## Review contract: traffic-review/v2, traffic-human/v1 rubric
 
+Run `rb review <bundle-or-run-directory>` to start the local reviewer. The
+command serves only `captures/overview.webm`, `captures/overview.json`, and
+`run.json`, and loads them into the page automatically. Use the timeline to
+mark evidence intervals, choose an explicit status for each rule, and write
+observations in plain language. The page's single file picker is only a
+fallback for switching to another run.
+The page locks the review before exporting JSON, preserving the exact run ID,
+artifact hash, scenario, seed, coverage, per-rule timestamp references, and
+optional visual-quality notes. Pass/fail/unverifiable decisions remain human
+choices; sliders are context and are not converted into verdicts.
+
 Supply a JSON sidecar to `rb build --reviews <directory>`. Copy `run_id`,
 `artifact_hash` (selected candidate hash), `scenario_id`, and integer `seed`
 from the bundle. Include `schema_version: "traffic-review/v2"`,
@@ -40,6 +51,16 @@ observed, and `evidence_refs` drawn from the sidecar's top-level references.
 Each rule must cite `captures/overview.webm`, optionally with a timestamp
 fragment; source references can supplement the recording. References must
 resolve inside the bundle. A poster alone cannot establish a pass.
+
+For `signal-compliance`, a pass means every clearly visible movement obeys the
+active signal/right-of-way. A clear bypass of a controlled signal is a fail;
+use unverifiable only when the signal state or movement is obscured.
+
+Calibration note (2026-09): the first two human reviews agreed on collision,
+lane, scale, and trip-integrity failures. One review marked signal compliance
+pass while noting vehicles bypassed signals; that historical judgment exposed
+the ambiguity and prompted the explicit rule above. Existing sidecars remain
+unchanged; the clarified rule applies to subsequent reviews.
 
 Intervals must cover the entire measured evaluation without gaps, including
 overload and recovery. Use `evaluation_elapsed_ms` from capture/v2 metadata;

@@ -86,7 +86,8 @@ P0-A is complete when all of the following are true:
 - Harness, provider, and model adapters compose into a `ResolvedSUT`; adding a
   compatible fake adapter requires no conductor or wizard branch.
 - The real wizard path discovers the current Codex release, checks ChatGPT
-  authentication read-only, and offers Luna. It does not ask for a subscription
+  authentication read-only, and offers the supported Luna, Terra, Sol, and
+  Astra profiles. It does not ask for a subscription
   allocation or cost questionnaire.
 - Before any model invocation, run preflight refreshes the selected harness
   (`codex update`, or Pi plus its extensions) and the selected local inference
@@ -402,9 +403,9 @@ and never executed by the report shell.
 ### WP6 — Current Codex path and honest cost evidence
 
 Build the current Codex harness path, update-aware preflight fixtures, explicit
-non-interactive Luna invocation with JSONL evidence and ephemeral/scoped
+non-interactive known-model invocation with JSONL evidence and ephemeral/scoped
 configuration, event/usage normalization, the ChatGPT provider adapter, and
-Luna descriptor. The live subscription path records cost as unavailable and
+known model descriptors. The live subscription path records cost as unavailable and
 preserves time, token, and attempt evidence; it does not allocate plan fees.
 
 **Exit:** the wizard authors and launches the live path without exposing

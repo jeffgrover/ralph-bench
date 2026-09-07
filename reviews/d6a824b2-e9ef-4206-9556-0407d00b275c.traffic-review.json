@@ -1,0 +1,72 @@
+{
+  "schema_version": "traffic-review/v2",
+  "rubric_version": "traffic-human/v1",
+  "status": "fail",
+  "run_id": "d6a824b2-e9ef-4206-9556-0407d00b275c",
+  "artifact_hash": "9a71bfe11c05679a9dbde5402f57b07176c4e0ecf411fceeaba01e948c465acc",
+  "scenario_id": "busy-intersection-gates-balanced",
+  "seed": 17,
+  "reviewer": "Jeff Grover",
+  "reason": "Visually okay, some scale problems, obeying traffic lights... but otherwise mostly wrong.",
+  "evidence_refs": [
+    "captures/overview.webm"
+  ],
+  "reviewed_intervals": [
+    "evaluation 0–50515 ms"
+  ],
+  "coverage_ms": [
+    [
+      0,
+      50515
+    ]
+  ],
+  "coverage_complete": false,
+  "findings": {
+    "collision-avoidance": {
+      "status": "fail",
+      "detail": "Cars seem to overlap without consequence, and do not stop or try to avoid collisions.",
+      "evidence_refs": [
+        "captures/overview.webm"
+      ],
+      "confidence": 4
+    },
+    "signal-compliance": {
+      "status": "pass",
+      "detail": "Generally speaking, the stoplights seem to be doing their job and the cars seem to be obeying them, but cars drive around them.",
+      "evidence_refs": [
+        "captures/overview.webm"
+      ],
+      "confidence": 3
+    },
+    "lane-discipline": {
+      "status": "fail",
+      "detail": "There isn't even road discipline, the card drive off-road diagonally to destinations on other roads",
+      "evidence_refs": [
+        "captures/overview.webm"
+      ],
+      "confidence": 5
+    },
+    "physical-scale": {
+      "status": "fail",
+      "detail": "The roads are way to wide for the car size, although the lane markings look more appropriately sized",
+      "evidence_refs": [
+        "captures/overview.webm"
+      ],
+      "confidence": 3
+    },
+    "trip-integrity": {
+      "status": "unverifiable",
+      "detail": "I cannot visually tell where cars are attempting to go.",
+      "evidence_refs": [
+        "captures/overview.webm"
+      ],
+      "confidence": 3
+    }
+  },
+  "visual_review": {
+    "clarity": 3,
+    "motion": 2,
+    "attractiveness": 2,
+    "notes": ""
+  }
+}

@@ -301,8 +301,9 @@ P0 includes:
 - The built-in harness/provider/model registry and capability resolver as the
   only source of wizard choices and option schemas.
 - Current-version Codex CLI detection, bounded update-aware preflight,
-  read-only ChatGPT authentication through `codex login status`, and the
-  `gpt-5.6-luna` model descriptor.
+  read-only ChatGPT authentication through `codex login status`, and known
+  `gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-5.6-sol`, and `gpt-6-astra`
+  model descriptors.
 - A provider choice labeled **ChatGPT (subscription)** whose review explains
   that P0-A cost is unavailable, while time, tokens, and attempts remain
   visible. There is no subscription-cost questionnaire.

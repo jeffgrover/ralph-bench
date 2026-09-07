@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import sys
 from typing import Callable, Sequence
+import webbrowser
 
 from .adapters import AdapterRegistry, built_in_registry, resolve_sut
 from .adapters.contracts import (
@@ -36,6 +37,7 @@ from .experiments import (
 )
 from .preview import PreviewError, open_bundle_preview
 from .reporting import ReportBuildError, build_site
+from .review_server import ReviewServerError, serve_review
 
 
 class WizardCancelled(Exception):
@@ -60,6 +62,18 @@ def _parser() -> argparse.ArgumentParser:
         "preview", help="open a bundle's evaluator-recorded simulation overview"
     )
     preview.add_argument("path", type=Path)
+    review = sub.add_parser(
+        "review", help="review one result bundle or extracted run locally"
+    )
+    review.add_argument(
+        "source",
+        nargs="?",
+        type=Path,
+        help="one .ralph.zip bundle or extracted run directory",
+    )
+    review.add_argument(
+        "--no-open", action="store_true", help="serve without opening a browser"
+    )
     doctor = sub.add_parser("doctor", help="perform read-only adapter diagnostics")
     doctor.add_argument("--json", action="store_true", help="emit machine-readable diagnostics")
     bundle = sub.add_parser("bundle", help="inspect immutable result bundles")
@@ -619,6 +633,27 @@ def main(
             output_fn(f"Could not open recorded overview: {exc}")
             return 2
         output_fn(f"Opened recorded simulation overview: {preview.media_path}")
+        return 0
+    if args.command == "review":
+        if args.source is not None:
+            try:
+                serve_review(
+                    args.source,
+                    project_root=_project_root_for_cli(),
+                    open_browser=not args.no_open,
+                )
+            except ReviewServerError as exc:
+                output_fn(f"Could not start human review: {exc}")
+                return 2
+            return 0
+        page = _project_root_for_cli() / "review" / "index.html"
+        if not page.is_file():
+            output_fn(f"Human review page is missing: {page}")
+            return 2
+        opened = args.no_open or webbrowser.open(page.as_uri())
+        output_fn(f"Human review page: {page}")
+        if not args.no_open and not opened:
+            output_fn("The browser could not be opened automatically; open the path above.")
         return 0
     if args.command == "conformance":
         try:

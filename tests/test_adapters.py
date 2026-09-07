@@ -281,6 +281,25 @@ class AdapterTests(unittest.TestCase):
             cost_capabilities.evidence_statuses, ("unavailable",)
         )
 
+    def test_codex_chatgpt_frontier_models_resolve_as_known_models(self):
+        def process(argv, timeout):
+            return ProcessResult(
+                0,
+                "codex-cli 0.149.0\n"
+                if argv[-1] == "--version"
+                else "Logged in using ChatGPT\n",
+            )
+
+        for model in ("gpt-5.6-terra", "gpt-5.6-sol", "gpt-6-astra"):
+            with self.subTest(model=model):
+                sut = resolve_sut(
+                    parse_experiment({**cloud_raw(), "model": model}),
+                    built_in_registry(),
+                    context=ProbeContext(process_runner=process),
+                )
+                self.assertEqual(sut.model_id, f"model/{model}")
+                self.assertTrue(sut.model_binding.capabilities.known)
+
     def test_probe_context_detaches_metadata_and_rejects_invalid_timeout(self):
         metadata = {"credential_available": True}
         context = ProbeContext(metadata=metadata)

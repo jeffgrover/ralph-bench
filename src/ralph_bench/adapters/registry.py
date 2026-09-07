@@ -10,7 +10,13 @@ from .codex import CodexHarnessAdapter
 from .lmstudio import LMStudioProviderAdapter
 from .pi import PiHarnessAdapter
 from .contracts import HarnessAdapter, ModelAdapter, ProviderAdapter
-from .models import GenericModelAdapter, LunaModelAdapter
+from .models import (
+    AstraModelAdapter,
+    GenericModelAdapter,
+    LunaModelAdapter,
+    SolModelAdapter,
+    TerraModelAdapter,
+)
 
 
 @dataclass
@@ -56,6 +62,9 @@ def built_in_registry(
     provider = ChatGPTProviderAdapter()
     local_provider = lmstudio or LMStudioProviderAdapter()
     luna = LunaModelAdapter()
+    terra = TerraModelAdapter()
+    sol = SolModelAdapter()
+    astra = AstraModelAdapter()
     generic = GenericModelAdapter()
     return AdapterRegistry(
         {
@@ -66,5 +75,11 @@ def built_in_registry(
             provider.descriptor.adapter_id: provider,
             local_provider.descriptor.adapter_id: local_provider,
         },
-        {luna.descriptor.adapter_id: luna, generic.descriptor.adapter_id: generic},
+        {
+            luna.descriptor.adapter_id: luna,
+            terra.descriptor.adapter_id: terra,
+            sol.descriptor.adapter_id: sol,
+            astra.descriptor.adapter_id: astra,
+            generic.descriptor.adapter_id: generic,
+        },
     )

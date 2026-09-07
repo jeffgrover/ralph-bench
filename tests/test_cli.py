@@ -329,6 +329,43 @@ class CliTests(unittest.TestCase):
         preview.assert_called_once_with(Path("/tmp/result.ralph.zip"))
         self.assertIn(str(media), output[0])
 
+    def test_review_no_open_prints_local_page(self):
+        output: list[str] = []
+        self.assertEqual(
+            main(
+                ["review", "--no-open"],
+                output_fn=output.append,
+                stdin=io.StringIO(),
+            ),
+            0,
+        )
+        self.assertIn("review/index.html", output[0])
+
+    def test_review_source_uses_local_server(self):
+        with patch("ralph_bench.cli.serve_review") as serve:
+            self.assertEqual(
+                main(
+                    ["review", "/tmp/result.ralph.zip"],
+                    output_fn=lambda _message: None,
+                    stdin=io.StringIO(),
+                ),
+                0,
+            )
+        serve.assert_called_once()
+        self.assertEqual(serve.call_args.args[0], Path("/tmp/result.ralph.zip"))
+        self.assertTrue(serve.call_args.kwargs["open_browser"])
+
+        with patch("ralph_bench.cli.serve_review") as serve:
+            self.assertEqual(
+                main(
+                    ["review", "/tmp/result.ralph.zip", "--no-open"],
+                    output_fn=lambda _message: None,
+                    stdin=io.StringIO(),
+                ),
+                0,
+            )
+        self.assertFalse(serve.call_args.kwargs["open_browser"])
+
     def test_wizard_derives_scenario_pack_and_omits_subscription_questionnaire(self):
         answers = iter(
             (

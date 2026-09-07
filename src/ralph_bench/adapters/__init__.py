@@ -36,7 +36,13 @@ from .contracts import (
     ResolvedSUT,
     UpdateResult,
 )
-from .models import GenericModelAdapter, LunaModelAdapter
+from .models import (
+    AstraModelAdapter,
+    GenericModelAdapter,
+    LunaModelAdapter,
+    SolModelAdapter,
+    TerraModelAdapter,
+)
 from .pi import PiHarnessAdapter
 from .pi_execution import PiAttemptExecutor, PiExecutionError, PiStreamSummary, parse_pi_jsonl
 from .registry import AdapterRegistry, built_in_registry
@@ -44,6 +50,7 @@ from .resolver import ResolutionError, resolve_sut
 
 __all__ = [
     "AdapterDescriptor",
+    "AstraModelAdapter",
     "AdapterRegistry",
     "BILLING_MODE_TRACKS",
     "ChatGPTProviderAdapter",
@@ -79,7 +86,9 @@ __all__ = [
     "ProviderAdapter",
     "ResolutionError",
     "ResolvedSUT",
+    "SolModelAdapter",
     "SubprocessExecutor",
+    "TerraModelAdapter",
     "UpdateResult",
     "built_in_registry",
     "credential_secret_values",
