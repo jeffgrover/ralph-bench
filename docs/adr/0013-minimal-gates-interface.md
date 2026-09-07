@@ -3,6 +3,11 @@
 - Status: accepted
 - Date: 2026-08-25
 
+Physical acceptance is amended by
+[ADR 0017](0017-traffic-validity-before-performance.md). The minimal gates API
+remains; physical review becomes required traffic-validity evidence, separate
+from aesthetic judgment. The decision below is retained as history.
+
 ## Context
 
 The first live Busy Intersection run produced a visually strong simulation but

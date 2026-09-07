@@ -7,17 +7,21 @@ whether a model-and-harness combination can produce an original, accepted
 browser artifact, how well the artifact performs under controlled load, and
 how much local time or cloud cost was required.
 
-The P0 challenge family is:
-
-- `busy-intersection/v1` for local and smaller models.
-- `five-by-five-rush/v1` for frontier and cloud-class models.
+Busy Intersection is the active challenge. The executable contract remains
+`busy-intersection/v1`; the simplicity refactor targets
+`busy-intersection/v2` for both local and cloud models. The city remains
+deferred, with the Challenge Portability Fixture proving the generic boundary.
 
 Busy Intersection uses evaluator-injected `gates/v1`: two arrival callbacks,
 two finish notifications, and an evaluator-owned completion ledger sampled
-while the same live run is recorded. It optimizes sustainable monitored vehicle
-throughput; physical plausibility, safety, and visible agreement with finish
-notifications are separate human/frontier-review dimensions. The full city
-protocol remains a P0-B design concern.
+while the same live run is recorded. The ledger establishes protocol and
+demand-accounting properties, not physical traffic validity. V2 requires
+collision avoidance, signal compliance, lane discipline, realistic scale, and
+truthful trip completion before traffic performance comparison. Required
+traffic review remains separate from aesthetic review. Follow the public
+behavioral contract in `docs/TRAFFIC_CHALLENGES.md` and the staged migration in
+`docs/NEXT_STEPS.md`; do not imply that v1 results satisfy unimplemented v2
+requirements.
 
 ## Repository identity
 
@@ -46,11 +50,11 @@ Read these before P0 implementation:
 - `docs/ISOLATION_MODEL.md`
 - `docs/adr/`, especially ADR 0009 (P0 seam breadth), ADR 0011 (cloud cost
   evidence, OpenRouter references, and deferred subscription allocation), ADR
-  0013 (minimal evaluator-injected gates), and ADR 0015 (current-toolchain
-  preflight)
+  0013 (minimal evaluator-injected gates), ADR 0015 (current-toolchain
+  preflight), and ADR 0017 (traffic validity before performance)
 
 The P0-A planning packet was accepted on 2026-08-23 as amended by ADR 0011 and
-ADR 0014.
+ADR 0014 and ADR 0017.
 Do not silently expand scope through implementation.
 
 ## Architectural constraints
@@ -101,6 +105,12 @@ Do not silently expand scope through implementation.
 - Do not reintroduce candidate-authored topology, snapshot, queue, simulation
   clock, or event ontologies into Busy Intersection. Ralph owns gate IDs,
   timestamps, completion validation, and outstanding-demand monitoring.
+- Every client receives the same complete challenge. Harness handoffs may
+  describe execution tools and loops but must not weaken the traffic task.
+  Reduced tool-call calibration tasks need distinct identity and provenance.
+- Public physical bounds and correctness rules belong in the versioned
+  challenge. Gates conformance alone cannot establish traffic acceptance;
+  missing or insufficient physical review is pending or unverifiable.
 - The Busy Intersection may use 2D, 2.5D, or 3D presentation. Do not encode a
   rendering-technology preference into traffic acceptance or visual review.
 - Treat layout, visual coherence, information design, motion, polish,
@@ -171,8 +181,9 @@ Do not silently expand scope through implementation.
   proving path after seam completion.
 - P0 targets portable L0/unsealed staging and must label its limitations
   honestly; stronger isolation remains a later evaluated capability.
-- Exact traffic thresholds belong in versioned private judge packs and require
-  fixture/reference/pilot calibration.
+- Exact load/scoring thresholds belong in versioned private judge packs and
+  require fixture/reference/pilot calibration. Physical bounds, signal rules,
+  and traffic-validity requirements are public challenge material.
 - Google Drive, quota-burden reporting, legacy result import, frontier-model
   qualitative judging, and broad legacy-harness migration are post-P0 work.
 
@@ -190,8 +201,9 @@ Do not silently expand scope through implementation.
   overwrite it with later attempts. Complete pre-evaluation failures remain
   operator-visible failures without result bundles.
 - Keep challenge-specific checks out of the conductor core.
-- Ensure deterministic fast-forward evaluation and visible playback use the
-  same simulation state/update path.
+- Record the same live run used for evaluation. Use the elapsed-time convention
+  in `docs/TRAFFIC_CHALLENGES.md`; ledger sampling is not a simulation step.
+  Do not claim deterministic fast-forward support from the current worker.
 
 ## Testing expectations
 
@@ -210,6 +222,8 @@ P0 tests must cover:
 - Isolation/path and secret-redaction fixtures.
 - Malformed and adversarial ZIP bundles.
 - Passing and deliberately broken traffic artifacts.
+- Physical-validity observation against collision, signal, lane, scale, and
+  false-finish counterexamples; protocol fixtures alone do not establish it.
 - Dishonest or inconsistent artifact telemetry.
 - Load-to-failure, recovery, and metric calculations.
 - Functional eligibility before performance comparison, including public

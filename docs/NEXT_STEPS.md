@@ -1,14 +1,125 @@
 # Prioritized next steps
 
-This is the resume point after replacing the original rich traffic protocol
-with the minimal `gates/v1` arrival/finish boundary and accepting the
-seam-first direction. The first P0-A model run on 2026-08-23 remains valuable
-evidence: it produced a valid immutable bundle and a visually strong Busy
-Intersection, but exposed that interface plumbing was dominating measurement.
+The next milestone is the simplicity refactor described below. The operator
+has observed generated artifacts that collide, ignore signals, leave their
+lanes, or use implausible vehicle/road scale. Some local-model artifacts do
+not establish a working simulation at all. Successful gate callbacks and
+attractive animation therefore cannot establish traffic validity.
+
+The implementation status and historical evidence below describe the existing
+P0-A path; they do not establish that these new acceptance requirements have
+been implemented or verified.
+
+## Clearer goals
+
+The [traffic contract](TRAFFIC_CHALLENGES.md) is authoritative for what a
+simulation must do: finite travelers move through a shared world, avoid
+collisions, obey signals, follow lanes, use realistic physical scale, and
+complete their requested trips. The document defines the public envelope,
+right-of-way rules, clock convention, evidence, and counterexamples.
+
+[ADR 0017](adr/0017-traffic-validity-before-performance.md) records the change
+from optional physical interpretation to required traffic validity, while
+retaining `gates/v1`. The executable challenge remains v1 until the v2 contract
+can be delivered and evaluated honestly. Diagnostic callback throughput does
+not establish a working simulation.
+
+## Refactor phases
+
+Proceed in this order and pause after each phase. Do not start live model
+runs or introduce additional integrations as part of mechanical cleanup.
+
+### 1. Establish the traffic contract — complete, 2026-09-05
+
+- Define the traffic concepts, safety rules, public physical baseline, shared
+  assignment, time convention, and evidence requirements in one contract.
+- Amend the vision, acceptance interpretation, repository guidance, and ADRs.
+- Reserve v2 for changed semantics; preserve the executable v1 pack and schemas.
+
+**Exit:** Documentation distinguishes implemented behavior from the v2 target;
+all required rules have a public definition and planned evidence/counterexample.
+Physical baseline values still require fixture calibration. No runtime change
+or claim that traffic validity is already enforced.
+
+### 2. Remove unused machinery and duplicate calculations — next
+
+- Remove the unused run-state machine and cleanup stack/report, retaining
+  coverage of the actual conductor lifecycle and rollback paths.
+- Remove the unused host-environment helper and redundant repair wrapper;
+  retarget any useful wrapper tests to the production boundary.
+- Remove the unread challenge scenario document and its serialization.
+- Reuse the existing safe artifact-tree hash; use Python's file digest helper
+  where equivalent. Build the smoke scenario directly with validated domain
+  objects instead of serializing and reparsing an intermediate dictionary.
+
+**Exit:** Existing account-free tests pass; runtime behavior, bundle schemas,
+path/secret protections, and cleanup guarantees remain unchanged.
+
+### 3. Consolidate shared execution and configuration
+
+- Share conformance execution while callers retain ownership of temporary or
+  preserved output directories.
+- Share attempt bookkeeping across Codex and Pi; keep native invocation,
+  parsing, configuration, and raw evidence at adapter boundaries.
+- Use one capability declaration for wizard, resolver, and invocation options;
+  remove unused option declarations and keep known models declarative and
+  unknown models conservative. Retain the three typed adapter families.
+- Give every client the complete challenge. Remove the Pi-only animation
+  replacement; label any reduced tool-call calibration separately.
+
+**Exit:** Both client paths receive the same assignment and preserve attempt,
+resource, feedback, and cleanup evidence. Shared validation has one source.
+
+### 4. Make acceptance and reporting truthful
+
+- Represent protocol conformance, traffic review, load performance, and visual
+  quality separately, following the [measurement model](MEASUREMENT_MODEL.md).
+- Support explicit traffic-review states and evidence references. Keep later
+  reviews outside immutable bundles, tied to run ID and artifact hash.
+- Exclude failed, pending, and unverifiable traffic from performance comparison;
+  retain diagnostics. Preserve the L0 experimental/official-ranking boundary.
+- Version changed result/capture semantics, describe elapsed evaluation time
+  accurately, and retain historical readers without inventing physical passes.
+
+**Exit:** Acceptance and report tests exercise missing/failed/insufficient
+review, provenance mismatches, immutable input, and historical compatibility.
+The staged v2 path cannot be presented as calibrated production performance.
+
+### 5. Validate physical behavior and calibrate load
+
+- Identify the existing passing artifact as a protocol fixture. Exercise a
+  physically credible evaluator-owned reference under the public envelope.
+- Add observation cases for car/car and car/pedestrian collisions, red-light
+  entry, lane departure, scale abuse, false finishes, starvation, backlog, and
+  recovery. Test the claimed observation method, not preset verdict fields.
+- Validate human-review coverage and any proposed detector against those
+  cases. Preserve explicit uncertainty where the evidence cannot decide.
+- Calibrate demand and recovery against safe behavior; version the private
+  judge. Materialize the v2 public pack and shared scenario profile, verify
+  end-to-end evidence, then activate v2 only when all release conditions hold.
+
+**Exit:** Each validity rule has demonstrated observation coverage and a
+counterexample. Account-free fixture tests do not need private material;
+private reference/pilot evidence supports the production thresholds. Safety
+remains mandatory under overload, and v1/v2 results are not mixed.
+
+### 6. Consolidate documentation around the working solution
+
+- Keep README focused on usage, P0_PLAN on current scope and completion, and
+  this file on outstanding work. Link to one owner for each domain contract.
+- Remove duplicated requirements and obsolete implementation instructions.
+  Condense local-model handoff history while retaining experiment/run IDs and
+  the evidence needed to interpret failures.
+- Preserve historical ADRs and clearly mark their amendments; remove claims
+  for functionality that is neither implemented nor in the current milestone.
+
+**Exit:** Commands and examples match the implemented system, each requirement
+has one authoritative home, and historical evidence remains interpretable.
 
 ## Decisions already made
 
-Do not reopen these without new evidence:
+Retain these existing P0 choices except where the refactor requirements above
+explicitly revise traffic acceptance or the shared challenge:
 
 - Busy Intersection is the primary challenge. The future city remains open for
   extension; its P0 seam proof is the Challenge Portability Fixture, not a

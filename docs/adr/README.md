@@ -4,7 +4,8 @@ These records capture the foundational decisions approved for Ralph Bench P0-A.
 They were accepted when implementation began on 2026-08-23. Superseded or
 amended ADRs are retained as historical decisions; the current cost decision is
 ADR 0011, the current scope/version/measurement refinement is ADR 0014, and
-the current toolchain-preflight policy is ADR 0015.
+the current toolchain-preflight policy is ADR 0015. ADR 0017 amends traffic
+acceptance and shared challenge requirements for the phased v2 refactor.
 
 | ADR | Decision |
 |---|---|
@@ -24,3 +25,4 @@ the current toolchain-preflight policy is ADR 0015.
 | [0014](0014-seam-first-evaluation-and-active-harness.md) | Keep Busy Intersection primary, make eligibility precede performance, resolve current harness versions at run time, prove seams with Pi-wiggum/local execution, and defer reporting breadth until the seams are complete. |
 | [0015](0015-current-toolchain-preflight.md) | Refresh the selected harness, extensions, and local inference runtime before evaluation, verify provider readiness, and preserve exact toolchain provenance. |
 | [0016](0016-pi-controlled-proving-handoff.md) | Use a bounded controlled Pi handoff for local proving while retaining native Wiggum as a separate loop mode and preserving evaluator feedback boundaries. |
+| [0017](0017-traffic-validity-before-performance.md) | Require evidenced physical traffic validity before performance comparison, retain minimal gates, and use the same complete challenge for every client. |

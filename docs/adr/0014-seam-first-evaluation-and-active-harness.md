@@ -3,6 +3,10 @@
 **Status:** Accepted
 **Date:** 2026-08-30
 
+[ADR 0017](0017-traffic-validity-before-performance.md) makes physical traffic
+validity explicit in the eligibility floor and defines the staged v2
+migration. The decision below is retained as history.
+
 ## Context
 
 The first implementation established a strong contract, execution, isolation,

@@ -6,11 +6,17 @@
 durable system boundary, with the Challenge Portability Fixture proving that
 future challenges can extend the system without Busy-specific orchestration.
 
+**Current amendment:** [ADR 0017](adr/0017-traffic-validity-before-performance.md)
+adds mandatory traffic validity and the v2 migration. Follow the ordered
+[refactor phases](NEXT_STEPS.md#refactor-phases) before extending the product.
+The [traffic contract](TRAFFIC_CHALLENGES.md) owns the physical requirements;
+existing v1 conformance/load results do not establish that they are met.
+
 ## Objective
 
 Build the smallest Ralph Bench that is already shaped like the intended
 product: guided experiment authoring, polymorphic SUT resolution, controlled
-execution, staged isolation, deterministic browser evaluation, immutable
+execution, staged isolation, recorded browser evaluation, immutable
 evidence, honest cloud-cost provenance, and a visually coherent derived report.
 
 The abstractions are not speculative. The legacy evaluator already proves the
@@ -369,9 +375,10 @@ recorded visual review. Do not implement optional bracket refinement in P0-A.
 
 **Exit:** passing and deliberately broken fixtures produce reproducible
 throughput, completion latency, invalid-finish, backlog, low-load service,
-breakdown, and recovery evidence. Captures preserve collision/safety/motion
-evidence for visual review. The calibrated profile/seed manifest is versioned
-and recorded with every result.
+breakdown, and recovery evidence. Under ADR 0017, the v2 exit additionally
+requires evidenced traffic validity under the public physical envelope;
+protocol fixtures and the existence of a capture are insufficient. The
+calibrated profile/seed manifest is versioned and recorded with every result.
 
 **Estimate:** 6–8 engineering days.
 
@@ -456,9 +463,10 @@ The skeleton is protected by tests that cross its seams:
 - Requested/materialized/effective configuration and cleanup remain distinct;
   cleanup runs on every terminal path.
 - Repetitions and attempts never collide or overwrite earlier evidence.
-- Gate reconciliation catches dropped, duplicate, unknown, wrong-kind, and
-  wrong-exit completions; recorded review checks physical plausibility and
-  agreement with reported finishes.
+- Gate reconciliation catches duplicate, unknown, wrong-kind, and wrong-exit
+  completions and retains unfinished requests as outstanding demand. Required
+  traffic review establishes the separate physical-validity findings in
+  `TRAFFIC_CHALLENGES.md`; inconclusive evidence cannot become a pass.
 - Held stages distinguish transient queues from sustained breakdown and record
   recovery.
 - Missing cost stays null/unavailable and never becomes zero; subscription
