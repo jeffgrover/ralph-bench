@@ -26,6 +26,9 @@ class ConformanceError(RuntimeError):
     """The public conformance input or execution was invalid."""
 
 
+PUBLIC_SMOKE_SETTLE_MS = 12_000
+
+
 def _assertion(
     assertion_id: str,
     passed: bool,
@@ -74,6 +77,7 @@ def evaluate_public_conformance(
         for item in completions
         if isinstance(item, Mapping) and isinstance(item.get("id"), str)
     }
+    missing_ids = sorted(expected_ids - completion_ids)
     assertions = (
         _assertion(
             "gates-interface-ready",
@@ -100,7 +104,10 @@ def evaluate_public_conformance(
             "traveler-service",
             completion_ids == expected_ids and len(completions) == len(expected_ids),
             f"all {len(expected_ids)} public smoke travelers finished",
-            f"finished {len(completion_ids)} of {len(expected_ids)} public smoke travelers",
+            (
+                f"finished {len(completion_ids)} of {len(expected_ids)} public smoke "
+                f"travelers; missing {', '.join(missing_ids)}"
+            ),
             scenario=scenario,
         ),
         _assertion(
@@ -154,6 +161,7 @@ def evaluate_public_conformance(
             "completed_travelers": len(completion_ids),
             "runtime_error_count": len(runtime_errors),
             "network_violation_count": len(network_violations),
+            "missing_traveler_ids": missing_ids,
         },
         "performance_eligible": False,
     }
@@ -178,7 +186,11 @@ def load_public_smoke_scenario(path: Path) -> GateScenario:
         ],
         default=0,
     )
-    horizon = max_arrival + 8_000
+    # The smoke pack is deliberately unscored, so allow a modest signal-cycle
+    # settle window after the final arrival. Capacity and latency remain private
+    # evaluator concerns; this only prevents a valid but slower implementation
+    # from failing before it can demonstrate the public finish callbacks.
+    horizon = max_arrival + PUBLIC_SMOKE_SETTLE_MS
     scenario = {
         "schema_version": "gate-scenario/v1",
         "scenario_id": "busy-intersection-public-smoke",

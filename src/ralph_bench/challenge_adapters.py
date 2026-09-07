@@ -317,11 +317,14 @@ class BusyIntersectionChallengeAdapter:
         label: str,
         public_evaluation: Mapping[str, Any] | None = None,
     ) -> PublicCheckResult:
-        assertion_sources = (public_evaluation, evaluation)
+        assertion_sources = (
+            ("public", public_evaluation),
+            ("private", evaluation),
+        )
         failed_assertions: list[dict[str, Any]] = []
         assertion_ids: list[str] = list(static.assertion_ids)
         seen_failures: set[str] = set()
-        for source in assertion_sources:
+        for source_kind, source in assertion_sources:
             assertions = source.get("assertions", []) if isinstance(source, Mapping) else []
             if not isinstance(assertions, list):
                 continue
@@ -335,12 +338,13 @@ class BusyIntersectionChallengeAdapter:
                     assertion_ids.append(assertion_id)
                 if assertion.get("result") == "fail" and assertion_id not in seen_failures:
                     seen_failures.add(assertion_id)
+                    detail = _browser_repair_detail(assertion_id)
+                    if source_kind == "public":
+                        observed = assertion.get("detail")
+                        if isinstance(observed, str) and observed.strip():
+                            detail += f" Observed public result: {observed.strip()}."
                     failed_assertions.append(
-                        {
-                            "id": assertion_id,
-                            "result": "fail",
-                            "detail": _browser_repair_detail(assertion_id),
-                        }
+                        {"id": assertion_id, "result": "fail", "detail": detail}
                     )
         passed = (
             static.passed

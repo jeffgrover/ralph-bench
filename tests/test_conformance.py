@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+from pathlib import Path
 import unittest
 
-from ralph_bench.conformance import evaluate_public_conformance
+from ralph_bench.conformance import (
+    PUBLIC_SMOKE_SETTLE_MS,
+    evaluate_public_conformance,
+    load_public_smoke_scenario,
+)
 from ralph_bench.gates import CarArrival, DemandStage, GateScenario, PedestrianArrival
 
 
@@ -56,7 +61,22 @@ class ConformanceTests(unittest.TestCase):
         )
         self.assertEqual(result["outcome"], "failed")
         self.assertIn("traveler-service", {item["assertion_id"] for item in result["assertions"] if item["result"] == "fail"})
+        self.assertIn("car-1", result["metrics"]["missing_traveler_ids"])
         self.assertNotIn("threshold", str(result["failures"]).lower())
+
+    def test_checked_in_smoke_has_a_settle_window_after_the_last_arrival(self):
+        scenario = load_public_smoke_scenario(
+            Path(__file__).parents[1]
+            / "challenges"
+            / "busy-intersection"
+            / "v1"
+            / "public"
+            / "scenario-pack.json"
+        )
+        latest_arrival = max(
+            item.arrival_ms for item in (*scenario.cars, *scenario.pedestrians)
+        )
+        self.assertEqual(scenario.horizon_ms, latest_arrival + PUBLIC_SMOKE_SETTLE_MS)
 
 
 if __name__ == "__main__":
