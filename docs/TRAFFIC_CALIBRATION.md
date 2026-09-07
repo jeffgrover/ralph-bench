@@ -8,6 +8,20 @@ accounting; it does not observe bodies, lanes, signals, or occupied space.
 Human reviewers inspect the same recording and preserved artifact. Their
 findings are supplied separately from the immutable bundle.
 
+## Reference baseline (calibration only)
+
+`reference/busy-intersection-v1` is a small evaluator-owned static artifact,
+not a hidden answer or a production judge. On Chromium 149 / Playwright 1.62,
+seed 17, the real worker passed public smoke (6/6 travelers) and the balanced
+load profile (80/80 cars, 16/16 pedestrians, zero invalid completions). The
+trace observed 66 vehicles/minute at peak, first failed to keep pace at the
+90-vehicle/minute offered stage, and cleared its 14-car cooldown backlog in
+14,827 ms. The reference tree hash for this revision is
+`0aa5b923d29a9995d88e828676ff9207ea26ade2db35c3dc2842a75fdb12c561`.
+These numbers are a starting observation, not frozen thresholds;
+repeat on the target platforms and complete the human review below before
+activating v2.
+
 ## Review contract: traffic-review/v2, traffic-human/v1 rubric
 
 Supply a JSON sidecar to `rb build --reviews <directory>`. Copy `run_id`,

@@ -44,6 +44,13 @@ These are outstanding benchmark validation, not completed by unit tests.
   Replaying this run's raw Codex log confirms no reported usage. Its immutable
   bundle predates the fix and retains the historical zero summary; do not
   interpret that summary as measured zero consumption or free inference.
+- Added an evaluator-owned reference artifact at
+  `reference/busy-intersection-v1`. The real browser worker passes its public
+  smoke and full balanced load profile: 80/80 cars, 16/16 pedestrians, zero
+  invalid completions, a 66 vehicles/minute observed peak, first overload at
+  the 90 vehicles/minute offered stage, and recovery of all backlog in 14.8
+  seconds. This establishes a reproducible protocol/load baseline only; its
+  physical-validity review is still pending.
 
 ## Next validation work, in order
 

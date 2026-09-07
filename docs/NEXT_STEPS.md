@@ -6,8 +6,10 @@ synthetic calibration claims are superseded by that review and the current
 [human review contract](TRAFFIC_CALIBRATION.md). Documentation consolidation
 is included in the new milestone.
 
-Private reference/reviewer validation and load calibration remain prerequisites
-for v2 activation. The operator has observed generated artifacts that collide,
+Private reviewer validation and load calibration remain prerequisites for v2
+activation. An evaluator-owned reference now supplies a repeatable starting
+trace; its physical behavior is not yet human-certified. The operator has
+observed generated artifacts that collide,
 ignore signals, leave their lanes, or use implausible vehicle/road scale. Some
 local-model artifacts do not establish a working simulation at all. Successful
 gate callbacks and attractive animation therefore cannot establish traffic
@@ -154,16 +156,12 @@ counterexample. Account-free fixture tests do not need private material;
 private reference/pilot evidence supports the production thresholds. Safety
 remains mandatory under overload, and v1/v2 results are not mixed.
 
-Phase 5's account-free calibration slice is complete, 2026-09-06. The new
-`traffic-observation/v1` calibration seam derives physical and load findings
-from evaluator-owned observations rather than candidate verdict fields. The
-in-repository reference trace covers every proposed rule; counterexamples
-cover car/car and car/pedestrian collisions, red-light entry, lane departure,
-scale abuse, false finishes, starvation, backlog, and recovery. The suite
-passes (152 tests). This is calibration evidence, not a production v2 judge:
-the browser worker still records only `gates/v1`, and v2 activation remains
-blocked on a private viable reference, observer validation under occlusion and
-missing frames, pilot runs, and human threshold review.
+The prior synthetic `traffic-observation/v1` claim was withdrawn during the
+closing-gaps pass. The current reference artifact and real browser trace are
+load/protocol calibration evidence only. The browser worker still records only
+`gates/v1`, and v2 activation remains blocked on human review of the reference,
+counterexamples, occlusion/missing-frame cases, pilot runs, and threshold
+review.
 
 ### 6. Consolidate documentation around the working solution
 
