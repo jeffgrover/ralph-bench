@@ -10,8 +10,9 @@ findings are supplied separately from the immutable bundle.
 
 ## Reference baseline (calibration only)
 
-`reference/busy-intersection-v1` is a small evaluator-owned static artifact,
-not a hidden answer or a production judge. On Chromium 149 / Playwright 1.62,
+The evaluator-owned reference is kept in a local private reference directory,
+outside the repository and staged public challenge assets. It is not a hidden
+answer or a production judge. On Chromium 149 / Playwright 1.62,
 seed 17, the real worker passed public smoke (6/6 travelers) and the balanced
 load profile (80/80 cars, 16/16 pedestrians, zero invalid completions). The
 trace observed 66 vehicles/minute at peak, first failed to keep pace at the
