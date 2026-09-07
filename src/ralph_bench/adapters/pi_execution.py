@@ -55,13 +55,7 @@ def _assistant_message(event: Mapping[str, Any]) -> Mapping[str, Any] | None:
 def _usage(message: Mapping[str, Any]) -> dict[str, int]:
     raw = message.get("usage")
     if not isinstance(raw, Mapping):
-        return {
-            "input_tokens": 0,
-            "output_tokens": 0,
-            "total_tokens": 0,
-            "reasoning_tokens": 0,
-            "cache_read_tokens": 0,
-        }
+        return {}
     input_tokens = _nonnegative_int(raw.get("input", raw.get("input_tokens")))
     output_tokens = _nonnegative_int(raw.get("output", raw.get("output_tokens")))
     cache_read = _nonnegative_int(raw.get("cacheRead", raw.get("cache_read_tokens")))
@@ -143,13 +137,7 @@ def parse_pi_jsonl(
     model_id: str | None = None
     final_message = ""
     event_types: list[str] = []
-    totals = {
-        "input_tokens": 0,
-        "output_tokens": 0,
-        "total_tokens": 0,
-        "reasoning_tokens": 0,
-        "cache_read_tokens": 0,
-    }
+    totals: dict[str, int] = {}
     with path.open("r", encoding="utf-8", errors="replace") as stream:
         for line in stream:
             if not line.strip():
@@ -173,7 +161,7 @@ def parse_pi_jsonl(
             turns += 1
             usage = _usage(message)
             for key, value in usage.items():
-                totals[key] += value
+                totals[key] = totals.get(key, 0) + value
             tool_calls += _tool_calls(message)
             provider_id = provider_id or (
                 str(message["provider"]) if isinstance(message.get("provider"), str) else None

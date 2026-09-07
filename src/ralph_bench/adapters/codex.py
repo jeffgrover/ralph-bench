@@ -270,6 +270,7 @@ class CodexHarnessAdapter:
             argv += ("-C", working_directory)
         argv += ("-",)
         return InvocationPlan(
+            tool_policy="standard",
             argv=argv,
             model=model,
             sandbox=sandbox,

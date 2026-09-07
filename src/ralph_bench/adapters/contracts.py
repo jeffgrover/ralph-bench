@@ -302,6 +302,7 @@ class InvocationPlan:
     prompt_argument: str = "-"
     evidence_prefix: str = "codex"
     warnings: tuple[str, ...] = ()
+    tool_policy: str = "unknown"
 
 
 @dataclass(frozen=True, slots=True)

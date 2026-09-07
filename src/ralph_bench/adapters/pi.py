@@ -353,6 +353,7 @@ class PiHarnessAdapter:
             else:
                 warnings.append("Pi-wiggum prompt template is missing")
         return InvocationPlan(
+            tool_policy="calibration" if loop == "controlled" else "standard",
             argv=tuple(argv_parts),
             model=model,
             sandbox=sandbox,

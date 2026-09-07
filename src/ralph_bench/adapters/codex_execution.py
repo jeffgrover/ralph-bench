@@ -489,7 +489,7 @@ def parse_codex_jsonl(path: Path, *, secret_values: Sequence[str] = ()) -> Codex
         warnings.append(f"ignored {malformed} malformed JSONL line(s)")
     if session_id is not None:
         session_id = redact_text(session_id, secret_values)
-    return CodexStreamSummary(events_seen, malformed, session_id, totals, turns, redact_text(final_message, secret_values), tuple(event_types), tuple(warnings))
+    return CodexStreamSummary(events_seen, malformed, session_id, totals if turns else {}, turns, redact_text(final_message, secret_values), tuple(event_types), tuple(warnings))
 
 
 class CodexAttemptExecutor:

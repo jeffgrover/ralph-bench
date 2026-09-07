@@ -61,10 +61,12 @@ OpenRouter billing/reference support is the next provider slice.
 - [Vision](docs/VISION.md)
 - [P0 implementation plan](docs/P0_PLAN.md)
 - [Prioritized next steps](docs/NEXT_STEPS.md)
+- [Closing the gaps](docs/CLOSING_GAPS.md)
 - [`rb` CLI and experiment authoring](docs/CLI_AND_EXPERIMENTS.md)
 - [Configuration ownership and lifecycle](docs/CONFIGURATION_MODEL.md)
 - [Polymorphic harness, provider, and model adapters](docs/ADAPTER_MODEL.md)
 - [Traffic challenge specifications](docs/TRAFFIC_CHALLENGES.md)
+- [Traffic observation calibration](docs/TRAFFIC_CALIBRATION.md)
 - [Measurement model](docs/MEASUREMENT_MODEL.md)
 - [Cloud and subscription cost model](docs/COST_MODEL.md)
 - [Immutable result bundle](docs/RESULT_BUNDLE.md)
@@ -79,6 +81,8 @@ rb run experiments/cloud-intersection.toml
 rb conformance tests/fixtures/busy_intersection/passing
 rb preview results/inbox/<run-id>.ralph.zip
 rb build --source results/inbox --output site
+# Optional, read-only traffic-validity sidecars:
+rb build --source results/inbox --reviews reviews --output site
 ```
 
 With no arguments, `rb` guides the user through a client-first experiment
@@ -150,15 +154,24 @@ The first P0-A contract spine is implemented and tested:
 - Challenge-specific public-pack preparation, scenario construction, browser
   evaluation, repair vocabulary, and prompts traverse a challenge adapter
   boundary rather than a Busy Intersection branch in the conductor.
-- `rb build --source <inbox> --output <site>` validates bundles read-only and
-  produces a deterministic static report with local/cloud track context,
+- `rb build --source <inbox> --output <site> [--reviews <directory>]` validates
+  bundles read-only and produces a deterministic static report with
+  local/cloud track context, separate protocol/traffic/load/visual dimensions,
   acceptance/failure evidence, resource metrics, provenance, poster/video
   captures, and explicit artifact download links. Candidate HTML is never
-  executed by the report shell; invalid bundles are quarantined from normal
-  views.
+  executed by the report shell; invalid bundles and invalid review sidecars are
+  quarantined from normal views.
+- Physical review uses external `traffic-review/v2` sidecars with per-rule
+  findings, scenario identity, recording evidence, and full interval coverage.
+  Comparison also requires public/private prerequisites and a recorded
+  standard tool policy. All current comparisons are experimental; no strong
+  isolation backend is implemented to certify official ranking.
 
-The remaining P0-A seams are the portability fixture's full generic lifecycle
-proof, reproducibility/claim hardening, and cross-platform validation.
+The remaining physical-validity work is private reference/pilot observation
+validation, occlusion and missing-frame calibration, and threshold review
+before activating `busy-intersection/v2`. The portability fixture's full
+generic lifecycle proof, reproducibility/claim hardening, and cross-platform
+validation remain follow-up work.
 Current-toolchain refresh and local-provider readiness are required run-preflight
 seams before model evaluation; discovery and `rb doctor` remain read-only.
 

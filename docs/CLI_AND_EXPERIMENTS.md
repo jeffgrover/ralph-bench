@@ -43,12 +43,15 @@ registration, delivery, completion, runtime, and offline assertion IDs. It
 does not run the private load profile, predict capacity, or create a result
 bundle. `--json` emits bounded machine-readable diagnostics for an agent.
 
-`rb build --source <inbox> --output <site>` validates every direct
+`rb build --source <inbox> --output <site> [--reviews <directory>]` validates every direct
 `.ralph.zip` input before extracting it into a fresh derived site. Valid runs
 become navigable index/detail pages with evaluator-owned poster/video captures,
 metrics, acceptance evidence, provenance, and explicit artifact downloads.
 Invalid bundles are listed in `data/invalid-bundles.json` and omitted from
-normal views. The report shell never executes candidate HTML or JavaScript.
+normal views. Optional traffic-review sidecars are read-only external inputs;
+missing reviews remain `pending`, and malformed, insufficient, or mismatched
+reviews are listed in `data/invalid-reviews.json` and cannot make a run
+comparable. The report shell never executes candidate HTML or JavaScript.
 
 ## Vocabulary
 

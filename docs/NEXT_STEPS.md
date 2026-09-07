@@ -1,15 +1,21 @@
 # Prioritized next steps
 
-The next milestone is shared execution/configuration consolidation described
-below. The operator
-has observed generated artifacts that collide, ignore signals, leave their
-lanes, or use implausible vehicle/road scale. Some local-model artifacts do
-not establish a working simulation at all. Successful gate callbacks and
-attractive animation therefore cannot establish traffic validity.
+The previous five-phase effort is closed. The active correction milestone is
+[Closing the gaps](CLOSING_GAPS.md). Phase notes below are historical; their
+synthetic calibration claims are superseded by that review and the current
+[human review contract](TRAFFIC_CALIBRATION.md). Documentation consolidation
+is included in the new milestone.
+
+Private reference/reviewer validation and load calibration remain prerequisites
+for v2 activation. The operator has observed generated artifacts that collide,
+ignore signals, leave their lanes, or use implausible vehicle/road scale. Some
+local-model artifacts do not establish a working simulation at all. Successful
+gate callbacks and attractive animation therefore cannot establish traffic
+validity.
 
 The implementation status and historical evidence below describe the existing
-P0-A path; they do not establish that these new acceptance requirements have
-been implemented or verified.
+P0-A path. The unused synthetic observation seam has been removed under the
+closing-gaps plan; private visual/pilot validation remains outstanding.
 
 ## Clearer goals
 
@@ -118,6 +124,18 @@ started.
 review, provenance mismatches, immutable input, and historical compatibility.
 The staged v2 path cannot be presented as calibrated production performance.
 
+Phase 4 is complete, 2026-09-06. New bundles retain the v1 protocol/load
+fields but also record an explicit `acceptance/v1` summary and pending
+`traffic-review/v1` baseline. `rb build --reviews <directory>` consumes
+read-only review sidecars tied to the exact run ID and selected artifact hash;
+missing, failed, insufficient, duplicate, or mismatched reviews remain
+diagnostic and are excluded from performance comparison. Reports now show
+protocol conformance, traffic validity, load comparison eligibility, visual
+quality, and L0/official ranking status independently. Browser captures use
+`capture/v2` clock names while the validator and reporter continue to read
+historical `capture/v1` bundles. The account-free suite passes (146 tests);
+no live model run was started for this refactor.
+
 ### 5. Validate physical behavior and calibrate load
 
 - Identify the existing passing artifact as a protocol fixture. Exercise a
@@ -135,6 +153,17 @@ The staged v2 path cannot be presented as calibrated production performance.
 counterexample. Account-free fixture tests do not need private material;
 private reference/pilot evidence supports the production thresholds. Safety
 remains mandatory under overload, and v1/v2 results are not mixed.
+
+Phase 5's account-free calibration slice is complete, 2026-09-06. The new
+`traffic-observation/v1` calibration seam derives physical and load findings
+from evaluator-owned observations rather than candidate verdict fields. The
+in-repository reference trace covers every proposed rule; counterexamples
+cover car/car and car/pedestrian collisions, red-light entry, lane departure,
+scale abuse, false finishes, starvation, backlog, and recovery. The suite
+passes (152 tests). This is calibration evidence, not a production v2 judge:
+the browser worker still records only `gates/v1`, and v2 activation remains
+blocked on a private viable reference, observer validation under occlusion and
+missing frames, pilot runs, and human threshold review.
 
 ### 6. Consolidate documentation around the working solution
 
@@ -482,16 +511,19 @@ Linux, macOS, and Windows/WSL with platform provenance recorded.
 
 ## After P0-A
 
-1. Add OpenRouter as the first metered provider and canonical reference-price
+1. Finish private viable-reference and observer validation (including
+   occlusion/missing-frame cases), pilot load/recovery runs, and human
+   threshold review before activating `busy-intersection/v2` comparisons.
+2. Add OpenRouter as the first metered provider and canonical reference-price
    source.
-2. Use the growing corpus to refine failure modes, judge calibration, and
+3. Use the growing corpus to refine failure modes, judge calibration, and
    capacity-search schedules.
-3. Add multiple independent runs and statistical comparison views.
-4. Implement the 5x5 Rush city/freeway challenge through the same contracts.
-5. Evaluate and select strong L1/L2 isolation backends cross-platform.
-6. Add Google Drive bundle storage/ingest after the local immutable
+4. Add multiple independent runs and statistical comparison views.
+5. Implement the 5x5 Rush city/freeway challenge through the same contracts.
+6. Evaluate and select strong L1/L2 isolation backends cross-platform.
+7. Add Google Drive bundle storage/ingest after the local immutable
    bundle/report path is stable.
-7. Give the legacy `llm-eval` corpus an explicit archival/read-only-view policy
+8. Give the legacy `llm-eval` corpus an explicit archival/read-only-view policy
    rather than silently treating it as migrated data.
 
 ## Independent review triage

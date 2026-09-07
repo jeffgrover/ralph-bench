@@ -76,6 +76,11 @@ def _parser() -> argparse.ArgumentParser:
         "--source", type=Path, default=Path("results/inbox"), dest="inbox"
     )
     build.add_argument("--output", type=Path, default=Path("site"))
+    build.add_argument(
+        "--reviews",
+        type=Path,
+        help="optional directory of traffic-review/v2 sidecars outside immutable bundles",
+    )
     conformance = sub.add_parser(
         "conformance",
         help="run the unscored public gates/v1 smoke check against a candidate",
@@ -485,7 +490,7 @@ def _run_experiment_path(
         return 3
     output_fn(
         f"Produced {len(summary.runs)} validated result bundle(s); "
-        f"{summary.passed} full pass(es)."
+        f"{summary.passed} protocol/load pass(es); physical traffic review is pending."
     )
     for run in summary.runs:
         status = "PASS" if run.public_accepted and run.simulation_outcome == "passed" else "FAIL"
@@ -725,7 +730,7 @@ def main(
         return 0 if result.valid else 1
     if args.command == "build":
         try:
-            result = build_site(args.inbox, args.output)
+            result = build_site(args.inbox, args.output, reviews=args.reviews)
         except (ReportBuildError, OSError, RuntimeError) as exc:
             output_fn(f"Static report build failed: {exc}")
             return 3

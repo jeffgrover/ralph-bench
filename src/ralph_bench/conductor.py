@@ -477,6 +477,7 @@ def _usage(raw_root: Path) -> dict[str, Any]:
         "turns": 0,
     }
     summaries = 0
+    reported = {key: 0 for key in totals if key != "turns"}
     summary_paths = sorted(raw_root.glob("*-attempt-*.summary.json"))
     for path in summary_paths:
         try:
@@ -489,15 +490,22 @@ def _usage(raw_root: Path) -> dict[str, Any]:
         for key in totals:
             if key == "turns":
                 continue
-            raw = usage.get(key, 0)
+            raw = usage.get(key)
             if isinstance(raw, int) and not isinstance(raw, bool) and raw >= 0:
                 totals[key] += raw
+                reported[key] += 1
         turns = value.get("turns", 0)
         if isinstance(turns, int) and not isinstance(turns, bool) and turns >= 0:
             totals["turns"] += turns
         summaries += 1
+    observed = {key: totals[key] for key, count in reported.items() if count}
+    for key, count in reported.items():
+        if not count or count != len(summary_paths):
+            totals[key] = None
+    totals["observed_tokens"] = observed
     totals["attempt_summaries"] = summaries
-    totals["provenance"] = "harness_reported"
+    totals["status"] = "unavailable" if not observed else "complete" if all(totals[key] is not None for key in reported) else "partial"
+    totals["provenance"] = "harness_reported" if observed else "unavailable"
     return totals
 
 
@@ -888,6 +896,37 @@ def _execute_one(
     simulation_outcome = str(evaluation.get("outcome", "failed"))
     overall_passed = loop_result.accepted and simulation_outcome == "passed"
     created = datetime.now(timezone.utc).isoformat()
+    protocol_status = (
+        public_conformance.get("evaluation", {}).get("outcome")
+        if isinstance(public_conformance.get("evaluation"), Mapping)
+        else "unavailable"
+    )
+    traffic_review = {
+        "schema_version": "traffic-review/v1",
+        "status": "pending",
+        "run_id": run_id,
+        "artifact_hash": artifact_hash,
+        "reason": "physical traffic review is a separate post-run input",
+        "evidence_refs": [],
+    }
+    acceptance = {
+        "schema_version": "acceptance/v1",
+        "protocol_conformance": {
+            "status": protocol_status,
+            "evidence_ref": public_conformance_ref or None,
+        },
+        "traffic_review": traffic_review,
+        "load_performance": {
+            "status": "diagnostic",
+            "functional_eligible": bool(evaluation.get("performance_eligible", False)),
+            "comparison_eligible": False,
+            "reason": "traffic review is pending",
+        },
+        "visual_quality": {
+            "status": "pending",
+            "reason": "human visual review is a separate post-run input",
+        },
+    }
     run_manifest = {
         "schema_version": "run/v1",
         "required_features": [],
@@ -905,6 +944,11 @@ def _execute_one(
         "simulation_outcome": simulation_outcome,
         "measurement_status": evaluation.get("measurement_status", "unmeasurable"),
         "performance_eligible": bool(evaluation.get("performance_eligible", False)),
+        # v1 performance_eligible is retained for historical readers. It is
+        # deliberately not the v2 comparison decision; traffic review and
+        # provenance are required before a result can be ranked.
+        "traffic_review": traffic_review,
+        "acceptance": acceptance,
         "public_conformance": {
             "outcome": (
                 public_conformance.get("evaluation", {}).get("outcome")
@@ -966,6 +1010,7 @@ def _execute_one(
                 "harness": sut.harness_id,
                 "invocation": list(native_plan.argv),
                 "invocation_warnings": list(native_plan.warnings),
+                "tool_policy": native_plan.tool_policy,
                 "loop": experiment.client_options.loop,
                 "reasoning_effort": experiment.client_options.reasoning_effort,
                 "sandbox": native_plan.sandbox,
@@ -1165,7 +1210,7 @@ def execute_experiment(
         summary = EvaluationRunSummary(experiment_id, tuple(completed))
         reporter.emit(
             f"Evaluation complete: {len(summary.runs)} bundle(s), "
-            f"{summary.passed} full pass(es)"
+            f"{summary.passed} protocol/load pass(es); physical review pending"
         )
         return summary
     finally:

@@ -7,8 +7,9 @@ durable system boundary, with the Challenge Portability Fixture proving that
 future challenges can extend the system without Busy-specific orchestration.
 
 **Current amendment:** [ADR 0017](adr/0017-traffic-validity-before-performance.md)
-adds mandatory traffic validity and the v2 migration. Follow the ordered
-[refactor phases](NEXT_STEPS.md#refactor-phases) before extending the product.
+adds mandatory traffic validity and the v2 migration. The five-phase effort is
+closed; [Closing the gaps](CLOSING_GAPS.md) owns the follow-up corrections and
+remaining release prerequisites before product enhancements.
 The [traffic contract](TRAFFIC_CHALLENGES.md) owns the physical requirements;
 existing v1 conformance/load results do not establish that they are met.
 

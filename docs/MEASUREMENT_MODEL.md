@@ -1,7 +1,7 @@
 # Measurement Model
 
 **Status:** Accepted, amended by [ADR 0017](adr/0017-traffic-validity-before-performance.md)
-**Updated:** 2026-09-05
+**Updated:** 2026-09-06
 
 The traffic-acceptance requirements below target `busy-intersection/v2`.
 Implementation is staged. Current v1 bundles retain their original schemas
@@ -59,8 +59,12 @@ evidence is unverifiable. Every required rule needs an evidenced finding.
 Any demonstrated violation makes the aggregate fail, even when other rules
 remain unreviewed. A pass requires all rules and the reported intervals to be
 covered. Review records identify their author, rubric version, artifact hash,
-run, scenario, intervals, and supporting evidence. These states describe the
-new contract; phase 4 will introduce the versioned representation.
+run, scenario, intervals, and supporting evidence. These states are represented
+by `traffic-review/v2` sidecars supplied to the read-only reporter. A bundle
+carries only a pending baseline; later records remain outside the immutable
+ZIP and must match both its run ID and selected artifact tree hash. The report
+exposes sidecar evidence and diagnostics without treating a malformed or
+incomplete pass as valid.
 
 V2 performance eligibility requires protocol/runtime conformance, complete
 demand evidence, the low-load service floor, and a traffic-validity pass.
@@ -151,14 +155,21 @@ jitter matters. Candidate clocks do not establish authoritative duration.
 
 The live worker samples a ledger and records the same browser run. Sampling
 interval, media frame rate, and video playback rate do not determine a physics
-step or prove deterministic simulation. Existing capture fields named
-`simulated_horizon_ms`, `poster_simulation_ms`, and `simulation_interval_ms`
-describe legacy elapsed-run observations. Phase 4 will version and clarify
-that metadata while retaining historical readers.
+step or prove deterministic simulation. `capture/v2` separates the planned
+`evaluation_horizon_ms`, monotonic `evaluation_elapsed_ms`, poster position,
+observation interval, and worker wall time. Existing `capture/v1` fields named
+`simulated_horizon_ms`, `poster_simulation_ms`, and
+`simulation_interval_ms` remain readable as legacy planned/observed values;
+they are not silently reinterpreted as physical elapsed time.
 
 Missing intervals and excessive observation delay must be visible as evidence
 limitations. A scheduled horizon or finish notification cannot prove that
 unobserved physical motion was correct.
+
+The [human review contract](TRAFFIC_CALIBRATION.md) defines the implemented
+evidence checks and the recorded reference/counterexample calibration still
+required before v2 activation. The unused synthetic trace detector was removed
+in the [closing-gaps effort](CLOSING_GAPS.md).
 
 ## Load-to-failure protocol
 

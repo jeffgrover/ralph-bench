@@ -88,6 +88,13 @@ report.
 Files that do not apply may be absent only when the schema explicitly permits
 it. Absence must not be confused with a measured zero.
 
+Usage aggregation preserves missing token counts as `null`, with an
+`unavailable`, `partial`, or `complete` status describing attempt-summary
+coverage. `observed_tokens` retains reported subtotals when coverage is partial;
+these are not complete-run totals. Explicitly reported zero remains zero.
+Coverage does not establish billing accuracy, and missing usage cannot imply
+zero cost. Historical immutable bundles are not rewritten by parser fixes.
+
 ### P0-A bundle profile
 
 The layout above is the durable namespace, not a requirement to implement
@@ -165,11 +172,30 @@ Current v1 `run.json` and `metrics.json` preserve `performance_eligible`
 separately from the overall outcome. This describes the original
 protocol/runtime and low-load floor, not verified physical traffic validity.
 The [v2 eligibility contract](MEASUREMENT_MODEL.md#eligibility-before-performance)
-adds required traffic review. Phase 4 will version the representation and
-retain historical readers; old fields must not be interpreted as a physical
-pass. Later human reviews remain separate from the immutable ZIP, tied to the
-run ID, artifact tree hash, and reviewed evidence. Reporting cannot insert
-review evidence into an existing bundle.
+adds required traffic review. New runs now include an `acceptance/v1` summary
+and a pending `traffic-review/v1` baseline in `run.json`; the retained v1
+`performance_eligible` field is never promoted to a comparison decision by
+itself. Old fields must not be interpreted as a physical pass. Later human
+reviews remain separate from the immutable ZIP, tied to the run ID, artifact
+tree hash, reviewer/rubric, coverage, and evidence references. Reporting
+cannot insert review evidence into an existing bundle.
+
+Traffic review sidecars are supplied to `rb build --reviews <directory>` as
+regular JSON files outside the bundle. The current pass contract is
+`traffic-review/v2`, with the `traffic-human/v1` rubric, scenario and seed
+binding, per-rule findings, recording references and numeric full-run coverage.
+See the authoritative [human review contract](TRAFFIC_CALIBRATION.md).
+Historical v1 pass sidecars lack this evidence and remain unverifiable.
+Diagnostics go to `data/invalid-reviews.json`; source ZIPs remain untouched.
+
+`provenance/configuration.json` records `effective.tool_policy` from the
+harness plan (`standard`, `calibration`, or `unknown`). Only standard policy
+can enter experimental traffic comparison. Catalog records expose
+`comparison_exclusions` and a `comparison_cohort` containing challenge,
+pack/profile, rubric, track, loop and tool policy. Compare traffic performance
+only within equal cohorts; these keys do not certify hardware equivalence for
+agent timing. Official ranking remains disabled pending a verified isolation
+backend. A free-form isolation label never establishes official eligibility.
 
 ## Canonical events
 
@@ -232,9 +258,16 @@ The overview poster and animation must be produced from the same evaluated
 artifact and requested scenario. Media is human-review evidence, not an
 authoritative traffic counter.
 
-Legacy metadata uses simulation-oriented field names for elapsed-run
-observations. The [clock contract](MEASUREMENT_MODEL.md#evaluation-clock-and-observations)
-requires accurate labels in the future schema without changing old bundles.
+Legacy `capture/v1` metadata uses simulation-oriented field names for
+elapsed-run observations and remains readable. New browser captures use
+`capture/v2`: `evaluation_horizon_ms` is the planned evaluator horizon,
+`evaluation_elapsed_ms` is the monotonic elapsed evaluation clock,
+`poster_evaluation_elapsed_ms` identifies the poster position on that clock,
+and `capture_wall_time_ms` is the worker's wall time. The
+`evaluation_interval_ms` field describes observation sampling. These are
+separate from media playback fields. The [clock contract](MEASUREMENT_MODEL.md#evaluation-clock-and-observations)
+therefore does not infer physical elapsed time from a video duration or a
+candidate clock.
 
 ## Evaluation evidence
 
@@ -322,7 +355,7 @@ enter official reports.
 `rb build` follows a read-only transform:
 
 ```text
-bundle inbox -> validate -> catalog/cache -> derived site
+bundle inbox + optional review sidecars -> validate -> catalog/cache -> derived site
 ```
 
 The catalog is rebuildable. Deleting it must not lose authoritative evidence.

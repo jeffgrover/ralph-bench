@@ -166,6 +166,8 @@ def _monitor_and_capture(
     }
     readiness_error: str | None = None
     poster_at_ms = 0
+    run_started: float | None = None
+    evaluation_elapsed_ms = 0
     try:
         try:
             page.wait_for_function(
@@ -204,6 +206,9 @@ def _monitor_and_capture(
                     break
                 page.wait_for_timeout(min(_MONITOR_INTERVAL_MS, scenario.horizon_ms - elapsed_ms))
             monitor = _driver_call(page, "final")
+            evaluation_elapsed_ms = max(
+                0, round((time.monotonic() - run_started) * 1_000)
+            )
         else:
             runtime_errors.append(readiness_error)
             page.wait_for_timeout(1_000)
@@ -234,16 +239,17 @@ def _monitor_and_capture(
         )
     else:
         raise WorkerError(f"unsupported evaluation mode: {evaluation_mode!r}")
-    duration_ms = max(1, round((time.monotonic() - started) * 1_000))
+    capture_wall_time_ms = max(1, round((time.monotonic() - started) * 1_000))
     capture = {
-        "schema_version": "capture/v1",
+        "schema_version": "capture/v2",
         "viewport": _VIEWPORT,
         "scenario_id": scenario.scenario_id,
         "scenario_profile": scenario.profile,
         "seed": scenario.seed,
-        "simulated_horizon_ms": scenario.horizon_ms,
-        "poster_simulation_ms": poster_at_ms,
-        "simulation_interval_ms": {
+        "evaluation_horizon_ms": scenario.horizon_ms,
+        "evaluation_elapsed_ms": evaluation_elapsed_ms,
+        "poster_evaluation_elapsed_ms": poster_at_ms,
+        "evaluation_interval_ms": {
             "start": 0,
             "end": scenario.horizon_ms,
             "step": _MONITOR_INTERVAL_MS,
@@ -257,7 +263,7 @@ def _monitor_and_capture(
         "playback_step_ms": _MONITOR_INTERVAL_MS,
         "playback_delay_ms": _MONITOR_INTERVAL_MS,
         "playback_rate": 1,
-        "duration_ms": duration_ms,
+        "capture_wall_time_ms": capture_wall_time_ms,
         "frame_rate_fps": _VIDEO_FRAME_RATE_FPS,
         "capture_worker": {
             "id": "ralph-bench.browser-worker",

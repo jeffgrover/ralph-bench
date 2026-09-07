@@ -10,6 +10,7 @@ from typing import Any, Mapping
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 WEBM_EBML_SIGNATURE = b"\x1a\x45\xdf\xa3"
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
+CAPTURE_SCHEMAS = frozenset({"capture/v1", "capture/v2"})
 
 
 def png_dimensions(data: bytes) -> tuple[int, int] | None:
@@ -56,8 +57,21 @@ def capture_metadata_issues(
             return None
         return float(item)
 
-    if value.get("schema_version") != "capture/v1":
-        issues.append("schema_version must be capture/v1")
+    def nonnegative_number(name: str) -> float | None:
+        item = value.get(name)
+        if (
+            isinstance(item, bool)
+            or not isinstance(item, (int, float))
+            or not math.isfinite(float(item))
+            or item < 0
+        ):
+            issues.append(f"{name} must be a non-negative finite number")
+            return None
+        return float(item)
+
+    schema = value.get("schema_version")
+    if schema not in CAPTURE_SCHEMAS:
+        issues.append("schema_version must be capture/v1 or capture/v2")
     text_field("scenario_id")
     text_field("scenario_profile")
     text_field("simulation_phase")
@@ -67,11 +81,18 @@ def capture_metadata_issues(
     seed = value.get("seed")
     if isinstance(seed, bool) or not isinstance(seed, int):
         issues.append("seed must be an integer")
-    horizon = positive_number("simulated_horizon_ms")
+    if schema == "capture/v2":
+        horizon = positive_number("evaluation_horizon_ms")
+        nonnegative_number("evaluation_elapsed_ms")
+        nonnegative_number("poster_evaluation_elapsed_ms")
+        interval_name = "evaluation_interval_ms"
+    else:
+        horizon = positive_number("simulated_horizon_ms")
+        interval_name = "simulation_interval_ms"
     positive_number("playback_step_ms")
     positive_number("playback_delay_ms")
     positive_number("playback_rate")
-    positive_number("duration_ms")
+    positive_number("capture_wall_time_ms" if schema == "capture/v2" else "duration_ms")
     positive_number("frame_rate_fps")
 
     viewport = value.get("viewport")
@@ -83,9 +104,9 @@ def capture_metadata_issues(
     ):
         issues.append("viewport must contain positive integer width and height")
 
-    interval = value.get("simulation_interval_ms")
+    interval = value.get(interval_name)
     if not isinstance(interval, Mapping):
-        issues.append("simulation_interval_ms must be an object")
+        issues.append(f"{interval_name} must be an object")
     else:
         start, end, step = (
             interval.get("start"),
@@ -93,11 +114,11 @@ def capture_metadata_issues(
             interval.get("step"),
         )
         if start != 0 or isinstance(end, bool) or not isinstance(end, int) or end <= 0:
-            issues.append("simulation interval must start at zero and have a positive integer end")
+            issues.append("evaluation interval must start at zero and have a positive integer end")
         if isinstance(step, bool) or not isinstance(step, int) or step <= 0:
             issues.append("simulation interval step must be a positive integer")
         if horizon is not None and end != int(horizon):
-            issues.append("simulation interval end must match simulated_horizon_ms")
+            issues.append(f"{interval_name} end must match its horizon field")
 
     worker = value.get("capture_worker")
     if not isinstance(worker, Mapping) or any(
@@ -142,6 +163,7 @@ def media_issues(
 __all__ = [
     "PNG_SIGNATURE",
     "WEBM_EBML_SIGNATURE",
+    "CAPTURE_SCHEMAS",
     "capture_metadata_issues",
     "is_webm",
     "media_issues",

@@ -32,6 +32,7 @@ class AdapterTests(unittest.TestCase):
             ),
         )
         self.assertEqual(plan.stdin_mode, "prompt")
+        self.assertEqual(plan.tool_policy, "standard")
         self.assertEqual(plan.prompt_argument, "-")
 
     def test_partial_and_failed_codex_probes_are_bounded_and_nonsecret(self):
@@ -146,6 +147,9 @@ class AdapterTests(unittest.TestCase):
             self.assertIn("--prompt-template", plan.argv)
             self.assertEqual(plan.prompt_argument, "-")
             self.assertEqual(plan.warnings, ())
+            self.assertEqual(plan.tool_policy, "standard")
+            controlled = PiHarnessAdapter(extension_root=root).plan("candidate", loop="controlled")
+            self.assertEqual(controlled.tool_policy, "calibration")
 
     def test_lmstudio_refresh_and_readiness_use_bounded_cli_evidence(self):
         calls: list[tuple[str, ...]] = []
