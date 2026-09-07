@@ -41,6 +41,19 @@ all required rules have a public definition and planned evidence/counterexample.
 Physical baseline values still require fixture calibration. No runtime change
 or claim that traffic validity is already enforced.
 
+### Live calibration evidence — 2026-09-06
+
+The first post-merge Codex/Luna run produced a valid diagnostic bundle at
+`fa18b063-dff1-4f91-8ef5-1ee1dd95d10a`. Its private v1 load simulation serviced
+80/80 cars and 16/16 pedestrians, measured 81 vehicles/minute, and recovered
+its backlog, but the original public smoke horizon ended before the second
+pedestrian finished (5/6 travelers). The public pack now grants a modest,
+unscored 12-second settle window after the last arrival and reports missing
+public traveler IDs in bounded repair feedback. Replaying the preserved
+artifact under that calibrated public pack completed all 6/6 travelers with no
+runtime or network errors. This calibrates the v1 interface smoke boundary; it
+does not establish the v2 physical-validity requirements below.
+
 ### 2. Remove unused machinery and duplicate calculations — next
 
 - Remove the unused run-state machine and cleanup stack/report, retaining
