@@ -22,7 +22,8 @@ follow lanes, and use realistic physical scale. The
 [traffic contract](docs/TRAFFIC_CHALLENGES.md) defines these requirements.
 The current executable v1 challenge and its `passed`/`performance_eligible`
 results establish protocol/load behavior, not physical traffic validity.
-Phase 1 documents the new contract; implementation follows in separate phases.
+Phases 1 and 2 established the contract and completed the simplicity cleanup;
+shared execution/configuration work follows next.
 
 The initial live system under test is:
 

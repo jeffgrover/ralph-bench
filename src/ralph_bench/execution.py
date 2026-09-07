@@ -2,14 +2,13 @@
 
 The module intentionally knows nothing about Codex, traffic, or ZIP bundles.
 Adapters supply execution results; the conductor owns attempt admission,
-preservation, public feedback, state, and cleanup evidence.
+preservation, and public feedback.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
-from enum import StrEnum
 import hashlib
 import json
 import os
@@ -27,110 +26,8 @@ class ExecutionError(RuntimeError):
     """Base error for conductor contract violations."""
 
 
-class StateTransitionError(ExecutionError):
-    """Raised for an invalid run state transition."""
-
-
 class AttemptPreservationError(ExecutionError):
     """Raised when a candidate cannot be preserved safely and immutably."""
-
-
-class RunState(StrEnum):
-    CREATED = "created"
-    PREFLIGHT = "preflight"
-    READY = "ready"
-    RUNNING = "running"
-    PUBLIC_CHECK = "public_check"
-    FINALIZING = "finalizing"
-    COMPLETE = "complete"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
-    TIMED_OUT = "timed_out"
-
-
-TERMINAL_STATES = frozenset(
-    {RunState.COMPLETE, RunState.FAILED, RunState.CANCELLED, RunState.TIMED_OUT}
-)
-
-_ALLOWED_TRANSITIONS: Mapping[RunState, frozenset[RunState]] = {
-    RunState.CREATED: frozenset(
-        {RunState.PREFLIGHT, RunState.FAILED, RunState.CANCELLED}
-    ),
-    RunState.PREFLIGHT: frozenset(
-        {RunState.READY, RunState.FAILED, RunState.CANCELLED, RunState.TIMED_OUT}
-    ),
-    RunState.READY: frozenset(
-        {RunState.RUNNING, RunState.FAILED, RunState.CANCELLED, RunState.TIMED_OUT}
-    ),
-    RunState.RUNNING: frozenset(
-        {
-            RunState.PUBLIC_CHECK,
-            RunState.FINALIZING,
-            RunState.FAILED,
-            RunState.CANCELLED,
-            RunState.TIMED_OUT,
-        }
-    ),
-    RunState.PUBLIC_CHECK: frozenset(
-        {
-            RunState.RUNNING,
-            RunState.FINALIZING,
-            RunState.FAILED,
-            RunState.CANCELLED,
-            RunState.TIMED_OUT,
-        }
-    ),
-    RunState.FINALIZING: TERMINAL_STATES,
-    RunState.COMPLETE: frozenset(),
-    RunState.FAILED: frozenset(),
-    RunState.CANCELLED: frozenset(),
-    RunState.TIMED_OUT: frozenset(),
-}
-
-
-@dataclass(frozen=True, slots=True)
-class StateTransition:
-    previous: RunState
-    current: RunState
-    reason: str
-
-
-class RunStateMachine:
-    def __init__(self, recorder: EventRecorder | None = None) -> None:
-        self._state = RunState.CREATED
-        self._history: list[StateTransition] = []
-        self._recorder = recorder
-
-    @property
-    def state(self) -> RunState:
-        return self._state
-
-    @property
-    def history(self) -> tuple[StateTransition, ...]:
-        return tuple(self._history)
-
-    def transition(self, target: RunState, reason: str) -> StateTransition:
-        if target not in _ALLOWED_TRANSITIONS[self._state]:
-            raise StateTransitionError(
-                f"invalid run transition {self._state.value} -> {target.value}"
-            )
-        if not reason.strip():
-            raise StateTransitionError("state transition reason is required")
-        transition = StateTransition(self._state, target, reason)
-        self._history.append(transition)
-        self._state = target
-        if self._recorder is not None:
-            self._recorder.record(
-                phase="conductor",
-                event_type="run.state_changed",
-                source="conductor",
-                payload={
-                    "previous": transition.previous.value,
-                    "current": transition.current.value,
-                    "reason": transition.reason,
-                },
-            )
-        return transition
 
 
 def expand_repetitions(
@@ -153,54 +50,6 @@ def expand_repetitions(
         seen.add(run_id)
         result.append(run_id)
     return tuple(result)
-
-
-@dataclass(frozen=True, slots=True)
-class CleanupFailure:
-    action: str
-    error_type: str
-    message: str
-
-
-@dataclass(frozen=True, slots=True)
-class CleanupReport:
-    attempted: tuple[str, ...]
-    failures: tuple[CleanupFailure, ...]
-
-    @property
-    def succeeded(self) -> bool:
-        return not self.failures
-
-
-class CleanupStack:
-    """Small idempotent LIFO cleanup stack that preserves every failure."""
-
-    def __init__(self) -> None:
-        self._actions: list[tuple[str, Callable[[], None]]] = []
-        self._report: CleanupReport | None = None
-
-    def register(self, name: str, action: Callable[[], None]) -> None:
-        if self._report is not None:
-            raise ExecutionError("cannot register cleanup after cleanup has run")
-        if not name.strip():
-            raise ExecutionError("cleanup action name is required")
-        self._actions.append((name, action))
-
-    def run(self) -> CleanupReport:
-        if self._report is not None:
-            return self._report
-        attempted: list[str] = []
-        failures: list[CleanupFailure] = []
-        for name, action in reversed(self._actions):
-            attempted.append(name)
-            try:
-                action()
-            except Exception as exc:  # Cleanup must continue through independent actions.
-                failures.append(
-                    CleanupFailure(name, type(exc).__name__, str(exc) or repr(exc))
-                )
-        self._report = CleanupReport(tuple(attempted), tuple(failures))
-        return self._report
 
 
 @dataclass(frozen=True, slots=True)

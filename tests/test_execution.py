@@ -8,14 +8,10 @@ from ralph_bench.events import EventRecorder
 from ralph_bench.execution import (
     AttemptPreservationError,
     AttemptStore,
-    CleanupStack,
     ControlledAttemptLoop,
     ExecutionError,
     HarnessAttemptResult,
     PublicCheckResult,
-    RunState,
-    RunStateMachine,
-    StateTransitionError,
     candidate_tree_hash,
     expand_repetitions,
 )
@@ -31,21 +27,6 @@ class IncrementingClock:
 
 
 class ExecutionTests(unittest.TestCase):
-    def test_state_machine_accepts_lifecycle_and_rejects_terminal_reentry(self) -> None:
-        machine = RunStateMachine()
-        for state in (
-            RunState.PREFLIGHT,
-            RunState.READY,
-            RunState.RUNNING,
-            RunState.PUBLIC_CHECK,
-            RunState.FINALIZING,
-            RunState.COMPLETE,
-        ):
-            machine.transition(state, f"enter {state.value}")
-        self.assertEqual(machine.state, RunState.COMPLETE)
-        with self.assertRaises(StateTransitionError):
-            machine.transition(RunState.RUNNING, "cannot reopen")
-
     def test_repetition_ids_are_preallocated_and_unique(self) -> None:
         ids = iter(("run-a", "run-b", "run-c"))
         self.assertEqual(
@@ -55,23 +36,6 @@ class ExecutionTests(unittest.TestCase):
         duplicates = iter(("same", "same"))
         with self.assertRaises(ExecutionError):
             expand_repetitions("experiment-a", 2, lambda: next(duplicates))
-
-    def test_cleanup_runs_lifo_continues_after_failure_and_is_idempotent(self) -> None:
-        calls: list[str] = []
-        stack = CleanupStack()
-        stack.register("first", lambda: calls.append("first"))
-
-        def fail() -> None:
-            calls.append("failure")
-            raise RuntimeError("fixture cleanup failed")
-
-        stack.register("failure", fail)
-        stack.register("last", lambda: calls.append("last"))
-        report = stack.run()
-        self.assertEqual(calls, ["last", "failure", "first"])
-        self.assertFalse(report.succeeded)
-        self.assertEqual(stack.run(), report)
-        self.assertEqual(calls, ["last", "failure", "first"])
 
     def test_controlled_loop_preserves_failure_then_green_and_charges_both(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

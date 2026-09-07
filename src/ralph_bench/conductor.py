@@ -433,11 +433,6 @@ def _harness_executable(experiment: Experiment, harness: Any) -> Path:
     return path
 
 
-def _safe_host_environment() -> dict[str, str]:
-    keys = ("LANG", "LC_ALL", "LC_CTYPE", "NO_COLOR", "TERM", "TZ")
-    return {key: os.environ[key] for key in keys if key in os.environ}
-
-
 def _native_process_environment(
     *,
     scoped_home: Path,
@@ -470,20 +465,6 @@ def _experiment_id(experiment: Experiment) -> str:
         separators=(",", ":"),
     ).encode("utf-8")
     return "exp-" + hashlib.sha256(encoded).hexdigest()[:16]
-
-
-def _browser_repair_check(
-    static: PublicCheckResult,
-    evaluation: Mapping[str, Any],
-    reporter: ProgressReporter,
-    *,
-    label: str,
-) -> PublicCheckResult:
-    """Compatibility helper for callers of the former Busy-specific function."""
-
-    return BusyIntersectionChallengeAdapter().repair_check(
-        static, evaluation, reporter, label=label
-    )
 
 
 def _usage(raw_root: Path) -> dict[str, Any]:

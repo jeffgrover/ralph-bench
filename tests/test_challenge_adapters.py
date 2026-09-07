@@ -28,7 +28,6 @@ class FutureCityFixtureAdapter:
             {"topology": "future-defined", "protocol": "city/v1"},
             "future-city-fixture",
             "future-city-profile",
-            {"topology": "future-defined"},
             {"challenge_id": self.challenge_id, "protocol": "city/v1"},
             source,
         )

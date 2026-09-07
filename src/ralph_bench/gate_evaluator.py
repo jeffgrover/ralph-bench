@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-import hashlib
 import os
 from pathlib import Path
 import re
 from statistics import median
 from typing import Any, Mapping, Sequence
 
+from .execution import AttemptPreservationError, candidate_tree_hash
 from .gates import DemandStage, GateScenario
 
 
@@ -116,16 +116,8 @@ def check_static_candidate(candidate_root: str | Path) -> CandidateCheckResult:
     add("no-backend", not backend, "no backend transport is required", "the artifact requires a backend transport")
     tree_hash: str | None = None
     try:
-        digest = hashlib.sha256()
-        for path in sorted(files, key=lambda item: item.relative_to(root).as_posix()):
-            relative = path.relative_to(root).as_posix().encode("utf-8")
-            data = path.read_bytes()
-            digest.update(len(relative).to_bytes(8, "big"))
-            digest.update(relative)
-            digest.update(len(data).to_bytes(8, "big"))
-            digest.update(data)
-        tree_hash = digest.hexdigest()
-    except OSError:
+        tree_hash = candidate_tree_hash(root)
+    except (AttemptPreservationError, OSError):
         pass
     return CandidateCheckResult(
         not any(item["result"] == "fail" for item in checks),

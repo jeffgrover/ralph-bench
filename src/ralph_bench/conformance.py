@@ -19,7 +19,13 @@ from .browser_runtime import (
     find_playwright_browsers_path,
     run_browser_evaluation,
 )
-from .gates import DemandStage, GateScenario, gate_scenario_from_dict
+from .gates import (
+    CarArrival,
+    DemandStage,
+    GateScenario,
+    GateSchemaError,
+    PedestrianArrival,
+)
 
 
 class ConformanceError(RuntimeError):
@@ -178,50 +184,46 @@ def load_public_smoke_scenario(path: Path) -> GateScenario:
     pedestrians = value.get("pedestrians", [])
     if not isinstance(cars, list) or not isinstance(pedestrians, list):
         raise ConformanceError("public smoke scenario cars and pedestrians must be lists")
-    max_arrival = max(
-        [
-            int(item["at_ms"])
-            for item in (*cars, *pedestrians)
-            if isinstance(item, Mapping)
-        ],
-        default=0,
-    )
-    # The smoke pack is deliberately unscored, so allow a modest signal-cycle
-    # settle window after the final arrival. Capacity and latency remain private
-    # evaluator concerns; this only prevents a valid but slower implementation
-    # from failing before it can demonstrate the public finish callbacks.
-    horizon = max_arrival + PUBLIC_SMOKE_SETTLE_MS
-    scenario = {
-        "schema_version": "gate-scenario/v1",
-        "scenario_id": "busy-intersection-public-smoke",
-        "profile": "public-smoke",
-        "seed": 0,
-        "horizon_ms": horizon,
-        "stages": [
-            DemandStage("public-smoke", 0, horizon, 0, 0, False, False).to_dict()
-        ],
-        "cars": [
-            {
-                "id": item["id"],
-                "entersFrom": item["entersFrom"],
-                "exitsTo": item["exitsTo"],
-                "arrival_ms": item["at_ms"],
-            }
-            for item in cars
-        ],
-        "pedestrians": [
-            {
-                "id": item["id"],
-                "crossing": item["crossing"],
-                "direction": item["direction"],
-                "arrival_ms": item["at_ms"],
-            }
-            for item in pedestrians
-        ],
-    }
     try:
-        return gate_scenario_from_dict(scenario)
-    except (KeyError, TypeError, ValueError) as exc:
+        if any(not isinstance(item, Mapping) for item in (*cars, *pedestrians)):
+            raise GateSchemaError("scenario entries must be objects")
+        car_arrivals = tuple(
+            CarArrival(
+                item["id"],
+                item["entersFrom"],
+                item["exitsTo"],
+                item["at_ms"],
+            )
+            for item in cars
+        )
+        pedestrian_arrivals = tuple(
+            PedestrianArrival(
+                item["id"],
+                item["crossing"],
+                item["direction"],
+                item["at_ms"],
+            )
+            for item in pedestrians
+        )
+        max_arrival = max(
+            (item.arrival_ms for item in (*car_arrivals, *pedestrian_arrivals)),
+            default=0,
+        )
+        # The smoke pack is deliberately unscored, so allow a modest signal-cycle
+        # settle window after the final arrival. Capacity and latency remain private
+        # evaluator concerns; this only prevents a valid but slower implementation
+        # from failing before it can demonstrate the public finish callbacks.
+        horizon = max_arrival + PUBLIC_SMOKE_SETTLE_MS
+        return GateScenario(
+            "busy-intersection-public-smoke",
+            "public-smoke",
+            0,
+            horizon,
+            (DemandStage("public-smoke", 0, horizon, 0, 0, False, False),),
+            car_arrivals,
+            pedestrian_arrivals,
+        )
+    except (KeyError, TypeError, ValueError, GateSchemaError) as exc:
         raise ConformanceError("public smoke scenario violates gates/v1 schema") from exc
 
 

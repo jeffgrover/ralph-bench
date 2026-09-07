@@ -1,6 +1,7 @@
 # Prioritized next steps
 
-The next milestone is the simplicity refactor described below. The operator
+The next milestone is shared execution/configuration consolidation described
+below. The operator
 has observed generated artifacts that collide, ignore signals, leave their
 lanes, or use implausible vehicle/road scale. Some local-model artifacts do
 not establish a working simulation at all. Successful gate callbacks and
@@ -54,7 +55,7 @@ artifact under that calibrated public pack completed all 6/6 travelers with no
 runtime or network errors. This calibrates the v1 interface smoke boundary; it
 does not establish the v2 physical-validity requirements below.
 
-### 2. Remove unused machinery and duplicate calculations — next
+### 2. Remove unused machinery and duplicate calculations — complete, 2026-09-06
 
 - Remove the unused run-state machine and cleanup stack/report, retaining
   coverage of the actual conductor lifecycle and rollback paths.
@@ -67,6 +68,14 @@ does not establish the v2 physical-validity requirements below.
 
 **Exit:** Existing account-free tests pass; runtime behavior, bundle schemas,
 path/secret protections, and cleanup guarantees remain unchanged.
+
+Phase 2 removed the unused run-state machine, generic cleanup stack/report,
+host-environment helper, and compatibility repair wrapper. It also removed the
+unread scenario-document field, built the public smoke scenario directly from
+validated gate objects, reused the safe artifact-tree hash, and used
+`hashlib.file_digest` for the browser executable digest. The full account-free
+suite passes (138 tests); no live model run was started for this mechanical
+cleanup.
 
 ### 3. Consolidate shared execution and configuration
 
@@ -201,7 +210,7 @@ explicitly revise traffic acceptance or the shared challenge:
 - Missing callbacks are reported as `unmeasurable`, not as zero throughput.
 - Context-aware offline checks accept CSS custom properties such as
   `--ws:64px` while still rejecting real external URLs.
-- The complete unit and contract suite contains 137 passing tests at this
+- The complete unit and contract suite contains 138 passing tests at this
   checkpoint; the command below is authoritative as the suite grows.
 
 ## Fair-shot design guardrails

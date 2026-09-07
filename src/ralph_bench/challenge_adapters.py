@@ -39,7 +39,6 @@ class ChallengeRun:
     scenario: object
     scenario_id: str
     scenario_profile: str
-    scenario_document: Mapping[str, Any]
     challenge_document: Mapping[str, Any]
     public_source: Path
 
@@ -219,7 +218,6 @@ class BusyIntersectionChallengeAdapter:
             scenario,
             scenario.scenario_id,
             scenario.profile,
-            scenario.to_dict(),
             challenge_document,
             public_source,
         )

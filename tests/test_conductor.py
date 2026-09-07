@@ -21,10 +21,10 @@ from ralph_bench.adapters.contracts import ProbeContext, ProcessResult
 from ralph_bench.browser_runtime import BrowserEvaluationArtifacts
 from ralph_bench.bundles import validate_bundle
 from ralph_bench.capture_validation import PNG_SIGNATURE, WEBM_EBML_SIGNATURE
+from ralph_bench.challenge_adapters import BusyIntersectionChallengeAdapter
 from ralph_bench.conductor import (
     ProgressReporter,
     _AttemptProgress,
-    _browser_repair_check,
     _ModelWorkBudget,
     _attempt_status,
     _interactive_check_loop,
@@ -282,7 +282,7 @@ class ConductorTests(unittest.TestCase):
     def test_browser_repair_feedback_is_semantic_and_does_not_leak_private_values(self):
         messages: list[str] = []
         static = PublicCheckResult(True, {"summary": "static pass", "checks": []}, ())
-        result = _browser_repair_check(
+        result = BusyIntersectionChallengeAdapter().repair_check(
             static,
             {
                 "outcome": "failed",
