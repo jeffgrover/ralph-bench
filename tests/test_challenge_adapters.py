@@ -5,6 +5,7 @@ import tempfile
 import unittest
 
 from ralph_bench.challenge_adapters import (
+    BusyIntersectionChallengeAdapter,
     ChallengeAdapterError,
     ChallengeRegistry,
     ChallengeRun,
@@ -34,6 +35,20 @@ class FutureCityFixtureAdapter:
 
 
 class ChallengeAdapterTests(unittest.TestCase):
+    def test_busy_prompt_keeps_complete_assignment_for_every_client(self):
+        adapter = BusyIntersectionChallengeAdapter()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            build, _prompts, _feedback = adapter.prompt_builder(
+                "complete challenge assignment",
+                workspace=root / "workspace",
+                public_challenge=root / "public",
+            )
+        prompt = build(1, None)
+        self.assertIn("complete challenge assignment", prompt)
+        self.assertIn("including index.html", prompt)
+        self.assertNotIn("Keep it under 3,500 characters", prompt)
+
     def test_registry_and_run_boundary_accept_future_protocol_and_topology(self):
         adapter = FutureCityFixtureAdapter()
         registry = ChallengeRegistry({adapter.challenge_id: adapter})

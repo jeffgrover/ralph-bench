@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from pathlib import Path
+import tempfile
 import unittest
 
+from ralph_bench.browser_runtime import BrowserEvaluationArtifacts
 from ralph_bench.conformance import (
     PUBLIC_SMOKE_SETTLE_MS,
     evaluate_public_conformance,
     load_public_smoke_scenario,
+    run_conformance_evaluation,
 )
 from ralph_bench.gates import CarArrival, DemandStage, GateScenario, PedestrianArrival
 
@@ -24,6 +27,43 @@ def smoke_scenario() -> GateScenario:
 
 
 class ConformanceTests(unittest.TestCase):
+    def test_shared_runner_uses_caller_owned_output_and_evidence_paths(self):
+        calls = []
+
+        def evaluator(candidate, output, **kwargs):
+            calls.append((candidate, output, kwargs))
+            return BrowserEvaluationArtifacts(
+                {"evaluation": {"outcome": "passed"}},
+                output / "result.json",
+                output / "overview.webm",
+                output / "overview.png",
+                output / "overview.json",
+                kwargs["raw_evidence"] / "stdout.txt",
+                kwargs["raw_evidence"] / "stderr.txt",
+                0.1,
+            )
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            candidate = root / "candidate"
+            candidate.mkdir()
+            output = root / "browser-output"
+            raw = root / "raw"
+            artifacts = run_conformance_evaluation(
+                candidate,
+                smoke_scenario(),
+                output=output,
+                raw_evidence=raw,
+                chromium=root / "chromium",
+                playwright_browsers_path=root / "browsers",
+                browser_evaluator=evaluator,
+            )
+
+        self.assertEqual(artifacts.result["evaluation"]["outcome"], "passed")
+        self.assertEqual(calls[0][0], candidate)
+        self.assertEqual(calls[0][1], output)
+        self.assertEqual(calls[0][2]["raw_evidence"], raw)
+
     def test_public_conformance_is_unscored_and_requires_both_traveler_shapes(self):
         scenario = smoke_scenario()
         result = evaluate_public_conformance(

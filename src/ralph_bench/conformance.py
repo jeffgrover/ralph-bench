@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import tempfile
-from typing import Any, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 from .browser_runtime import (
     BrowserEvaluationArtifacts,
@@ -227,6 +227,41 @@ def load_public_smoke_scenario(path: Path) -> GateScenario:
         raise ConformanceError("public smoke scenario violates gates/v1 schema") from exc
 
 
+def run_conformance_evaluation(
+    candidate: Path,
+    scenario: GateScenario,
+    *,
+    output: Path,
+    raw_evidence: Path,
+    timeout_seconds: float = 30.0,
+    chromium: Path,
+    playwright_browsers_path: Path,
+    browser_evaluator: Callable[..., BrowserEvaluationArtifacts] = run_browser_evaluation,
+) -> BrowserEvaluationArtifacts:
+    """Run one public conformance evaluation using caller-owned directories."""
+
+    candidate = Path(candidate)
+    if not candidate.is_dir() or candidate.is_symlink():
+        raise ConformanceError("candidate must be a real directory")
+    artifacts = browser_evaluator(
+        candidate,
+        Path(output),
+        raw_evidence=Path(raw_evidence),
+        timeout_seconds=timeout_seconds,
+        seed=scenario.seed,
+        chromium=chromium,
+        playwright_browsers_path=playwright_browsers_path,
+        scenario=scenario,
+        evaluation_mode="conformance",
+    )
+    if not isinstance(artifacts.result, Mapping):
+        raise ConformanceError("browser worker returned malformed conformance evidence")
+    evaluation = artifacts.result.get("evaluation")
+    if not isinstance(evaluation, Mapping):
+        raise ConformanceError("browser worker omitted conformance evaluation")
+    return artifacts
+
+
 def run_public_conformance(
     candidate: Path,
     *,
@@ -237,9 +272,6 @@ def run_public_conformance(
 ) -> dict[str, Any]:
     """Run the checked-in unscored smoke scenario without producing a bundle."""
 
-    candidate = Path(candidate)
-    if not candidate.is_dir() or candidate.is_symlink():
-        raise ConformanceError("candidate must be a real directory")
     scenario_path = (
         Path(project_root)
         / "challenges"
@@ -251,20 +283,19 @@ def run_public_conformance(
     scenario = load_public_smoke_scenario(scenario_path)
     with tempfile.TemporaryDirectory(prefix="ralph-bench-conformance-") as directory:
         root = Path(directory)
-        artifacts: BrowserEvaluationArtifacts = run_browser_evaluation(
+        artifacts = run_conformance_evaluation(
             candidate,
-            root / "browser-output",
+            scenario,
+            output=root / "browser-output",
             raw_evidence=root / "raw",
             timeout_seconds=timeout_seconds,
             chromium=chromium or find_chromium(),
             playwright_browsers_path=playwright_browsers_path
             or find_playwright_browsers_path(),
-            scenario=scenario,
-            evaluation_mode="conformance",
         )
         result = artifacts.result
         evaluation = result.get("evaluation")
-        if not isinstance(evaluation, dict):
+        if not isinstance(evaluation, Mapping):
             raise ConformanceError("browser worker omitted conformance evaluation")
         return {
             "schema_version": "conformance/v1",
@@ -286,5 +317,6 @@ __all__ = [
     "ConformanceError",
     "evaluate_public_conformance",
     "load_public_smoke_scenario",
+    "run_conformance_evaluation",
     "run_public_conformance",
 ]

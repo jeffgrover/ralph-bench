@@ -547,9 +547,6 @@ class LMStudioProviderAdapter:
             },
         ))
 
-    def option_schema(self) -> dict[str, object]:
-        return {"endpoint": {"default": "http://127.0.0.1:1234/v1"}}
-
     def connection_settings(self, context: ProbeContext | None = None) -> dict[str, object]:
         context = context or ProbeContext()
         endpoint = context.metadata.get("provider_endpoint", "http://127.0.0.1:1234/v1")

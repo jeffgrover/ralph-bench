@@ -622,7 +622,6 @@ def _execute_one(
     base_prompt = (staged.public_challenge / "prompt.txt").read_text(encoding="utf-8")
     prompt_fn, attempt_prompts, attempt_feedback = challenge_adapter.prompt_builder(
         base_prompt,
-        client=experiment.client,
         workspace=staged.workspace,
         public_challenge=staged.public_challenge,
     )
@@ -966,6 +965,7 @@ def _execute_one(
             "effective": {
                 "harness": sut.harness_id,
                 "invocation": list(native_plan.argv),
+                "invocation_warnings": list(native_plan.warnings),
                 "loop": experiment.client_options.loop,
                 "reasoning_effort": experiment.client_options.reasoning_effort,
                 "sandbox": native_plan.sandbox,

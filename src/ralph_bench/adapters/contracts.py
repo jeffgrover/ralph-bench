@@ -6,6 +6,8 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Callable, Mapping, Protocol
 
+from ..options import REASONING_EFFORTS
+
 
 @dataclass(frozen=True)
 class AdapterDescriptor:
@@ -273,7 +275,6 @@ BILLING_MODE_TRACKS = {
     "local": "local",
 }
 
-
 def tracks_for_cost_capabilities(
     capabilities: CostCapabilities,
 ) -> tuple[str, ...]:
@@ -370,8 +371,6 @@ class HarnessAdapter(Protocol):
         self, scoped_home: Path, credential_reference: Path | None = None
     ) -> Mapping[str, str]: ...
 
-    def option_schema(self) -> Mapping[str, Any]: ...
-
     def plan(
         self,
         model: str,
@@ -396,8 +395,6 @@ class ProviderAdapter(Protocol):
         self, context: ProbeContext | None = None
     ) -> tuple[ModelOffer, ...]: ...
 
-    def option_schema(self) -> Mapping[str, Any]: ...
-
     def connection_settings(self, context: ProbeContext | None = None) -> Mapping[str, Any]: ...
 
     def cost_capabilities(self) -> CostCapabilities: ...
@@ -413,7 +410,5 @@ class ModelAdapter(Protocol):
     def match(self, offer: ModelOffer) -> bool: ...
 
     def capabilities(self, offer: ModelOffer) -> ModelCapabilities: ...
-
-    def option_schema(self) -> Mapping[str, Any]: ...
 
     def resolve(self, model_id: str, offer: ModelOffer) -> ModelBinding: ...

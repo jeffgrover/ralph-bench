@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
-from .contracts import AdapterDescriptor, ModelBinding, ModelCapabilities, ModelOffer
+from .contracts import (
+    AdapterDescriptor,
+    ModelBinding,
+    ModelCapabilities,
+    ModelOffer,
+    REASONING_EFFORTS,
+)
 
 
 class LunaModelAdapter:
@@ -21,17 +27,10 @@ class LunaModelAdapter:
         return ModelCapabilities(
             True,
             ("text",),
-            ("none", "low", "medium", "high", "xhigh", "max"),
+            REASONING_EFFORTS,
             tool_use=True,
             confidence="declared",
         )
-
-    def option_schema(self) -> dict[str, object]:
-        return {
-            "reasoning_effort": {
-                "values": ("none", "low", "medium", "high", "xhigh", "max")
-            }
-        }
 
     def resolve(self, model_id: str, offer: ModelOffer) -> ModelBinding:
         if not self.match(offer):
@@ -58,9 +57,6 @@ class GenericModelAdapter:
 
     def capabilities(self, offer: ModelOffer) -> ModelCapabilities:
         return ModelCapabilities(False, confidence="unknown")
-
-    def option_schema(self) -> dict[str, object]:
-        return {}
 
     def resolve(self, model_id: str, offer: ModelOffer) -> ModelBinding:
         return ModelBinding(

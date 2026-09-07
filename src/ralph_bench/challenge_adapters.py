@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, Protocol, TYPE_CHECKING
 
 from .browser_runtime import BrowserEvaluationArtifacts, run_browser_evaluation
-from .conformance import load_public_smoke_scenario
+from .conformance import load_public_smoke_scenario, run_conformance_evaluation
 from .execution import PublicCheckResult
 from .gate_evaluator import CandidateCheckResult, check_static_candidate
 from .gates import GateScenario, balanced_seed_for_repetition, build_balanced_gate_scenario
@@ -94,7 +94,6 @@ class ChallengeAdapter(Protocol):
         self,
         base_prompt: str,
         *,
-        client: str,
         workspace: Path,
         public_challenge: Path,
     ) -> tuple[
@@ -289,16 +288,15 @@ class BusyIntersectionChallengeAdapter:
             / "public"
             / "scenario-pack.json"
         )
-        artifacts = self._browser_evaluator(
+        artifacts = run_conformance_evaluation(
             candidate,
-            output,
+            scenario,
+            output=output,
             raw_evidence=raw_evidence,
             timeout_seconds=timeout_seconds,
-            seed=scenario.seed,
             chromium=chromium,
             playwright_browsers_path=playwright_browsers_path,
-            scenario=scenario,
-            evaluation_mode="conformance",
+            browser_evaluator=self._browser_evaluator,
         )
         if not isinstance(artifacts.result, Mapping):
             raise ChallengeAdapterError("public conformance returned malformed evidence")
@@ -380,7 +378,6 @@ class BusyIntersectionChallengeAdapter:
         self,
         base_prompt: str,
         *,
-        client: str,
         workspace: Path,
         public_challenge: Path,
     ) -> tuple[
@@ -392,25 +389,12 @@ class BusyIntersectionChallengeAdapter:
         feedbacks: dict[int, Mapping[str, Any] | None] = {}
 
         def build(attempt: int, feedback: Mapping[str, Any] | None) -> str:
-            if client in {"pi", "harness/pi"}:
-                text = (
-                    "Use the write tool exactly once now to create index.html, then "
-                    "stop. Do not explain or plan. Keep it under 3,500 characters: "
-                    "standalone offline canvas animation showing a simple four-way "
-                    "intersection, moving cars, and pedestrians. When "
-                    "window.RalphGates exists, register carArrived({id,entersFrom,"
-                    "exitsTo}) and pedestrianArrived({id,crossing,direction}); move "
-                    "each received traveler across the canvas and call the matching "
-                    "finish method exactly once when it leaves. Always animate. No "
-                    "network, comments, libraries, or HUD.\n"
-                )
-            else:
-                text = (
-                    base_prompt.rstrip()
-                    + f"\n\nWork only in {workspace}. Public challenge files are available "
-                    f"read-only at {public_challenge}. Put the complete final static "
-                    f"submission directly in {workspace}, including index.html.\n"
-                )
+            text = (
+                base_prompt.rstrip()
+                + f"\n\nWork only in {workspace}. Public challenge files are available "
+                f"read-only at {public_challenge}. Put the complete final static "
+                f"submission directly in {workspace}, including index.html.\n"
+            )
             if feedback is not None:
                 text += (
                     "\nThis is the single evaluator-controlled repair pass. Open the "

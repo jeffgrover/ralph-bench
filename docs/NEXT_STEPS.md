@@ -77,7 +77,7 @@ validated gate objects, reused the safe artifact-tree hash, and used
 suite passes (138 tests); no live model run was started for this mechanical
 cleanup.
 
-### 3. Consolidate shared execution and configuration
+### 3. Consolidate shared execution and configuration — complete, 2026-09-06
 
 - Share conformance execution while callers retain ownership of temporary or
   preserved output directories.
@@ -91,6 +91,17 @@ cleanup.
 
 **Exit:** Both client paths receive the same assignment and preserve attempt,
 resource, feedback, and cleanup evidence. Shared validation has one source.
+
+Phase 3 now routes standalone and staged public conformance through one
+caller-owned browser runner. Codex and Pi continue to share the conductor's
+attempt admission, preservation, feedback, and cleanup lifecycle while keeping
+native invocation and event parsing in their adapters. Wizard choices and
+resolver/invocation validation use the shared model capability values; unused
+adapter option-schema declarations were removed. Both clients receive the
+complete challenge prompt. Controlled Pi's deliberately reduced one-write
+tool policy is recorded as calibration provenance rather than a benchmark
+result. The account-free suite passes (140 tests); no live model run was
+started.
 
 ### 4. Make acceptance and reporting truthful
 
@@ -210,7 +221,7 @@ explicitly revise traffic acceptance or the shared challenge:
 - Missing callbacks are reported as `unmeasurable`, not as zero throughput.
 - Context-aware offline checks accept CSS custom properties such as
   `--ws:64px` while still rejecting real external URLs.
-- The complete unit and contract suite contains 138 passing tests at this
+- The complete unit and contract suite contains 140 passing tests at this
   checkpoint; the command below is authoritative as the suite grows.
 
 ## Fair-shot design guardrails

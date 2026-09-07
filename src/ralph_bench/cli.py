@@ -12,6 +12,7 @@ from typing import Callable, Sequence
 
 from .adapters import AdapterRegistry, built_in_registry, resolve_sut
 from .adapters.contracts import (
+    ModelOffer,
     ProbeContext,
     ProbeResult,
     tracks_for_cost_capabilities,
@@ -311,12 +312,11 @@ class Wizard:
                 f"  Evaluation profile: {scenario_pack} "
                 "(derived from challenge and execution track)"
             )
-            effort_schema = model_adapter.option_schema().get("reasoning_effort", {})
-            effort_values = (
-                effort_schema.get("values", ())
-                if isinstance(effort_schema, dict)
-                else ()
+            model_capabilities = model_adapter.capabilities(
+                selected_offer
+                or ModelOffer(model, model, source="manual", freshness="unknown")
             )
+            effort_values = model_capabilities.reasoning_efforts
             effort = (
                 self._select(
                     "Reasoning effort:",

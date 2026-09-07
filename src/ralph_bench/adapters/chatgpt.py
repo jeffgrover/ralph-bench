@@ -92,9 +92,6 @@ class ChatGPTProviderAdapter:
             ),
         )
 
-    def option_schema(self) -> dict[str, object]:
-        return {}
-
     def connection_settings(self, context: ProbeContext | None = None) -> dict[str, object]:
         return {}
 

@@ -207,6 +207,12 @@ not update during an active run, reach back
 into the conductor, prompt the user, write result bundles, or call another
 adapter through hidden global state.
 
+The current P0 implementation keeps normalized reasoning effort in
+`ModelCapabilities.reasoning_efforts`; the wizard, resolver, and invocation
+plans consume that shared value set. The `option_schema()` methods shown above
+are an extension shape for future provider/model-specific controls, not a
+required runtime hook in this phase.
+
 ## Registry and construction
 
 P0 uses an explicit built-in registry populated through normal package imports.

@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from .challenges import ChallengeProfileError, scenario_pack_for
+from .options import REASONING_EFFORTS
 
 
 class ExperimentError(ValueError):
@@ -133,7 +134,7 @@ def parse_experiment(data: Mapping[str, Any]) -> Experiment:
     )
     if loop not in {"controlled", "native"}:
         raise ExperimentError(f"unsupported client_options.loop: {loop!r}")
-    if effort not in {"none", "low", "medium", "high", "xhigh", "max"}:
+    if effort not in REASONING_EFFORTS:
         raise ExperimentError(f"unsupported client_options.reasoning_effort: {effort!r}")
     repetitions = _positive_int(data, "repetitions", 1)
     max_wall = _positive_int(budget, "max_wall_seconds", 1200)

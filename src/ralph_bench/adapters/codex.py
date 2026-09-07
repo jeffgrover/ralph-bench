@@ -14,13 +14,14 @@ from pathlib import Path
 from typing import Callable
 
 from .contracts import (
-        AdapterDescriptor,
-        ConnectionProbe,
-        HarnessExecutionContext,
+    AdapterDescriptor,
+    ConnectionProbe,
+    HarnessExecutionContext,
     InvocationPlan,
     ProbeContext,
     ProbeResult,
     ProcessResult,
+    REASONING_EFFORTS,
     UpdateResult,
 )
 
@@ -231,12 +232,6 @@ class CodexHarnessAdapter:
             auth.warnings,
         )
 
-    def option_schema(self) -> dict[str, object]:
-        return {
-            "reasoning_effort": {"values": ("none", "low", "medium", "high", "xhigh", "max")},
-            "loop": {"values": ("controlled", "native")},
-        }
-
     def plan(
         self,
         model: str,
@@ -248,8 +243,7 @@ class CodexHarnessAdapter:
     ) -> InvocationPlan:
         if loop not in {"controlled", "native"}:
             raise ValueError(f"unsupported Codex loop: {loop}")
-        efforts = {"none", "low", "medium", "high", "xhigh", "max"}
-        if reasoning_effort not in efforts:
+        if reasoning_effort not in REASONING_EFFORTS:
             raise ValueError(f"unsupported Codex reasoning effort: {reasoning_effort}")
         if sandbox not in {"read-only", "workspace-write"}:
             raise ValueError(f"unsupported Codex sandbox: {sandbox}")

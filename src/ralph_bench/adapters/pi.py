@@ -17,6 +17,7 @@ from .contracts import (
     ProbeContext,
     ProbeResult,
     ProcessResult,
+    REASONING_EFFORTS,
     UpdateResult,
 )
 
@@ -291,12 +292,6 @@ class PiHarnessAdapter:
             "pi descriptor",
         )
 
-    def option_schema(self) -> dict[str, object]:
-        return {
-            "reasoning_effort": {"values": ("none", "low", "medium", "high", "xhigh", "max")},
-            "loop": {"values": ("controlled", "native")},
-        }
-
     def plan(
         self,
         model: str,
@@ -308,7 +303,7 @@ class PiHarnessAdapter:
     ) -> InvocationPlan:
         if loop not in {"controlled", "native"}:
             raise ValueError(f"unsupported Pi loop: {loop}")
-        if reasoning_effort not in {"none", "low", "medium", "high", "xhigh", "max"}:
+        if reasoning_effort not in REASONING_EFFORTS:
             raise ValueError(f"unsupported Pi thinking level: {reasoning_effort}")
         if sandbox not in {"read-only", "workspace-write"}:
             raise ValueError(f"unsupported Pi sandbox: {sandbox}")
@@ -341,6 +336,11 @@ class PiHarnessAdapter:
             self.extension_root.parent / "pi-subagents" / "index.ts",
         )
         warnings: list[str] = []
+        if loop == "controlled":
+            warnings.append(
+                "controlled Pi proving uses a reduced one-write tool policy; "
+                "treat it as tool-call calibration, not a benchmark-equivalent run"
+            )
         for resource in resources:
             if resource.is_file():
                 argv_parts.extend(("--extension", str(resource)))
