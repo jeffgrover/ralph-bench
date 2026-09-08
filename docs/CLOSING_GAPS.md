@@ -6,8 +6,9 @@ findings and completion work; historical phase records remain available.
 ## Scope and exit checks
 
 1. Remove the unused synthetic traffic detector and its misleading passing
-   reference. Preserve physical counterexamples as requirements for recorded
-   human-review calibration. No new candidate telemetry API.
+   reference. Preserve the minimal candidate-reported body trace only for
+   collision scoring; keep physical counterexamples as requirements for
+   recorded human-review calibration.
 2. Require explicit findings for collision avoidance, signals, lanes, scale,
    and trip integrity. Bind passing reviews to the scenario, seed, artifact,
    recording, and complete evaluation interval. Incomplete historical reviews
@@ -31,7 +32,7 @@ These are outstanding benchmark validation, not completed by unit tests.
   remains closed. Physical benchmark calibration remains outstanding below.
 - Removed the unused synthetic detector; implemented scenario-bound,
   recording-backed human findings and conservative comparison eligibility.
-- Regression suite: 157 tests pass. Historical artifact
+- Regression suite: 164 tests pass. Historical artifact
   `fa18b063-dff1-4f91-8ef5-1ee1dd95d10a` passed all six public browser checks
   with no runtime/network errors. This is not proof of physical validity.
 - Final report ingests four bundles with zero invalid bundles.

@@ -106,6 +106,10 @@ RalphGates.register({
 
 RalphGates.carFinished(id, exit); // whole car has cleared the requested exit
 RalphGates.pedestrianFinished(id); // whole pedestrian has reached the far sidewalk
+
+RalphGates.observe([
+  { id, x, y, length, width, heading } // ground-plane meters; heading clockwise from east
+]); // complete occupied-body list at roughly 15 Hz
 ```
 
 Vehicle entrances and exits are `north`, `east`, `south`, and `west`; evaluator
@@ -119,9 +123,23 @@ only once, and for cars only at the requested exit. It samples its issued,
 completed, outstanding, invalid, and latency ledgers throughout the same live
 run captured for visual review. Page reload is the reset boundary.
 
-There is no candidate-authored network description, topology schema, snapshot,
-queue report, summary counter, simulation clock, or parallel event ontology in
-`gates/v1`. Those concepts remain implementation choices inside the artifact.
+For measured runs, `observe` reports every evaluator-issued body still
+occupying the world at roughly 15 Hz (target 60–70 ms, never slower than
+10 Hz), using the rendered body's full ground footprint. Ralph timestamps the
+receipt, validates IDs and finite positive dimensions, preserves the trace, and
+derives oriented-footprint contact. A complete trace with zero reported
+car/car or car/pedestrian overlaps earns the automated collision score; any
+reported overlap fails that score. The coordinate system is ground-plane
+meters with east/south-positive `x`/`y`; `heading` is clockwise from east. The
+candidate does not report a clock, speed, collision verdict, topology, or
+aggregate counter. Missing or inconsistent body evidence is unverifiable and
+cannot establish collision safety.
+
+There is no candidate-authored network description, topology schema, queue
+report, summary counter, simulation clock, or parallel event ontology in
+`gates/v1`. The focused `bodies/v1` list is the exception: it reports occupied
+footprints for safety evidence without describing the simulation's internal
+state. All other concepts remain implementation choices inside the artifact.
 
 ### Visual design and creative latitude
 
@@ -598,7 +616,8 @@ responsibility is to preserve and present the evidence exceptionally well.
 - Narrative prompt.
 - Infrastructure constraints, dimensions and tolerances, time convention,
   right-of-way rules, and traffic-validity rubric.
-- The complete four-method `gates/v1` contract and semantic gate diagram.
+- The complete `gates/v1` contract, `bodies/v1` observation contract and
+  semantic gate diagram.
 - Starter/vendor assets.
 - Public smoke checks.
 - One representative public scenario.

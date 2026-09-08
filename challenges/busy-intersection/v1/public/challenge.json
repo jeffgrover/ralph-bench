@@ -26,7 +26,22 @@
     "global": "RalphGates",
     "api_version": "gates/v1",
     "register": ["carArrived", "pedestrianArrived"],
-    "finish": ["carFinished", "pedestrianFinished"]
+    "finish": ["carFinished", "pedestrianFinished"],
+    "observe": {
+      "version": "bodies/v1",
+      "method": "observe",
+      "body_fields": ["id", "x", "y", "length", "width", "heading"],
+      "coordinate_system": "ground-plane-meters",
+      "sampling": {
+        "target_hz": 15,
+        "minimum_hz": 10,
+        "maximum_gap_ms": 100
+      },
+      "collision_scoring": {
+        "required_reported_collisions": 0,
+        "coverage": "complete"
+      }
+    }
   },
   "evaluator_owned_monitoring": [
     "arrival and completion timestamps",
@@ -35,7 +50,8 @@
     "throughput by load stage",
     "backlog growth",
     "load-to-failure and cooldown recovery",
-    "browser runtime and blocked network evidence"
+    "browser runtime and blocked network evidence",
+    "reported-body trace coverage and collision score"
   ],
   "human_review": [
     "visible agreement with finish notifications",

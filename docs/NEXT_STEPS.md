@@ -15,9 +15,37 @@ local-model artifacts do not establish a working simulation at all. Successful
 gate callbacks and attractive animation therefore cannot establish traffic
 validity.
 
+## Immediate next milestone: collision observation and scoring (P0.5)
+
+**Priority:** highest; before further model comparisons or throughput tuning
+
+Implement the [minimal observation design](COLLISION_OBSERVATION.md): one
+`RalphGates.observe(bodies)` call at roughly 15 Hz, with IDs and oriented
+ground-plane rectangles in meters. Ralph derives speed and safety findings;
+the model supplies no detector, clock, topology or control interface.
+
+This supersedes the initial pixel-box proposal. Screen coordinates depend on
+camera and zoom. Physical overlap remains a collision at any speed. Near-miss
+and speed-dependent-clearance categories are intentionally omitted: they were
+too heuristic to score consistently.
+
+The diagnostic slice now captures raw observations, validates IDs and numeric
+geometry, detects contact including between-sample crossings, and gives a
+complete zero-collision trace an explicit score. Candidate-reported geometry
+still requires visual corroboration for signals, lanes, scale and trip
+integrity. Old bundles retain their original evidence and missing telemetry is
+never retroactively treated as safe.
+
+**Revised estimate:** 4–6 engineering days for the complete diagnostic slice,
+including the remaining replay, bounded sweep handling and real-browser/reviewer
+calibration. The collision score is implemented for complete body traces;
+hard-gate activation for the other traffic rules still follows observer and
+human-review validation.
+
 The implementation status and historical evidence below describe the existing
-P0-A path. The unused synthetic observation seam has been removed under the
-closing-gaps plan; private visual/pilot validation remains outstanding.
+P0-A path. The old synthetic observation seam has been removed; the minimal
+body trace is now used only for collision scoring. Private visual/pilot
+validation remains outstanding.
 
 ## Clearer goals
 
@@ -232,7 +260,8 @@ explicitly revise traffic acceptance or the shared challenge:
   the movement bridge.
 - That failure helped expose that the rich topology/snapshot/event contract was
   testing interface plumbing more than simulation design. It has been replaced
-  by the four-method `gates/v1` arrival/finish interface.
+  by the minimal `gates/v1` arrival/finish interface plus the focused
+  `bodies/v1` observation call.
 - The public pack now contains only an unscored smoke schedule and semantic gate
   diagram. Production arrival mixes, stage rates, seeds, and thresholds remain
   evaluator-owned.
@@ -257,7 +286,8 @@ The benchmark should be difficult because the system must design, implement,
 debug, and optimize a rich simulation—not because success depends on guessing
 an undocumented interface.
 
-- Publish every rule of the complete four-method `gates/v1` contract.
+- Publish every rule of the `gates/v1` arrival/finish and `bodies/v1`
+  observation contracts.
 - Give the model a deterministic public smoke scenario and a runnable
   conformance tool that exercises all required lifecycle shapes.
 - Provide browser console/runtime evidence and stable assertion IDs in a

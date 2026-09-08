@@ -205,6 +205,7 @@ def _read_run_record(
     cost = _json(extracted / "cost.json")
     challenge = _json(extracted / "challenge.json")
     assertions = _json(extracted / "evaluation" / "assertions.json")
+    runtime_observations = _json(extracted / "evaluation" / "runtime-observations.json")
     isolation = _json(extracted / "provenance" / "isolation.json")
     configuration = _json(extracted / "provenance" / "configuration.json")
     capture = _json(extracted / "captures" / "overview.json")
@@ -281,6 +282,11 @@ def _read_run_record(
         "metrics": metrics,
         "cost": cost if isinstance(cost, dict) else {},
         "assertions": assertions if isinstance(assertions, dict) else {},
+        "collision_observations": (
+            runtime_observations.get("collision_observations", {})
+            if isinstance(runtime_observations, dict)
+            else {}
+        ),
         "isolation": isolation if isinstance(isolation, dict) else {},
         "configuration": configuration if isinstance(configuration, dict) else {},
         "preflight": preflight if isinstance(preflight, dict) else {},
@@ -315,6 +321,7 @@ def _render_index(records: list[dict[str, Any]]) -> str:
         simulation = item["metrics"].get("simulation", {})
         peak = _number(simulation.get("peak_monitored_throughput")) if isinstance(simulation, dict) else None
         qualifying_peak = _number(simulation.get("peak_qualifying_throughput")) if isinstance(simulation, dict) else None
+        collision_score = _text(simulation.get("collision_score_status"), "unscored") if isinstance(simulation, dict) else "unscored"
         review = item.get("traffic_review", {})
         review_status = _text(review.get("status"), "pending") if isinstance(review, dict) else "pending"
         comparison = "official" if item.get("official_ranking_eligible") else (
@@ -330,7 +337,7 @@ def _render_index(records: list[dict[str, Any]]) -> str:
             f"<td>{html.escape(_text(item.get('protocol_conformance', {}).get('status') if isinstance(item.get('protocol_conformance'), dict) else None, 'unavailable'))}</td>"
             f"<td>{html.escape(review_status)}<br>"
             f"<span class=\"muted\">{html.escape(comparison)}</span><br>"
-            f"<span class=\"muted\">observed {html.escape(str(peak if peak is not None else '—'))}/min · qualifying {html.escape(str(qualifying_peak if qualifying_peak is not None else '—'))}/min</span></td>"
+            f"<span class=\"muted\">observed {html.escape(str(peak if peak is not None else '—'))}/min · qualifying {html.escape(str(qualifying_peak if qualifying_peak is not None else '—'))}/min · collisions {html.escape(collision_score)}</span></td>"
             f"<td>{html.escape(str(item['attempt_count']))}</td>"
             "</tr>"
         )
@@ -374,6 +381,23 @@ def _render_run(record: dict[str, Any]) -> str:
     assertion_body = "".join(assertion_rows) or '<tr><td colspan="3" class="muted">No assertion records.</td></tr>'
     metrics_text = json.dumps(record["metrics"], ensure_ascii=False, sort_keys=True, indent=2)
     cost_text = json.dumps(record["cost"], ensure_ascii=False, sort_keys=True, indent=2)
+    collision_observations = record.get("collision_observations", {})
+    if isinstance(collision_observations, dict) and collision_observations.get("status") not in {None, "unavailable"}:
+        collision_status = _text(collision_observations.get("status"), "diagnostic")
+        collision_text = json.dumps(collision_observations, ensure_ascii=False, sort_keys=True, indent=2)
+        collision_count = int(collision_observations.get("collision_count", len(collision_observations.get("collisions", []))))
+        collision_score_status = _text(collision_observations.get("collision_score_status"), "historical/unscored")
+        collision_callout = (
+            f'<div class="callout"><strong>Automated body observation:</strong> '
+            f'{html.escape(collision_status)}; '
+            f'{collision_count} collision(s); collision score '
+            f'{html.escape(collision_score_status)}. '
+            'A reported collision removes load-comparison eligibility; historical or incomplete traces remain unscored.</div>'
+        )
+        collision_evidence = f'<h2>Automated body observation</h2><pre>{html.escape(collision_text)}</pre>'
+    else:
+        collision_callout = '<div class="callout"><strong>Automated body observation:</strong> unavailable; this bundle predates the optional body trace.</div>'
+        collision_evidence = ""
     review = record.get("traffic_review", {})
     review_status = _text(review.get("status"), "pending") if isinstance(review, dict) else "pending"
     review_reason = _text(review.get("reason"), "no review supplied") if isinstance(review, dict) else "no review supplied"
@@ -415,6 +439,8 @@ def _render_run(record: dict[str, Any]) -> str:
         if record.get("artifact_available")
         else '<span class="muted">candidate entrypoint unavailable</span>'
     )
+    collision_score = simulation.get("collision_score") if isinstance(simulation, dict) else None
+    collision_score_text = "—" if collision_score is None else f"{collision_score}/1"
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Ralph Bench — {html.escape(record['run_id'])}</title><link rel="stylesheet" href="../../assets/site.css"></head>
@@ -423,18 +449,21 @@ def _render_run(record: dict[str, Any]) -> str:
 <div class="grid"><div class="card"><span class="value">{html.escape(str(record['attempt_count']))}</span><span class="label">attempts</span></div>
 <div class="card"><span class="value">{html.escape(str(_number(simulation.get('peak_monitored_throughput'), '—') if isinstance(simulation, dict) else '—'))}</span><span class="label">observed vehicles/min</span></div>
 <div class="card"><span class="value">{html.escape(str(_number(simulation.get('peak_qualifying_throughput'), '—') if isinstance(simulation, dict) else '—'))}</span><span class="label">qualifying vehicles/min</span></div>
+<div class="card"><span class="value">{html.escape(collision_score_text)}</span><span class="label">collision score</span></div>
 <div class="card"><span class="value">{html.escape(str(_number(agent.get('wall_seconds'), '—') if isinstance(agent, dict) else '—'))}</span><span class="label">agent seconds</span></div>
 <div class="card"><span class="value">{html.escape(str(_number(agent.get('usage', {}).get('total_tokens'), '—') if isinstance(agent, dict) and isinstance(agent.get('usage'), dict) else '—'))}</span><span class="label">reported tokens</span></div>
 <div class="card"><span class="value">{html.escape(elapsed_text)}</span><span class="label">{html.escape(elapsed_label)}</span></div>
 <div class="card"><span class="value">{html.escape(record['measurement_status'])}</span><span class="label">load evidence</span></div></div>
-<div class="callout"><strong>Performance comparison:</strong> {html.escape(comparison)}. Load evidence is {html.escape(_text(record.get('load_performance', {}).get('status') if isinstance(record.get('load_performance'), dict) else None, 'unmeasurable'))}; the retained v1 functional/load flag is {"eligible" if record["performance_eligible"] else "not eligible"}. It does not establish physical traffic validity.</div>
+<div class="callout"><strong>Performance comparison:</strong> {html.escape(comparison)}. Load evidence is {html.escape(_text(record.get('load_performance', {}).get('status') if isinstance(record.get('load_performance'), dict) else None, 'unmeasurable'))}; the retained v1 functional/load flag is {"eligible" if record["performance_eligible"] else "not eligible"}. Remaining physical traffic rules still require review.</div>
 <div class="callout"><strong>Protocol conformance:</strong> {html.escape(protocol_status)}. <strong>Traffic validity:</strong> <span class="status {'pass' if review_status == 'pass' else 'fail' if review_status == 'fail' else 'experimental'}">{html.escape(review_status)}</span>{diagnostic_text} — {html.escape(review_reason)}. Evidence: {html.escape(', '.join(str(item) for item in review_refs) if review_refs else 'none')}.</div>
 <div class="callout"><strong>Visual quality:</strong> {html.escape(_text(record.get('visual_quality', {}).get('status') if isinstance(record.get('visual_quality'), dict) else None, 'pending'))}. This is a separate human review dimension and is not inferred from the poster or animation.</div>
+{collision_callout}
 <div class="callout"><strong>Isolation:</strong> {html.escape(_text(record['isolation'].get('level'), 'L0/unsealed'))}. <strong>Preflight:</strong> {html.escape(_text(record['preflight'].get('status'), 'not recorded'))}. Configuration and toolchain provenance remain in the bundle.</div>
 <div class="media"><div><h2>Recorded poster</h2><img src="overview.png" alt="Evaluator-recorded simulation poster"></div><div><h2>Recorded overview</h2><video controls preload="metadata" src="overview.webm"></video></div></div>
 <h2>Acceptance assertions</h2><div class="table-wrap"><table><thead><tr><th>Assertion</th><th>Result</th><th>Observed evidence</th></tr></thead><tbody>{assertion_body}</tbody></table></div>
 <h2>Comparison evidence</h2><p>{exclusions}</p><p>Traffic comparisons require matching cohorts. Official ranking awaits a verified isolation backend.</p><pre>{cohort_text}</pre>
 <h2>Traffic review findings</h2><pre>{review_text}</pre>
+{collision_evidence}
 <h2>Evidence</h2><div class="callout"><strong>Artifact:</strong> {artifact_link}. This report does not execute candidate HTML or JavaScript.</div>
 <pre>{html.escape(metrics_text)}</pre><h2>Cost evidence</h2><pre>{html.escape(cost_text)}</pre>
 <p class="muted">Bundle: {html.escape(record['bundle_name'])}<br>SHA-256: {html.escape(record['bundle_sha256'])}</p>

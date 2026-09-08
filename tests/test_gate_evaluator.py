@@ -43,7 +43,88 @@ def issued(scenario: GateScenario) -> list[dict[str, object]]:
     ]
 
 
+def observed_monitor(scenario: GateScenario, *, overlap: bool) -> dict[str, object]:
+    car_two_x = 2 if overlap else 10
+    bodies = [
+        {"id": "car-1", "x": 0, "y": 0, "length": 4, "width": 1.8, "heading": 0},
+        {"id": "car-2", "x": car_two_x, "y": 0, "length": 4, "width": 1.8, "heading": 0},
+        {"id": "ped-1", "x": 100, "y": 100, "length": 0.6, "width": 0.6, "heading": 0},
+    ]
+    return {
+        "ready": True,
+        "issued": issued(scenario),
+        "completions": [
+            {"kind": "car", "id": "car-1", "finish": "south", "completed_ms": 700, "latency_ms": 700},
+            {"kind": "pedestrian", "id": "ped-1", "finish": None, "completed_ms": 800, "latency_ms": 700},
+            {"kind": "car", "id": "car-2", "finish": "west", "completed_ms": 2_400, "latency_ms": 1_300},
+        ],
+        "invalid": [],
+        "observations": [
+            {"time_ms": 0, "bodies": bodies},
+            {"time_ms": 100, "bodies": bodies},
+        ],
+        "invalid_observations": [],
+    }
+
+
 class GateEvaluatorTests(unittest.TestCase):
+    def test_zero_collision_trace_is_scored(self) -> None:
+        scenario = small_scenario()
+        result = evaluate_gate_monitor(
+            scenario,
+            observed_monitor(scenario, overlap=False),
+            (
+                {"time_ms": 0, "outstanding_cars": 1},
+                {"time_ms": 1_000, "outstanding_cars": 0},
+                {"time_ms": 2_000, "outstanding_cars": 1},
+                {"time_ms": 3_000, "outstanding_cars": 0},
+            ),
+        )
+        self.assertTrue(result.passed, result.to_dict())
+        self.assertTrue(result.performance_eligible)
+        self.assertEqual(result.metrics["collision_count"], 0)
+        self.assertEqual(result.metrics["collision_score"], 1)
+        self.assertIn("collision-free", {item.assertion_id for item in result.assertions})
+
+    def test_reported_collision_fails_collision_score(self) -> None:
+        scenario = small_scenario()
+        result = evaluate_gate_monitor(
+            scenario,
+            observed_monitor(scenario, overlap=True),
+            (
+                {"time_ms": 0, "outstanding_cars": 1},
+                {"time_ms": 1_000, "outstanding_cars": 0},
+                {"time_ms": 2_000, "outstanding_cars": 1},
+                {"time_ms": 3_000, "outstanding_cars": 0},
+            ),
+        )
+        self.assertFalse(result.passed)
+        self.assertFalse(result.performance_eligible)
+        self.assertEqual(result.metrics["collision_count"], 1)
+        self.assertEqual(result.metrics["collision_score"], 0)
+        self.assertIn("collision-free", {item.code for item in result.failures})
+
+    def test_incomplete_collision_trace_is_unscorable(self) -> None:
+        scenario = small_scenario()
+        monitor = observed_monitor(scenario, overlap=False)
+        monitor["observations"] = [
+            {"time_ms": 0, "bodies": monitor["observations"][0]["bodies"]},
+            {"time_ms": 101, "bodies": monitor["observations"][1]["bodies"]},
+        ]
+        result = evaluate_gate_monitor(
+            scenario,
+            monitor,
+            (
+                {"time_ms": 0, "outstanding_cars": 1},
+                {"time_ms": 1_000, "outstanding_cars": 0},
+                {"time_ms": 2_000, "outstanding_cars": 1},
+                {"time_ms": 3_000, "outstanding_cars": 0},
+            ),
+        )
+        self.assertFalse(result.performance_eligible)
+        self.assertIsNone(result.metrics["collision_score"])
+        self.assertEqual(result.metrics["collision_score_status"], "unmeasurable")
+
     def test_minimal_monitor_produces_throughput_backlog_and_recovery(self) -> None:
         scenario = small_scenario()
         monitor = {
@@ -186,6 +267,10 @@ class GateEvaluatorTests(unittest.TestCase):
 
     def test_injected_library_exposes_only_the_small_public_surface(self) -> None:
         self.assertIn('apiVersion: "gates/v1"', GATES_INIT_SCRIPT)
+        self.assertIn('observationVersion: "bodies/v1"', GATES_INIT_SCRIPT)
+        self.assertIn("OBSERVATION_INTERVAL_MS = 60", GATES_INIT_SCRIPT)
+        self.assertIn("state.lastObservationMs = null", GATES_INIT_SCRIPT)
+        self.assertIn("observe(bodies)", GATES_INIT_SCRIPT)
         self.assertIn("carArrived", GATES_INIT_SCRIPT)
         self.assertIn("pedestrianArrived", GATES_INIT_SCRIPT)
         self.assertNotIn("describeNetwork", GATES_INIT_SCRIPT)

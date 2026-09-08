@@ -1059,6 +1059,7 @@ def _execute_one(
         runtime_observations={
             "schema_version": "runtime-observations/v1",
             "observations": evaluation.get("runtime_observations", []),
+            "collision_observations": evaluation.get("collision_observations", {}),
             "gate_monitor": browser.result.get("monitor", {}),
             "browser": browser.result.get("browser", {}),
             "evidence_refs": [browser_ref],

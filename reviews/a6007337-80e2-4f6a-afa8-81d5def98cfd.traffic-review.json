@@ -1,0 +1,72 @@
+{
+  "schema_version": "traffic-review/v2",
+  "rubric_version": "traffic-human/v1",
+  "status": "fail",
+  "run_id": "a6007337-80e2-4f6a-afa8-81d5def98cfd",
+  "artifact_hash": "5507a9c9362592174e2de9f9603b5924677a04c74e8d21b8d83ebeba970eb885",
+  "scenario_id": "busy-intersection-gates-balanced",
+  "seed": 17,
+  "reviewer": "Jeff Grover",
+  "reason": "Reasonably attractive and realistic visuals, quite a few collisions and near-misses, with overlapping cars and pedestrians.",
+  "evidence_refs": [
+    "captures/overview.webm"
+  ],
+  "reviewed_intervals": [
+    "evaluation 0–130020 ms"
+  ],
+  "coverage_ms": [
+    [
+      0,
+      130020
+    ]
+  ],
+  "coverage_complete": true,
+  "findings": {
+    "collision-avoidance": {
+      "status": "fail",
+      "detail": "Lots of near-misses and quite a few would-be collisions with pedestrians and cars.",
+      "evidence_refs": [
+        "captures/overview.webm"
+      ],
+      "confidence": 4
+    },
+    "signal-compliance": {
+      "status": "pass",
+      "detail": "Good stopping and queuing behavior for lights, but turns were questionable",
+      "evidence_refs": [
+        "captures/overview.webm"
+      ],
+      "confidence": 4
+    },
+    "lane-discipline": {
+      "status": "pass",
+      "detail": "Good in keeping to the lane",
+      "evidence_refs": [
+        "captures/overview.webm"
+      ],
+      "confidence": 5
+    },
+    "physical-scale": {
+      "status": "pass",
+      "detail": "Road too wide, not enough lanes.",
+      "evidence_refs": [
+        "captures/overview.webm"
+      ],
+      "confidence": 2
+    },
+    "trip-integrity": {
+      "status": "unverifiable",
+      "detail": "Difficult to ascertain car destinations (no turn lanes)",
+      "evidence_refs": [
+        "captures/overview.webm"
+      ],
+      "confidence": 4
+    }
+  },
+  "visual_review": {
+    "clarity": 4,
+    "motion": 4,
+    "attractiveness": 4,
+    "notes": ""
+  }
+}

@@ -51,6 +51,28 @@ car latency. These changes preserve hard protocol/runtime/traffic-validity
 gates while preventing late-but-eventually-completed trips from being mistaken
 for a capacity failure.
 
+## Body-trace calibration — 2026-09-07
+
+The preserved Sol and Astra artifacts were replayed with a temporary surgical
+`observe` insertion so the original immutable bundles were not changed. The
+full Sol trace had complete coverage and reported 24 footprint overlaps (13
+car/car and 11 car/pedestrian), matching the human review's description of
+quite a few collisions. The Astra trace had complete coverage
+and no footprint overlaps, consistent with its human reference judgment.
+
+Heuristic near-miss and speed-dependent-clearance categories were deliberately
+removed: their encounter counts were not meaningful enough to score. The
+collision result is now intentionally binary: complete trace plus zero
+overlaps is a score of `1`; any overlap is a score of `0`; missing or incomplete
+trace is unscorable.
+
+The same Sol trace retained all 24 detected overlaps when reduced from roughly
+60 Hz to roughly 15 Hz (maximum gap 71 ms); reducing below the 100 ms coverage
+budget missed one. New producers should therefore target 15 Hz, while Ralph
+performs collision analysis after capture so detector work cannot distort the
+simulation clock. The collision score is ready for calibration runs; other
+traffic rules still require human review before v2 activation.
+
 ## Review contract: traffic-review/v2, traffic-human/v1 rubric
 
 Run `rb review <bundle-or-run-directory>` to start the local reviewer. The

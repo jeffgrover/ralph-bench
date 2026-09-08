@@ -356,10 +356,12 @@ never mutate bundles.
 
 ### WP3 — Common browser, gate monitor, and capture
 
-Build one pinned Chromium/Playwright worker, inject the four-method `gates/v1`
-surface, monitor evaluator-issued arrivals and valid finish notifications,
-classify runtime failures, and capture one WebM overview plus one PNG poster
-from that same live run.
+Build one pinned Chromium/Playwright worker, inject the minimal `gates/v1`
+surface plus the sampled `bodies/v1` observation call (roughly 15 Hz), monitor
+evaluator-issued arrivals, body traces and valid finish notifications, classify
+runtime failures, and capture one WebM overview plus one PNG poster from that
+same live run. Run collision analysis after capture so detector work cannot
+distort the simulation clock.
 
 **Exit:** missing registration, unknown/duplicate/wrong-exit finishes, browser
 crashes, blocked network access, and disagreement between issued/completed

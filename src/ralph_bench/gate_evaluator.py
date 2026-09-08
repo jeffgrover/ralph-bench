@@ -10,6 +10,7 @@ import re
 from statistics import median
 from typing import Any, Mapping, Sequence
 
+from .collision_observer import analyze_observations
 from .execution import AttemptPreservationError, candidate_tree_hash
 from .gates import DemandStage, GateScenario
 
@@ -249,6 +250,7 @@ class EvaluationResult:
     failures: tuple[FailureRecord, ...]
     recovery: RecoveryResult
     runtime_observations: tuple[dict[str, Any], ...]
+    collision_observations: Mapping[str, Any]
     metrics: Mapping[str, Any]
     performance_eligible: bool
 
@@ -268,6 +270,7 @@ class EvaluationResult:
             "failures": [item.to_dict() for item in self.failures],
             "recovery": self.recovery.to_dict(),
             "runtime_observations": [dict(item) for item in self.runtime_observations],
+            "collision_observations": dict(self.collision_observations),
             "metrics": dict(self.metrics),
             "performance_eligible": self.performance_eligible,
         }
@@ -448,6 +451,29 @@ def evaluate_gate_monitor(
     )
     capacity = _capacity_curve(scenario, completions, observations, thresholds)
     recovery = _recovery(scenario, observations)
+    collision_observations = analyze_observations(monitor)
+    collision_evidence_requested = "observations" in monitor
+    collision_score_status = (
+        str(collision_observations.get("collision_score_status", "unavailable"))
+        if collision_evidence_requested
+        else "not-requested"
+    )
+    collision_count = int(collision_observations.get("collision_count", 0))
+    collision_assertions = (
+        _assertion(
+            scenario,
+            "collision-free",
+            collision_score_status == "pass",
+            "complete body evidence reported zero footprint collisions",
+            (
+                f"collision score is {collision_score_status}"
+                if collision_count == 0
+                else f"{collision_count} footprint collision(s) were reported"
+            ),
+            severity="critical",
+            threshold={"required_collisions": 0, "coverage": "complete"},
+        ),
+    ) if collision_evidence_requested else ()
     capacity_assertions = tuple(
         _assertion(
             scenario,
@@ -475,12 +501,14 @@ def evaluate_gate_monitor(
             severity="major",
         ),
     ) if recovery.attempted else ()
-    assertions = base_assertions + capacity_assertions + recovery_assertions
+    assertions = base_assertions + collision_assertions + capacity_assertions + recovery_assertions
     # Functional eligibility is evaluated before capacity and recovery. A
     # runnable, correctly wired artifact may still be measured at the load it
     # can sustain, even when it fails a held stage or cooldown requirement.
     functional_failures = tuple(
-        item for item in base_assertions if item.result == "fail"
+        item
+        for item in (*base_assertions, *collision_assertions)
+        if item.result == "fail"
     )
     performance_eligible = (
         not functional_failures
@@ -533,6 +561,13 @@ def evaluate_gate_monitor(
         "completed_pedestrians": len(pedestrian_completions),
         "outstanding_pedestrians": max(0, len(scenario.pedestrians) - len(pedestrian_completions)),
         "invalid_completions": len(invalid),
+        "collision_count": collision_count if collision_evidence_requested else None,
+        "collision_score": (
+            collision_observations.get("collision_score")
+            if collision_evidence_requested
+            else None
+        ),
+        "collision_score_status": collision_score_status,
         "median_car_completion_ms": median(latencies) if latencies else None,
         "p95_car_completion_ms": latencies[p95_index] if p95_index is not None else None,
         "maximum_car_completion_ms": max(latencies, default=None),
@@ -559,6 +594,7 @@ def evaluate_gate_monitor(
         failures,
         recovery,
         tuple(dict(item) for item in observations),
+        collision_observations,
         metrics,
         performance_eligible,
     )

@@ -53,16 +53,23 @@ The public pack contains a small unscored smoke schedule and complete gate
 contract. Production arrival mixes, rates, seeds, thresholds, and capacity
 search remain evaluator-owned.
 
+The later `bodies/v1` extension adds one candidate call containing the complete
+occupied-body list for evaluator-issued travelers. It is justified by observed
+collision failures. The producer targets roughly 15 Hz (never slower than
+10 Hz); detector analysis is post-run. A collision is geometric footprint
+overlap. A complete trace with zero overlaps earns the automated collision
+score; any overlap fails it. This does not add topology, queues, signals,
+stepping, candidate clocks, or candidate-authored collision verdicts.
+
 ## Consequences
 
 - Simulation architecture, clock, topology, signal policy, motion, rendering,
   and visual design remain candidate-owned.
 - Ralph can derive throughput, latency, backlog, breakdown, and recovery from a
   small authoritative ledger without trusting candidate counters.
-- P0 cannot independently prove collision, signal, or trajectory correctness
-  from structured telemetry. The recorded run is explicit evidence for those
-  judgments; stronger sensors may be added only when observed abuse justifies
-  the added interface cost.
+- The body trace can score reported contact, but cannot prove that a
+  candidate's renderer matches its report. The recorded run remains explicit
+  evidence and human review remains required for the other traffic rules.
 - The protocol can later add optional traveler attributes without expanding
   the v1 required surface.
 - Candidate-facing portions of ADR 0003 and ADR 0009 are amended by this

@@ -31,11 +31,30 @@ line:
 RalphGates.carFinished(id, exit);
 RalphGates.pedestrianFinished(id);
 
+For measured runs, also report the complete occupied-body list at a steady
+sampling cadence of roughly 15 observations per second (target every 60–70 ms;
+do not fall below 10 observations per second). Use the evaluator-issued IDs
+and the ground-plane coordinate system in meters: x east, y south, heading
+clockwise from east. A faster producer is accepted, but Ralph analyzes the
+sampled trace rather than treating every animation frame as a separate event.
+
+RalphGates.observe([
+  { id, x, y, length, width, heading }
+]);
+
+Report cars and pedestrians that have entered the evaluated world until their
+whole body clears the finish boundary. Use the same footprint and position
+that drive the rendering; omit shadows, labels and decorative outlines.
+Ralph timestamps observations and derives oriented-footprint contact. A
+complete trace with zero reported car/car or car/pedestrian overlaps earns the
+automated collision score; any reported overlap fails that score. Do not report
+demo travelers, candidate clocks, counters, topology or a parallel event log.
+Page reload is the evaluation reset.
+
 Ralph owns arrival timing, completion timestamps, IDs, load, backlog and
 throughput calculations. Arrival callback return values are ignored; introduce
 the traveler and return promptly. An ID may finish only once, and a car must
-finish at its requested exit. Do not submit counters, topology, snapshots or a
-parallel event log. Page reload is the evaluation reset.
+finish at its requested exit.
 
 The load starts gently, increases until the design stops keeping pace, and then
 stops so recovery can be observed. The exact scored schedule and thresholds are
