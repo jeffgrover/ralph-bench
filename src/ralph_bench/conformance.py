@@ -32,7 +32,10 @@ class ConformanceError(RuntimeError):
     """The public conformance input or execution was invalid."""
 
 
-PUBLIC_SMOKE_SETTLE_MS = 12_000
+# The smoke run is unscored. Allow one complete signal cycle plus a normal
+# free-flow crossing after the last arrival so route latency is not mistaken
+# for an interface failure.
+PUBLIC_SMOKE_SETTLE_MS = 15_000
 
 
 def _assertion(

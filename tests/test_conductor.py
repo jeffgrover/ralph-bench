@@ -309,6 +309,23 @@ class ConductorTests(unittest.TestCase):
         self.assertNotIn("100", rendered)
         self.assertNotIn("75", rendered)
 
+    def test_browser_repair_feedback_omits_performance_findings(self):
+        static = PublicCheckResult(True, {"summary": "static pass", "checks": []}, ())
+        result = BusyIntersectionChallengeAdapter().repair_check(
+            static,
+            {
+                "outcome": "passed",
+                "assertions": [
+                    {"assertion_id": "capacity-stage-load-4", "result": "fail"},
+                    {"assertion_id": "cooldown-recovery", "result": "fail"},
+                ],
+            },
+            ProgressReporter(lambda _message: None),
+            label="Run 1/1",
+        )
+        self.assertTrue(result.passed)
+        self.assertEqual(result.feedback["checks"], [])
+
     def test_local_pi_composition_uses_harness_factory_without_conductor_branch(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -430,6 +447,15 @@ class ConductorTests(unittest.TestCase):
         now[0] += 5
         budget.stop()
         self.assertEqual(budget.consumed, 30)
+
+    def test_model_budget_reserves_time_for_repair_attempt(self):
+        now = [10.0]
+        budget = _ModelWorkBudget(100, clock=lambda: now[0])
+        self.assertEqual(budget.timeout_for(1, 2), 75)
+        budget.start()
+        now[0] += 70
+        budget.stop()
+        self.assertEqual(budget.timeout_for(2, 2), 30)
 
     def test_local_attempt_check_summarizes_structure_without_model_content(self):
         with tempfile.TemporaryDirectory() as directory:

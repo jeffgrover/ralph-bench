@@ -148,6 +148,12 @@ def _browser_repair_detail(assertion_id: str) -> str:
             "Make evaluator-issued pedestrians move across their requested "
             "crossings and notify Ralph at visible finish."
         ),
+        "collision-free": (
+            "Prevent every car/car and car/pedestrian footprint overlap while "
+            "preserving continuous motion and visible finish notifications. "
+            "Keep the body trace complete for every evaluator-issued traveler "
+            "from arrival until its body clears the finish boundary."
+        ),
         "cooldown-recovery": (
             "Let outstanding evaluator-issued cars clear during cooldown while "
             "keeping the simulation responsive."
@@ -330,6 +336,9 @@ class BusyIntersectionChallengeAdapter:
                 assertion_id = assertion.get("assertion_id")
                 if not isinstance(assertion_id, str) or not assertion_id.strip():
                     continue
+                if assertion_id.startswith("capacity-stage-") or assertion_id == "cooldown-recovery":
+                    # Throughput is a ranking vector, not a repair gate.
+                    continue
                 if assertion_id not in assertion_ids:
                     assertion_ids.append(assertion_id)
                 if assertion.get("result") == "fail" and assertion_id not in seen_failures:
@@ -356,7 +365,7 @@ class BusyIntersectionChallengeAdapter:
         )
         checks = [dict(item) for item in static.feedback.get("checks", [])]
         checks.extend(failed_assertions)
-        if not checks:
+        if not checks and not passed:
             checks.append(
                 {
                     "id": "browser-evaluation",

@@ -504,7 +504,7 @@ def _run_experiment_path(
         return 3
     output_fn(
         f"Produced {len(summary.runs)} validated result bundle(s); "
-        f"{summary.passed} protocol/load pass(es); physical traffic review is pending."
+        f"{summary.passed} validity pass(es); physical traffic review is pending."
     )
     for run in summary.runs:
         status = "PASS" if run.public_accepted and run.simulation_outcome == "passed" else "FAIL"

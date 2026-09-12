@@ -515,30 +515,15 @@ def evaluate_gate_monitor(
         and ready
         and len(issued) == expected_arrivals
     )
+    # Capacity and recovery are performance observations, not validity gates.
+    # Keep their failed assertions in the evidence so the curve remains
+    # useful for ranking, but only functional and safety failures invalidate a
+    # run.
     failures = tuple(
         FailureRecord(item.assertion_id, item.severity, None, item.detail)
-        for item in assertions
+        for item in (*base_assertions, *collision_assertions)
         if item.result == "fail"
     )
-    failures += tuple(
-        FailureRecord(
-            f"capacity:{stage.stage_id}:{code}",
-            "major",
-            stage.stage_id,
-            f"{stage.stage_id} failed {code}",
-        )
-        for stage in capacity
-        for code in stage.failure_codes
-    )
-    if recovery.attempted and not recovery.passed:
-        failures += (
-            FailureRecord(
-                "cooldown-recovery",
-                "major",
-                "cooldown",
-                recovery.detail,
-            ),
-        )
     car_completions = [item for item in raw_completions if isinstance(item, Mapping) and item.get("kind") == "car"]
     pedestrian_completions = [item for item in raw_completions if isinstance(item, Mapping) and item.get("kind") == "pedestrian"]
     latencies = sorted(int(item.get("latency_ms", 0)) for item in car_completions)

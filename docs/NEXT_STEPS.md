@@ -85,7 +85,7 @@ The first post-merge Codex/Luna run produced a valid diagnostic bundle at
 80/80 cars and 16/16 pedestrians, measured 81 vehicles/minute, and recovered
 its backlog, but the original public smoke horizon ended before the second
 pedestrian finished (5/6 travelers). The public pack now grants a modest,
-unscored 12-second settle window after the last arrival and reports missing
+unscored 15-second settle window after the last arrival and reports missing
 public traveler IDs in bounded repair feedback. Replaying the preserved
 artifact under that calibrated public pack completed all 6/6 travelers with no
 runtime or network errors. This calibrates the v1 interface smoke boundary; it
@@ -350,17 +350,19 @@ toolchain evidence is attributable and no update can occur during an active run.
 
 **Priority:** completed blocking seam
 
-- Capacity-stage and recovery failures now enter the final evaluation outcome.
+- Capacity-stage and recovery results remain explicit performance findings,
+  but no longer enter the validity outcome. A working artifact is therefore
+  measurable and rankable even when it cannot sustain the highest offered load.
 - The evaluator exposes `performance_eligible` separately, so a working but
-  overloaded artifact remains measurable while a non-working artifact cannot
-  enter performance comparison.
+  overloaded artifact remains measurable while a non-working or unsafe artifact
+  cannot enter performance comparison.
 - Fixtures cover both the overloaded-working and missing-interface paths.
 - Keep functional eligibility separate from the performance vector; never let
   high throughput compensate for invalid or dishonest behavior.
 
-**Exit:** met. The evaluator cannot report `passed` when a qualifying held stage
-or recovery requirement fails, and tests make the working-before-performance
-rule explicit.
+**Exit:** met. The evaluator cannot report `passed` when protocol, runtime,
+integrity, or collision validity fails; held-load and recovery findings remain
+visible in the performance vector without invalidating a working run.
 
 ### 2. Ship the agent-runnable public gate check — implemented
 

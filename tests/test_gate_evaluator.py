@@ -165,7 +165,7 @@ class GateEvaluatorTests(unittest.TestCase):
         )
         self.assertFalse(result.performance_eligible)
 
-    def test_overloaded_working_artifact_fails_performance_but_remains_eligible(self) -> None:
+    def test_overloaded_working_artifact_remains_eligible_and_reports_performance_findings(self) -> None:
         scenario = small_scenario()
         monitor = {
             "ready": True,
@@ -183,14 +183,13 @@ class GateEvaluatorTests(unittest.TestCase):
             {"time_ms": 3_000, "outstanding_cars": 2},
         )
         result = evaluate_gate_monitor(scenario, monitor, observations)
-        self.assertFalse(result.passed)
+        self.assertTrue(result.passed, result.to_dict())
         self.assertTrue(result.performance_eligible)
         self.assertEqual(result.measurement_status, "measured")
-        self.assertIn(
-            "capacity:load:backlog-growth",
-            {item.code for item in result.failures},
-        )
-        self.assertIn("cooldown-recovery", {item.code for item in result.failures})
+        self.assertEqual(result.failures, ())
+        failed_assertions = {item.assertion_id for item in result.assertions if item.result == "fail"}
+        self.assertIn("capacity-stage-load", failed_assertions)
+        self.assertIn("cooldown-recovery", failed_assertions)
 
     def test_capacity_reports_late_completion_as_latency_not_stage_failure(self) -> None:
         scenario = small_scenario()

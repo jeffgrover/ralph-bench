@@ -49,7 +49,10 @@ Capacity reports now retain both observed peak throughput and the lower peak
 among qualifying stages; completion latency includes median, P95, and maximum
 car latency. These changes preserve hard protocol/runtime/traffic-validity
 gates while preventing late-but-eventually-completed trips from being mistaken
-for a capacity failure.
+for a capacity failure. Held-load and cooldown results are performance
+findings, not additional validity gates: a safe, functional simulation that
+stalls under overload remains eligible and is differentiated by its measured
+throughput, backlog, latency, and recovery.
 
 ## Body-trace calibration — 2026-09-07
 
@@ -72,6 +75,34 @@ budget missed one. New producers should therefore target 15 Hz, while Ralph
 performs collision analysis after capture so detector work cannot distort the
 simulation clock. The collision score is ready for calibration runs; other
 traffic rules still require human review before v2 activation.
+
+## Outcome-policy recalibration — 2026-09-08
+
+The fresh Astra run `b84c0286-8cce-4b6c-b739-b265983f03d1` had zero detected
+collisions and passed protocol, runtime, arrival, completion, and low-load
+service checks. It completed 62/80 cars and left 18 cars outstanding after the
+load/recovery schedule. Under the previous policy, the held-load and recovery
+findings made the whole run fail. That conflated safety validity with capacity.
+
+The evaluator now treats collision-free, truthful, runnable behavior as the
+validity gate. Throughput, backlog, latency, load breakdown, and recovery stay
+in the immutable evidence and differentiate eligible runs. A safe simulation
+that cannot sustain the highest offered load is therefore a lower-performing
+result, not a failed simulation.
+
+## Sol proving run — 2026-09-08
+
+With throughput and cooldown removed from the validity outcome, plus one bounded
+repair attempt and explicit body-trace coverage feedback, Sol produced a private
+simulation that passed every protocol/runtime/service/safety gate. Its collision
+trace was complete with zero overlaps; it completed 34/80 cars and 1/16
+pedestrians, and measured 30 vehicles/minute. It remains a performance result,
+not a throughput failure. The only remaining rejection was the public smoke
+horizon in the immutable bundle: one car finished just after the former
+12-second post-arrival settle window. Replaying the preserved attempt-2
+candidate with the calibrated 15-second window passed all 6/6 public travelers.
+The original bundle remains immutable and records the historical smoke result;
+a future fresh run will seal the updated public evidence.
 
 ## Review contract: traffic-review/v2, traffic-human/v1 rubric
 

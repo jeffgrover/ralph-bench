@@ -28,6 +28,7 @@ from .adapters import (
 )
 from .preflight import PreflightError, run_sut_preflight
 from .browser_runtime import (
+    BrowserRuntimeError,
     find_chromium,
     find_playwright_browsers_path,
     run_browser_evaluation,
@@ -154,6 +155,17 @@ class _ModelWorkBudget:
             if self._active_since is not None:
                 consumed += max(0.0, self._clock() - self._active_since)
             return max(0.0, self._maximum - consumed)
+
+    def timeout_for(self, attempt_number: int, max_attempts: int) -> float:
+        """Keep a small repair reserve instead of spending the whole budget once."""
+
+        if attempt_number < 1 or max_attempts < 1 or attempt_number > max_attempts:
+            raise ValueError("invalid model attempt budget request")
+        remaining = self.remaining()
+        if attempt_number == max_attempts or max_attempts == 1:
+            return remaining
+        repair_reserve = self._maximum / 4
+        return max(1.0, remaining - repair_reserve)
 
     @property
     def consumed(self) -> float:
@@ -334,6 +346,7 @@ class _AttemptProgress:
         input_stream: Any | None = None,
         status_provider: Callable[[int], str] | None = None,
         model_budget: _ModelWorkBudget | None = None,
+        attempt_started: Callable[[int], None] | None = None,
     ) -> None:
         self._executor = executor
         self._reporter = reporter
@@ -344,6 +357,7 @@ class _AttemptProgress:
         self._input_stream = input_stream
         self._status_provider = status_provider
         self._model_budget = model_budget
+        self._attempt_started = attempt_started
 
     def __call__(
         self,
@@ -351,6 +365,8 @@ class _AttemptProgress:
         feedback: Mapping[str, Any] | None,
         admission: InvocationAdmission,
     ) -> HarnessAttemptResult:
+        if self._attempt_started is not None:
+            self._attempt_started(attempt_number)
         kind = "repair" if feedback is not None else "initial"
         self._reporter.emit(
             f"{self._run_label}: starting {kind} model attempt "
@@ -391,7 +407,7 @@ class _AttemptProgress:
             if check_ready.wait(timeout=0.2):
                 self._reporter.emit(
                     f"{self._run_label}: press c to check local progress; Ctrl-C cancels"
-                )
+        )
         started = time.monotonic()
         if self._model_budget is not None:
             self._model_budget.start()
@@ -634,7 +650,10 @@ def _execute_one(
         public_challenge=staged.public_challenge,
     )
     model_budget = _ModelWorkBudget(experiment.budget.max_wall_seconds)
-    remaining = model_budget.remaining
+    current_attempt = [1]
+    remaining = lambda: model_budget.timeout_for(
+        current_attempt[0], experiment.budget.max_attempts
+    )
     executor_context = HarnessExecutionContext(
         plan=plan,
         workspace=staged.workspace,
@@ -664,6 +683,9 @@ def _execute_one(
             evidence_prefix=native_plan.evidence_prefix,
         ),
         model_budget=model_budget,
+        attempt_started=lambda attempt_number: current_attempt.__setitem__(
+            0, attempt_number
+        ),
     )
     reporter.emit(f"{run_label}: monitoring gate completions and recording the overview")
     browser_output = staged.conductor_root / "browser"
@@ -688,15 +710,52 @@ def _execute_one(
             reporter.emit(f"{run_label}: unchanged candidate reuses browser evaluation")
             return check
         browser_output.mkdir(parents=True, exist_ok=True)
-        artifact = challenge_adapter.evaluate(
-            challenge_run,
-            path,
-            browser_output / f"attempt-{attempt_number:03d}",
-            raw_evidence=raw_root / f"browser-attempt-{attempt_number:03d}",
-            timeout_seconds=evaluation_timeout,
-            chromium=chromium,
-            playwright_browsers_path=playwright_browsers_path,
-        )
+        try:
+            artifact = challenge_adapter.evaluate(
+                challenge_run,
+                path,
+                browser_output / f"attempt-{attempt_number:03d}",
+                raw_evidence=raw_root / f"browser-attempt-{attempt_number:03d}",
+                timeout_seconds=evaluation_timeout,
+                chromium=chromium,
+                playwright_browsers_path=playwright_browsers_path,
+            )
+        except BrowserRuntimeError as exc:
+            failure_path = raw_root / f"browser-evaluation-attempt-{attempt_number}.failure.json"
+            failure_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "browser-failure/v1",
+                        "error_type": type(exc).__name__,
+                        "detail": str(exc),
+                    },
+                    sort_keys=True,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            reporter.emit(
+                f"{run_label}: browser evaluation failed; offering bounded repair feedback"
+            )
+            return PublicCheckResult(
+                False,
+                {
+                    "summary": (
+                        "The private browser evaluation did not complete. Repair the "
+                        "artifact so it loads offline, remains responsive, and completes "
+                        "the evaluator-owned simulation."
+                    ),
+                    "checks": [
+                        {
+                            "id": "browser-evaluation",
+                            "result": "fail",
+                            "detail": "private browser evaluation did not complete",
+                        }
+                    ],
+                },
+                (f"events/raw/{failure_path.name}",),
+            )
         raw_browser = raw_root / f"browser-evaluation-attempt-{attempt_number:03d}.json"
         shutil.copyfile(artifact.result_path, raw_browser)
         browser_ref = f"events/raw/{raw_browser.name}"
@@ -1211,7 +1270,7 @@ def execute_experiment(
         summary = EvaluationRunSummary(experiment_id, tuple(completed))
         reporter.emit(
             f"Evaluation complete: {len(summary.runs)} bundle(s), "
-            f"{summary.passed} protocol/load pass(es); physical review pending"
+            f"{summary.passed} validity pass(es); physical review pending"
         )
         return summary
     finally:
