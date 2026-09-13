@@ -279,7 +279,7 @@ Evaluation records include:
 - Capacity stages and refinement runs.
 - Sampled gate-ledger and runtime/browser observations used for metric
   derivation.
-- Candidate-reported body observations and collision-score findings when the
+- Candidate-reported body observations and safety-score findings when the
   optional `bodies/v1` trace is present.
 - Failure windows and thresholds.
 

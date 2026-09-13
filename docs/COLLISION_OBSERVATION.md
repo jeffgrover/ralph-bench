@@ -1,8 +1,8 @@
 # Minimal collision observation design
 
-Status: implemented collision-scoring contract, 2026-09-07. Historical bundles
-remain unchanged; new measured runs use the sampled trace and binary collision
-score below.
+Status: implemented collision-scoring contract, 2026-09-07; graduated safety
+scoring replaces safety gating in new runs. The score/status change is recorded
+as `collision-observations/v3`; historical bundles remain unchanged.
 
 ## Decision and candidate-facing contract
 
@@ -87,23 +87,24 @@ the final check must account for heading. Define a small numerical tolerance
 and an uncertain boundary band so roundoff cannot become an invented collision.
 Pedestrian/pedestrian spacing is outside the first detector's scope.
 
-**Collision score:** compare oriented rectangles for car/car and
-car/pedestrian pairs. A complete, valid trace with zero overlaps scores `1`; a
-trace with one or more overlaps scores `0`; unavailable or incomplete evidence
-is unscorable. This is intentionally binary. Do not infer safety from distance,
-speed, heading, or a heuristic safety envelope.
+**Safety score:** compare oriented rectangles for car/car and car/pedestrian
+pairs. A complete, valid trace receives `100 * 0.5^collision_count`, so zero
+overlaps scores `100`, one scores `50`, two scores `25`, and so on. Unavailable
+or incomplete evidence is unscorable. This is a deliberately austere finding,
+not a physical safety certification; do not infer safety from distance, speed,
+heading, or a heuristic safety envelope.
 
 **Between observations:** test motion between consecutive samples using a
 bounded sweep of interpolated centers and headings, including angle wraparound.
 An overlap found by that sweep is counted as contact under this evaluator
-model. Gaps beyond the coverage limit make the overall collision score
+model. Gaps beyond the coverage limit make the overall safety score
 unscorable; they do not become a guessed pass. Straight interpolation cannot
 prove what an arbitrary unreported curved path did, so the cadence and coverage
 contract remain part of the score.
 
 Group repeated contacts for the same pair into one encounter, with start/end
-times and evidence sample references. Preserve the raw trace so the collision
-detector can be re-scored without another model generation or mutation of the
+times and evidence sample references. Preserve the raw trace so the safety
+score can be recalculated without another model generation or mutation of the
 original bundle.
 
 ## Evidence and trust
@@ -124,10 +125,11 @@ time zero is identical. Perspective may make correspondence unverifiable.
 
 The initial report distinguishes observed contact, missing evidence, and no
 detected contact. A complete zero-contact trace earns the automated collision
-score; any contact vetoes load-comparison eligibility. Preserve human review for
-geometry/rendering agreement, signals, lanes and trip integrity. A detector
-disagreement requires inspection of the paired trace and video. Safety cannot
-be traded against throughput, including during overload.
+score; each observed contact lowers that score, while missing or incomplete
+evidence remains unscorable. Preserve human review for geometry/rendering
+agreement, signals, lanes and trip integrity. A detector disagreement requires
+inspection of the paired trace and video. Safety is reported beside throughput,
+not hidden by it or converted into a validity gate.
 
 ## Small implementation path
 
@@ -140,8 +142,8 @@ be traded against throughput, including during overload.
    Persist trace and findings through the challenge's existing evidence path,
    keeping traffic logic out of the conductor.
 3. Add event links and the simple top-down trace replay to the existing review
-   workflow. Ensure unsafe runs display no eligible throughput, even if their
-   historical machine/load outcome says passed.
+   workflow. Display the safety score beside throughput, and mark incomplete
+   safety evidence as unscorable rather than treating it as a pass.
 4. Exercise actual browser producers and geometry tests, then publish the
    required method in a new versioned public challenge pack. Old v1 bundles
    remain readable with collision evidence unavailable. Replaying an old

@@ -326,6 +326,22 @@ class ConductorTests(unittest.TestCase):
         self.assertTrue(result.passed)
         self.assertEqual(result.feedback["checks"], [])
 
+    def test_browser_repair_feedback_omits_safety_findings(self):
+        static = PublicCheckResult(True, {"summary": "static pass", "checks": []}, ())
+        result = BusyIntersectionChallengeAdapter().repair_check(
+            static,
+            {
+                "outcome": "passed",
+                "assertions": [
+                    {"assertion_id": "collision-free", "result": "fail"},
+                ],
+            },
+            ProgressReporter(lambda _message: None),
+            label="Run 1/1",
+        )
+        self.assertTrue(result.passed)
+        self.assertEqual(result.feedback["checks"], [])
+
     def test_local_pi_composition_uses_harness_factory_without_conductor_branch(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

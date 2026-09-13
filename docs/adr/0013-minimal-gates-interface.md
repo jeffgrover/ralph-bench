@@ -57,9 +57,10 @@ The later `bodies/v1` extension adds one candidate call containing the complete
 occupied-body list for evaluator-issued travelers. It is justified by observed
 collision failures. The producer targets roughly 15 Hz (never slower than
 10 Hz); detector analysis is post-run. A collision is geometric footprint
-overlap. A complete trace with zero overlaps earns the automated collision
-score; any overlap fails it. This does not add topology, queues, signals,
-stepping, candidate clocks, or candidate-authored collision verdicts.
+overlap. A complete trace receives the graduated automated safety score; each
+distinct overlap lowers it, while incomplete evidence is unscorable. This does
+not add topology, queues, signals, stepping, candidate clocks, or
+candidate-authored collision verdicts.
 
 ## Consequences
 

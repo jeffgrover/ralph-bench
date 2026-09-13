@@ -336,8 +336,12 @@ class BusyIntersectionChallengeAdapter:
                 assertion_id = assertion.get("assertion_id")
                 if not isinstance(assertion_id, str) or not assertion_id.strip():
                     continue
-                if assertion_id.startswith("capacity-stage-") or assertion_id == "cooldown-recovery":
-                    # Throughput is a ranking vector, not a repair gate.
+                if (
+                    assertion_id.startswith("capacity-stage-")
+                    or assertion_id in {"cooldown-recovery", "collision-free"}
+                ):
+                    # Throughput and safety are scoring vectors, not repair
+                    # gates. Keep their findings in the immutable evidence.
                     continue
                 if assertion_id not in assertion_ids:
                     assertion_ids.append(assertion_id)

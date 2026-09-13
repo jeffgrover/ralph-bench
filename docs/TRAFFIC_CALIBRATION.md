@@ -64,17 +64,18 @@ quite a few collisions. The Astra trace had complete coverage
 and no footprint overlaps, consistent with its human reference judgment.
 
 Heuristic near-miss and speed-dependent-clearance categories were deliberately
-removed: their encounter counts were not meaningful enough to score. The
-collision result is now intentionally binary: complete trace plus zero
-overlaps is a score of `1`; any overlap is a score of `0`; missing or incomplete
-trace is unscorable.
+removed: their encounter counts were not meaningful enough to score. Collision
+evidence now produces a graduated safety score: complete trace plus zero
+overlaps is `100`; each distinct collision pair halves the score; missing or
+incomplete trace is unscorable. Safety is reported separately from throughput
+and no longer gates whether a runnable simulation can be evaluated.
 
 The same Sol trace retained all 24 detected overlaps when reduced from roughly
 60 Hz to roughly 15 Hz (maximum gap 71 ms); reducing below the 100 ms coverage
 budget missed one. New producers should therefore target 15 Hz, while Ralph
 performs collision analysis after capture so detector work cannot distort the
-simulation clock. The collision score is ready for calibration runs; other
-traffic rules still require human review before v2 activation.
+simulation clock. The safety score is ready for calibration runs; other traffic
+rules still require human review before v2 activation.
 
 ## Outcome-policy recalibration — 2026-09-08
 
@@ -84,25 +85,28 @@ service checks. It completed 62/80 cars and left 18 cars outstanding after the
 load/recovery schedule. Under the previous policy, the held-load and recovery
 findings made the whole run fail. That conflated safety validity with capacity.
 
-The evaluator now treats collision-free, truthful, runnable behavior as the
-validity gate. Throughput, backlog, latency, load breakdown, and recovery stay
-in the immutable evidence and differentiate eligible runs. A safe simulation
-that cannot sustain the highest offered load is therefore a lower-performing
-result, not a failed simulation.
+The evaluator now treats truthful, runnable behavior as the validity floor.
+Collision observations remain immutable safety evidence, but they produce a
+graduated score rather than eliminating the run: `100 * 0.5^collision_count`
+for a complete trace, or unscorable when coverage is incomplete. Throughput,
+backlog, latency, load breakdown, recovery, and safety score stay in the
+immutable evidence and differentiate measured runs. A simulation that cannot
+sustain the highest offered load, or that has imperfect safety, remains
+measurable rather than disappearing from comparison.
 
 ## Sol proving run — 2026-09-08
 
 With throughput and cooldown removed from the validity outcome, plus one bounded
 repair attempt and explicit body-trace coverage feedback, Sol produced a private
-simulation that passed every protocol/runtime/service/safety gate. Its collision
-trace was complete with zero overlaps; it completed 34/80 cars and 1/16
-pedestrians, and measured 30 vehicles/minute. It remains a performance result,
-not a throughput failure. The only remaining rejection was the public smoke
-horizon in the immutable bundle: one car finished just after the former
-12-second post-arrival settle window. Replaying the preserved attempt-2
-candidate with the calibrated 15-second window passed all 6/6 public travelers.
-The original bundle remains immutable and records the historical smoke result;
-a future fresh run will seal the updated public evidence.
+simulation with a complete collision trace and zero overlaps. It completed 34/80
+cars and 1/16 pedestrians, and measured 30 vehicles/minute. It remains a
+performance result, not a throughput failure; the zero-collision trace earns a
+100/100 safety score. The only remaining rejection was the public smoke horizon
+in the immutable bundle: one car finished just after the former 12-second
+post-arrival settle window. Replaying the preserved attempt-2 candidate with the
+calibrated 15-second window passed all 6/6 public travelers. The original bundle
+remains immutable and records the historical smoke result; a future fresh run
+will seal the updated public evidence.
 
 ## Review contract: traffic-review/v2, traffic-human/v1 rubric
 

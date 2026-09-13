@@ -127,9 +127,9 @@ For measured runs, `observe` reports every evaluator-issued body still
 occupying the world at roughly 15 Hz (target 60–70 ms, never slower than
 10 Hz), using the rendered body's full ground footprint. Ralph timestamps the
 receipt, validates IDs and finite positive dimensions, preserves the trace, and
-derives oriented-footprint contact. A complete trace with zero reported
-car/car or car/pedestrian overlaps earns the automated collision score; any
-reported overlap fails that score. The coordinate system is ground-plane
+derives oriented-footprint contact. A complete trace receives a graduated
+safety score based on reported car/car and car/pedestrian overlaps; zero
+overlaps is the 100-point reference case. The coordinate system is ground-plane
 meters with east/south-positive `x`/`y`; `heading` is clockwise from east. The
 candidate does not report a clock, speed, collision verdict, topology, or
 aggregate counter. Missing or inconsistent body evidence is unverifiable and
@@ -502,7 +502,8 @@ difficult movement.
 - Correct freeway direction separation.
 - Real ramp connections between freeway and city networks.
 - Vehicles remain on valid lane/path geometry.
-- No collisions, teleportation, or silent trip deletion.
+- No silent trip deletion or teleportation; observed collisions are retained as
+  an automated safety score and reviewed against the recording.
 - Signal and direction compliance.
 - Browser/runtime stability at the required population.
 

@@ -23,18 +23,21 @@ same named challenge incomparable.
    traffic contract. Define the world, travelers, requested trips, dynamics,
    right of way, and evaluator-owned scenarios in plain language. These are
    behavioral concepts, not a new candidate-authored schema.
-2. Require collision avoidance, signal compliance, lane discipline, realistic
-   shared physical scale, and truthful trip completion throughout evaluation.
-   Safety remains mandatory during overload. Publish the infrastructure
-   envelope, physical bounds, and rules in the versioned public challenge.
+2. Require signal compliance, lane discipline, realistic shared physical scale,
+   and truthful trip completion throughout evaluation. Record car/car and
+   car/pedestrian contacts as an independent graduated safety score; do not let
+   throughput hide that score. Publish the infrastructure envelope, physical
+   bounds, and rules in the versioned public challenge.
 3. Retain `gates/v1` unchanged as arrival/finish instrumentation. Its ledger
    proves accounting properties; it cannot prove physical motion or safety.
-4. Report protocol conformance, traffic validity, load performance, and visual
-   quality separately. Traffic validity requires explicit human review until
-   independent detectors have been validated against counterexamples. Failed,
-   pending, or unverifiable physical validity excludes traffic performance
-   comparison; diagnostic measurements and failed artifacts remain available.
-   Existing evidence-integrity and isolation requirements still apply.
+4. Report protocol conformance, automated safety score, traffic validity, load
+   performance, and visual quality separately. Traffic validity requires
+   explicit human review until independent detectors have been validated
+   against counterexamples. Failed, pending, or unverifiable physical review
+   excludes traffic performance comparison; a measured collision score by
+   itself does not. Diagnostic measurements and failed artifacts remain
+   available. Existing evidence-integrity and isolation requirements still
+   apply.
 5. Give every client the same complete challenge. Harness-specific execution
    instructions may describe tools and loops but may not weaken the assignment.
    Any reduced task used to calibrate tool calls is explicitly calibration,
@@ -60,10 +63,11 @@ reporting remains read-only over original evidence.
 - ADR 0013 retains the small interface and candidate implementation freedom.
   Its treatment of physical review is replaced by mandatory, evidenced traffic
   acceptance, separate from aesthetic judgment.
-- ADR 0014's eligibility floor now explicitly includes physical traffic
-  validity. A safe run that stalls under load can still provide a lower
-  capacity measurement; a run with a physical violation cannot qualify by
-  reporting good throughput from another interval.
+- ADR 0014's eligibility floor still covers protocol and truthful runnable
+  behavior. A run that stalls under load can provide a lower capacity
+  measurement, and a run with observed contacts remains measurable with a
+  lower safety score; human physical-review status remains the separate
+  comparison decision until that review is automated and calibrated.
 - ADR 0016 retains the controlled/native loop distinction, tool calibration,
   evidence preservation, and feedback boundary. It no longer permits a
   reduced challenge under the same benchmark identity.

@@ -321,7 +321,8 @@ def _render_index(records: list[dict[str, Any]]) -> str:
         simulation = item["metrics"].get("simulation", {})
         peak = _number(simulation.get("peak_monitored_throughput")) if isinstance(simulation, dict) else None
         qualifying_peak = _number(simulation.get("peak_qualifying_throughput")) if isinstance(simulation, dict) else None
-        collision_score = _text(simulation.get("collision_score_status"), "unscored") if isinstance(simulation, dict) else "unscored"
+        safety_score = simulation.get("safety_score") if isinstance(simulation, dict) else None
+        safety_text = "—" if safety_score is None else f"{safety_score}/100"
         review = item.get("traffic_review", {})
         review_status = _text(review.get("status"), "pending") if isinstance(review, dict) else "pending"
         comparison = "official" if item.get("official_ranking_eligible") else (
@@ -337,7 +338,7 @@ def _render_index(records: list[dict[str, Any]]) -> str:
             f"<td>{html.escape(_text(item.get('protocol_conformance', {}).get('status') if isinstance(item.get('protocol_conformance'), dict) else None, 'unavailable'))}</td>"
             f"<td>{html.escape(review_status)}<br>"
             f"<span class=\"muted\">{html.escape(comparison)}</span><br>"
-            f"<span class=\"muted\">observed {html.escape(str(peak if peak is not None else '—'))}/min · qualifying {html.escape(str(qualifying_peak if qualifying_peak is not None else '—'))}/min · collisions {html.escape(collision_score)}</span></td>"
+            f"<span class=\"muted\">observed {html.escape(str(peak if peak is not None else '—'))}/min · qualifying {html.escape(str(qualifying_peak if qualifying_peak is not None else '—'))}/min · safety {html.escape(safety_text)}</span></td>"
             f"<td>{html.escape(str(item['attempt_count']))}</td>"
             "</tr>"
         )
@@ -386,13 +387,15 @@ def _render_run(record: dict[str, Any]) -> str:
         collision_status = _text(collision_observations.get("status"), "diagnostic")
         collision_text = json.dumps(collision_observations, ensure_ascii=False, sort_keys=True, indent=2)
         collision_count = int(collision_observations.get("collision_count", len(collision_observations.get("collisions", []))))
-        collision_score_status = _text(collision_observations.get("collision_score_status"), "historical/unscored")
+        collision_score_status = _text(collision_observations.get("safety_score_status", collision_observations.get("collision_score_status")), "historical/unscored")
+        safety_score = collision_observations.get("safety_score")
+        safety_text = "—" if safety_score is None else f"{safety_score}/100"
         collision_callout = (
             f'<div class="callout"><strong>Automated body observation:</strong> '
             f'{html.escape(collision_status)}; '
-            f'{collision_count} collision(s); collision score '
-            f'{html.escape(collision_score_status)}. '
-            'A reported collision removes load-comparison eligibility; historical or incomplete traces remain unscored.</div>'
+            f'{collision_count} collision(s); safety score '
+            f'{html.escape(safety_text)} ({html.escape(collision_score_status)}). '
+            'Safety is scored separately from load performance; incomplete traces remain unscorable.</div>'
         )
         collision_evidence = f'<h2>Automated body observation</h2><pre>{html.escape(collision_text)}</pre>'
     else:
@@ -439,8 +442,8 @@ def _render_run(record: dict[str, Any]) -> str:
         if record.get("artifact_available")
         else '<span class="muted">candidate entrypoint unavailable</span>'
     )
-    collision_score = simulation.get("collision_score") if isinstance(simulation, dict) else None
-    collision_score_text = "—" if collision_score is None else f"{collision_score}/1"
+    safety_score = simulation.get("safety_score") if isinstance(simulation, dict) else None
+    collision_score_text = "—" if safety_score is None else f"{safety_score}/100"
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Ralph Bench — {html.escape(record['run_id'])}</title><link rel="stylesheet" href="../../assets/site.css"></head>
@@ -449,7 +452,7 @@ def _render_run(record: dict[str, Any]) -> str:
 <div class="grid"><div class="card"><span class="value">{html.escape(str(record['attempt_count']))}</span><span class="label">attempts</span></div>
 <div class="card"><span class="value">{html.escape(str(_number(simulation.get('peak_monitored_throughput'), '—') if isinstance(simulation, dict) else '—'))}</span><span class="label">observed vehicles/min</span></div>
 <div class="card"><span class="value">{html.escape(str(_number(simulation.get('peak_qualifying_throughput'), '—') if isinstance(simulation, dict) else '—'))}</span><span class="label">qualifying vehicles/min</span></div>
-<div class="card"><span class="value">{html.escape(collision_score_text)}</span><span class="label">collision score</span></div>
+<div class="card"><span class="value">{html.escape(collision_score_text)}</span><span class="label">safety score</span></div>
 <div class="card"><span class="value">{html.escape(str(_number(agent.get('wall_seconds'), '—') if isinstance(agent, dict) else '—'))}</span><span class="label">agent seconds</span></div>
 <div class="card"><span class="value">{html.escape(str(_number(agent.get('usage', {}).get('total_tokens'), '—') if isinstance(agent, dict) and isinstance(agent.get('usage'), dict) else '—'))}</span><span class="label">reported tokens</span></div>
 <div class="card"><span class="value">{html.escape(elapsed_text)}</span><span class="label">{html.escape(elapsed_label)}</span></div>

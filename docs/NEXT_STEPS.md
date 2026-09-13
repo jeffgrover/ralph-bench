@@ -31,16 +31,15 @@ too heuristic to score consistently.
 
 The diagnostic slice now captures raw observations, validates IDs and numeric
 geometry, detects contact including between-sample crossings, and gives a
-complete zero-collision trace an explicit score. Candidate-reported geometry
+complete trace an explicit graduated safety score. Candidate-reported geometry
 still requires visual corroboration for signals, lanes, scale and trip
 integrity. Old bundles retain their original evidence and missing telemetry is
 never retroactively treated as safe.
 
 **Revised estimate:** 4–6 engineering days for the complete diagnostic slice,
 including the remaining replay, bounded sweep handling and real-browser/reviewer
-calibration. The collision score is implemented for complete body traces;
-hard-gate activation for the other traffic rules still follows observer and
-human-review validation.
+calibration. Graduated safety scoring is implemented for complete body traces;
+other traffic rules still require observer and human-review validation.
 
 The implementation status and historical evidence below describe the existing
 P0-A path. The old synthetic observation seam has been removed; the minimal
@@ -360,9 +359,10 @@ toolchain evidence is attributable and no update can occur during an active run.
 - Keep functional eligibility separate from the performance vector; never let
   high throughput compensate for invalid or dishonest behavior.
 
-**Exit:** met. The evaluator cannot report `passed` when protocol, runtime,
-integrity, or collision validity fails; held-load and recovery findings remain
-visible in the performance vector without invalidating a working run.
+**Exit:** met. The evaluator cannot report `passed` when protocol, runtime, or
+integrity validity fails. Held-load, recovery, and collision findings remain
+visible in the performance vector without invalidating a working run; a
+complete collision trace contributes a graduated safety score.
 
 ### 2. Ship the agent-runnable public gate check — implemented
 

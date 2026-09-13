@@ -220,8 +220,13 @@ def analyze_observations(
     missing_ids = sorted(set(issued) - observed_ids)
     coverage_complete = bool(normalized) and not missing_ids and not invalid and max_gap_ms <= config.maximum_gap_ms
     status = "unavailable" if not samples else "diagnostic"
+    safety_score = (
+        None
+        if status == "unavailable" or not coverage_complete
+        else round(100 * (0.5 ** len(collisions)), 2)
+    )
     return {
-        "schema_version": "collision-observations/v2",
+        "schema_version": "collision-observations/v3",
         "status": status,
         "sample_count": len(normalized),
         "body_sample_count": sum(len(bodies) for _, bodies in normalized),
@@ -232,21 +237,21 @@ def analyze_observations(
         "invalid_observations": invalid,
         "collisions": sorted(collisions.values(), key=lambda item: (item["first_ms"], item["ids"])),
         "collision_count": len(collisions),
-        "collision_score": (
-            None
-            if status == "unavailable" or not coverage_complete
-            else 0
-            if collisions
-            else 1
-        ),
+        "collision_score": safety_score,
+        "safety_score": safety_score,
         "collision_score_status": (
             "unavailable"
             if status == "unavailable"
             else "unmeasurable"
             if not coverage_complete
-            else "fail"
-            if collisions
-            else "pass"
+            else "scored"
+        ),
+        "safety_score_status": (
+            "unavailable"
+            if status == "unavailable"
+            else "unmeasurable"
+            if not coverage_complete
+            else "scored"
         ),
         "config": {
             "maximum_gap_ms": config.maximum_gap_ms,

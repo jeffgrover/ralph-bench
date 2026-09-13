@@ -83,10 +83,11 @@ class GateEvaluatorTests(unittest.TestCase):
         self.assertTrue(result.passed, result.to_dict())
         self.assertTrue(result.performance_eligible)
         self.assertEqual(result.metrics["collision_count"], 0)
-        self.assertEqual(result.metrics["collision_score"], 1)
+        self.assertEqual(result.metrics["collision_score"], 100)
+        self.assertEqual(result.metrics["safety_score"], 100)
         self.assertIn("collision-free", {item.assertion_id for item in result.assertions})
 
-    def test_reported_collision_fails_collision_score(self) -> None:
+    def test_reported_collision_is_scored_without_invalidating_the_run(self) -> None:
         scenario = small_scenario()
         result = evaluate_gate_monitor(
             scenario,
@@ -98,11 +99,13 @@ class GateEvaluatorTests(unittest.TestCase):
                 {"time_ms": 3_000, "outstanding_cars": 0},
             ),
         )
-        self.assertFalse(result.passed)
-        self.assertFalse(result.performance_eligible)
+        self.assertTrue(result.passed, result.to_dict())
+        self.assertTrue(result.performance_eligible)
         self.assertEqual(result.metrics["collision_count"], 1)
-        self.assertEqual(result.metrics["collision_score"], 0)
-        self.assertIn("collision-free", {item.code for item in result.failures})
+        self.assertEqual(result.metrics["collision_score"], 50.0)
+        self.assertEqual(result.metrics["safety_score"], 50.0)
+        self.assertNotIn("collision-free", {item.code for item in result.failures})
+        self.assertIn("collision-free", {item.assertion_id for item in result.assertions if item.result == "fail"})
 
     def test_incomplete_collision_trace_is_unscorable(self) -> None:
         scenario = small_scenario()
@@ -121,8 +124,9 @@ class GateEvaluatorTests(unittest.TestCase):
                 {"time_ms": 3_000, "outstanding_cars": 0},
             ),
         )
-        self.assertFalse(result.performance_eligible)
+        self.assertTrue(result.performance_eligible)
         self.assertIsNone(result.metrics["collision_score"])
+        self.assertIsNone(result.metrics["safety_score"])
         self.assertEqual(result.metrics["collision_score_status"], "unmeasurable")
 
     def test_minimal_monitor_produces_throughput_backlog_and_recovery(self) -> None:

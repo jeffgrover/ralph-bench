@@ -68,10 +68,12 @@ incomplete pass as valid.
 
 V2 performance eligibility requires protocol/runtime conformance, complete
 demand evidence, the low-load service floor, and a traffic-validity pass.
-A safe, valid artifact may fail a held-load or recovery requirement while
-still yielding meaningful lower capacity. A physical violation anywhere in
-that evaluated run makes it ineligible; higher-load collisions cannot be
-excused by selecting a clean lower-load interval.
+A valid artifact may fail a held-load or recovery requirement while still
+yielding meaningful lower capacity. The automated collision trace contributes
+a separate safety score; it does not by itself make the run ineligible or let
+a clean lower-load interval hide collisions elsewhere. A human-reviewed
+physical-validity failure remains a separate comparison decision until that
+review is automated and calibrated.
 
 Failed, pending, and unverifiable runs retain diagnostic measurements but do
 not enter traffic performance comparisons, rankings, or Pareto frontiers.

@@ -55,8 +55,11 @@ class CollisionObserverTests(unittest.TestCase):
                 {"time_ms": 100, "bodies": [body("car-a", 0, 0), body("car-b", 5, 0)]},
             )
         )
+        self.assertEqual(result["schema_version"], "collision-observations/v3")
         self.assertEqual(result["collisions"], [])
-        self.assertEqual(result["collision_score"], 1)
+        self.assertEqual(result["collision_score"], 100)
+        self.assertEqual(result["safety_score"], 100)
+        self.assertEqual(result["collision_score_status"], "scored")
 
     def test_high_speed_following_is_not_a_collision(self) -> None:
         result = analyze_observations(
@@ -66,7 +69,18 @@ class CollisionObserverTests(unittest.TestCase):
             )
         )
         self.assertEqual(result["collisions"], [])
-        self.assertEqual(result["collision_score"], 1)
+        self.assertEqual(result["collision_score"], 100)
+
+    def test_collision_score_decays_by_half_per_contact_pair(self) -> None:
+        result = analyze_observations(
+            monitor(
+                {"time_ms": 0, "bodies": [body("car-a", 0, 0), body("car-b", 2, 0)]},
+                {"time_ms": 100, "bodies": [body("car-a", 0, 0), body("car-b", 2, 0)]},
+            )
+        )
+        self.assertEqual(result["collision_count"], 1)
+        self.assertEqual(result["safety_score"], 50.0)
+        self.assertEqual(result["safety_score_status"], "scored")
 
     def test_missing_or_sparse_trace_is_explicitly_incomplete(self) -> None:
         result = analyze_observations(

@@ -463,15 +463,20 @@ def evaluate_gate_monitor(
         _assertion(
             scenario,
             "collision-free",
-            collision_score_status == "pass",
+            collision_score_status == "scored" and collision_count == 0,
             "complete body evidence reported zero footprint collisions",
             (
-                f"collision score is {collision_score_status}"
+                f"safety score is {collision_score_status}"
                 if collision_count == 0
-                else f"{collision_count} footprint collision(s) were reported"
+                else f"{collision_count} footprint collision(s) were reported; "
+                f"safety score {collision_observations.get('safety_score', collision_observations.get('collision_score'))}/100"
             ),
-            severity="critical",
-            threshold={"required_collisions": 0, "coverage": "complete"},
+            severity="major",
+            threshold={
+                "formula": "100 * 0.5^collision_count",
+                "reference_score": 100,
+                "coverage": "complete",
+            },
         ),
     ) if collision_evidence_requested else ()
     capacity_assertions = tuple(
@@ -505,23 +510,18 @@ def evaluate_gate_monitor(
     # Functional eligibility is evaluated before capacity and recovery. A
     # runnable, correctly wired artifact may still be measured at the load it
     # can sustain, even when it fails a held stage or cooldown requirement.
-    functional_failures = tuple(
-        item
-        for item in (*base_assertions, *collision_assertions)
-        if item.result == "fail"
-    )
+    functional_failures = tuple(item for item in base_assertions if item.result == "fail")
     performance_eligible = (
         not functional_failures
         and ready
         and len(issued) == expected_arrivals
     )
-    # Capacity and recovery are performance observations, not validity gates.
-    # Keep their failed assertions in the evidence so the curve remains
-    # useful for ranking, but only functional and safety failures invalidate a
-    # run.
+    # Capacity, recovery, and safety are scored findings, not validity gates.
+    # Keep their assertions in immutable evidence while allowing a runnable
+    # artifact to remain eligible for comparison across those dimensions.
     failures = tuple(
         FailureRecord(item.assertion_id, item.severity, None, item.detail)
-        for item in (*base_assertions, *collision_assertions)
+        for item in base_assertions
         if item.result == "fail"
     )
     car_completions = [item for item in raw_completions if isinstance(item, Mapping) and item.get("kind") == "car"]
@@ -552,7 +552,17 @@ def evaluate_gate_monitor(
             if collision_evidence_requested
             else None
         ),
+        "safety_score": (
+            collision_observations.get("safety_score")
+            if collision_evidence_requested
+            else None
+        ),
         "collision_score_status": collision_score_status,
+        "safety_score_status": (
+            collision_observations.get("safety_score_status", collision_score_status)
+            if collision_evidence_requested
+            else "not-requested"
+        ),
         "median_car_completion_ms": median(latencies) if latencies else None,
         "p95_car_completion_ms": latencies[p95_index] if p95_index is not None else None,
         "maximum_car_completion_ms": max(latencies, default=None),

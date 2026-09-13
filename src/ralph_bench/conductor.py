@@ -722,12 +722,13 @@ def _execute_one(
             )
         except BrowserRuntimeError as exc:
             failure_path = raw_root / f"browser-evaluation-attempt-{attempt_number}.failure.json"
+            failure_detail = str(exc)
             failure_path.write_text(
                 json.dumps(
                     {
                         "schema_version": "browser-failure/v1",
                         "error_type": type(exc).__name__,
-                        "detail": str(exc),
+                        "detail": failure_detail,
                     },
                     sort_keys=True,
                     indent=2,
@@ -750,7 +751,7 @@ def _execute_one(
                         {
                             "id": "browser-evaluation",
                             "result": "fail",
-                            "detail": "private browser evaluation did not complete",
+                            "detail": failure_detail,
                         }
                     ],
                 },
