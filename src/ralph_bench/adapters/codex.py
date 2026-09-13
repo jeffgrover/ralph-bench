@@ -240,7 +240,9 @@ class CodexHarnessAdapter:
         working_directory: str | None = None,
         executable: str | None = None,
         loop: str = "controlled",
+        provider: str | None = None,
     ) -> InvocationPlan:
+        del provider
         if loop not in {"controlled", "native"}:
             raise ValueError(f"unsupported Codex loop: {loop}")
         if reasoning_effort not in REASONING_EFFORTS:

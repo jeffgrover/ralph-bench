@@ -242,7 +242,7 @@ class PiAttemptExecutor:
                 provider_name: {
                     "baseUrl": endpoint,
                     "api": "openai-completions",
-                    "apiKey": "lm-studio-local",
+                    "apiKey": str(self.provider_settings.get("api_key", "lm-studio-local")),
                     "compat": {
                         "supportsDeveloperRole": False,
                         "supportsReasoningEffort": False,
@@ -252,13 +252,18 @@ class PiAttemptExecutor:
             }
         }
         model = models["providers"][provider_name]["models"][0]
+        context_window = self.provider_settings.get("context_window", 32768)
+        max_tokens = self.provider_settings.get("max_tokens", 4096)
+        try:
+            context_window = max(1024, int(context_window))
+            max_tokens = max(256, int(max_tokens))
+        except (TypeError, ValueError, OverflowError):
+            context_window = 32768
+            max_tokens = 4096
         model.update(
             {
-                # Keep the local proving context bounded. Gemma's reliable
-                # tool-writing behavior degrades when Pi is allowed to spend
-                # a long generation narrating a plan instead of editing.
-                "contextWindow": 32768,
-                "maxTokens": 4096,
+                "contextWindow": context_window,
+                "maxTokens": max_tokens,
             }
         )
         settings = {

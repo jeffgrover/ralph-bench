@@ -300,6 +300,7 @@ class PiHarnessAdapter:
         working_directory: str | None = None,
         executable: str | None = None,
         loop: str = "native",
+        provider: str | None = None,
     ) -> InvocationPlan:
         if loop not in {"controlled", "native"}:
             raise ValueError(f"unsupported Pi loop: {loop}")
@@ -313,7 +314,7 @@ class PiHarnessAdapter:
             "--print",
             "--no-session",
             "--approve",
-            "--provider", "lmstudio",
+            "--provider", provider or "lmstudio",
             "--model", model,
             "--thinking", "off" if reasoning_effort == "none" else reasoning_effort,
         ]
@@ -327,7 +328,7 @@ class PiHarnessAdapter:
                     "--tools",
                     "write",
                     "--system-prompt",
-                    "You are a direct file-writing assistant. Use exactly one complete write tool call immediately for the user's requested artifact. Never explain, plan, think aloud, or emit a second turn. Keep index.html under 3500 characters, concise and functional.",
+                    "You are a direct file-writing assistant. Write one compact self-contained index.html immediately with exactly one complete write tool call; keep it under 16,000 bytes. Do not create notes, helper scripts, alternate files, exploratory reads, or narration. Follow the user's gates/v1 interface literally: register the injected RalphGates object synchronously before animation, queue early requests, create exactly one traveler per arrival, preserve each ID and route field, finish exactly once after the body clears the requested outer exit, and observe only active evaluator travelers. Never invent callback names or argument shapes. Do not seed or spawn moving demo cars or pedestrians on page load; use static decoration instead. If optional demo mode exists, keep it off and never send demo entities to carFinished, pedestrianFinished, or observe. Every evaluator car must start at its outer requested entrance, move on a legal road/lane route, continue beyond its requested outer exit, and call carFinished once. Pedestrian directions are composite strings such as south-to-north and west-to-east: split at '-to-', validate the crossing pair from challenge.json, use both endpoints, and never reject a valid direction because the endpoints differ. To guarantee liveness, use one FIFO queue for evaluator cars and one global junctionBusy reservation: only the queue head enters the central conflict zone, later cars wait outside, and release the reservation when the whole body clears its requested outer exit. Use a FIFO pedestrian queue with at most one active pedestrian; let it cross when the junction is clear, make cars stop before its crosswalk, finish it at the opposite sidewalk, and then admit the next traveler. Do not use pairwise route-conflict logic or traffic-light phase as the only movement permission. Prefer safe complete trips over throughput. Prefer a small explicit route function and numeric progress values over an elaborate route library. Normalize callback fields before route math and never index a direction table with an undefined key; initialize every position, path, and waypoint before the first frame. Use strict-mode-safe JavaScript: never declare or assign variables named eval or arguments; use path[i] instead of .at() unless the receiver is certainly an array. Avoid undefined variables, syntax errors, and swallowed startup errors. Perform the checklist mentally, then write the complete artifact. Prioritize a small syntactically valid file, exact evaluator integration, live FIFO movement, and complete finishes over optional polish.",
                 )
             )
         resources = (

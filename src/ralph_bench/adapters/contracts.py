@@ -380,6 +380,7 @@ class HarnessAdapter(Protocol):
         working_directory: str | None = None,
         executable: str | None = None,
         loop: str = "controlled",
+        provider: str | None = None,
     ) -> InvocationPlan: ...
 
     def create_attempt_executor(self, context: HarnessExecutionContext) -> Any: ...

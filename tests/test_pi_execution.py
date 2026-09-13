@@ -141,6 +141,39 @@ class PiExecutionTests(unittest.TestCase):
             candidate.write_text("rewritten candidate", encoding="utf-8")
             self.assertTrue(executor._candidate_changed())
 
+    def test_pi_uses_provider_context_and_output_limits(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            workspace = root / "workspace"
+            workspace.mkdir()
+            agent_dir = root / "agent"
+            runner = _FakeRunner()
+            context = HarnessExecutionContext(
+                plan=InvocationPlan(("pi", "--mode", "json"), model="candidate"),
+                workspace=workspace,
+                evidence_root=root / "raw",
+                prompt="build the artifact",
+                environment={"PI_CODING_AGENT_DIR": str(agent_dir)},
+                timeout_seconds=12,
+                runner=runner,
+                metadata={
+                    "provider_settings": {
+                        "native_name": "local-b70",
+                        "base_url": "http://127.0.0.1:8080/v1",
+                        "api_key": "sk-local",
+                        "context_window": 131072,
+                        "max_tokens": 16384,
+                    }
+                },
+            )
+            admission = InvocationAdmission(1, EventRecorder())
+            PiAttemptExecutor(context)(1, None, admission)
+            models = json.loads((agent_dir / "models.json").read_text(encoding="utf-8"))
+            model = models["providers"]["local-b70"]["models"][0]
+            self.assertEqual(model["contextWindow"], 131072)
+            self.assertEqual(model["maxTokens"], 16384)
+            self.assertEqual(models["providers"]["local-b70"]["apiKey"], "sk-local")
+
 
 if __name__ == "__main__":
     unittest.main()

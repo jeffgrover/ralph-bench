@@ -6,10 +6,17 @@ runtime dependency you use into the submission.
 The scene must have four recognizable approaches and exits, straight/left/right
 vehicle movement, four pedestrian crossings, visible traffic control, plausible
 continuous motion, bounded spacing, braking and queues. Include useful controls
-and an attractive default demonstration when the artifact is opened by itself.
+and an attractive default presentation when the artifact is opened by itself.
+Ralph supplies the moving traffic during evaluation. Do not seed or spawn any
+simulation-issued moving cars or pedestrians by default; use road markings,
+signals, buildings, UI, and other static decoration for the attractive initial
+presentation. If you add an optional demo mode, it must be off during normal
+page load and its entities must never be sent to any RalphGates method.
 
-During evaluation Ralph injects a small global named RalphGates. Register two
-arrival callbacks if that global is present:
+During evaluation Ralph injects a small global named RalphGates. This is the
+sole evaluation interface and the evaluator is the sole source of evaluated
+travelers. Register the two arrival callbacks synchronously, before starting
+`requestAnimationFrame`, timers, or any animation loop:
 
 RalphGates.register({
   carArrived({ id, entersFrom, exitsTo }) {
@@ -20,10 +27,43 @@ RalphGates.register({
   }
 });
 
+The required lifecycle is: register first; queue any callback request that
+arrives before initialization; create exactly one evaluator traveler from each
+request; animate it using the requested fields; call exactly one matching finish
+method only after the whole visible body clears the requested outer boundary;
+then stop observing that traveler. Arrival callbacks must return promptly.
+Never replace, wrap, mock, or conditionally skip the injected `RalphGates`
+object when it is present, and never invent a second callback API.
+
+These callback contracts are exact. Preserve every evaluator-issued `id`
+byte-for-byte: if Ralph sends `car-0006`, the artifact must later call
+`RalphGates.carFinished("car-0006", requestedExit)` and must report
+`"car-0006"` in `observe()`. Never prefix, suffix, rename, stringify into a
+different identifier, or substitute an internal ID such as `eval_car-0006`.
+Register the callbacks before the animation loop starts. If an arrival happens
+while the page is still initializing, queue it and service it after
+initialization; do not drop it. Keep the original request fields with the
+traveler so its requested entrance, exit, crossing, and direction are used.
+
 Vehicle gates are north, east, south and west. U-turns are not requested.
 Pedestrian crossings use the same four labels; north/south crossings receive
 east-to-west or west-to-east travelers, while east/west crossings receive
 north-to-south or south-to-north travelers. See gate-map.svg.
+
+The pedestrian `direction` value is a composite string, for example
+`"south-to-north"`, `"north-to-south"`, `"west-to-east"`, or
+`"east-to-west"`; it is not just one cardinal word. Parse both endpoints and
+use them to choose the starting sidewalk, travel direction, and opposite
+finishing sidewalk. The valid crossing/direction pairs are exactly the pairs
+listed in `challenge.json`; for example, a west crossing accepts
+`north-to-south` and `south-to-north`, while a north crossing accepts
+`west-to-east` and `east-to-west`. Split the string at `"-to-"`; do not compare
+the two endpoints for equality. For every valid request, create one body with
+the exact evaluator ID, place it at the requested crossing's sidewalk edge,
+move it continuously across that crossing, report it in every `observe()`
+sample while active, and call `pedestrianFinished(id)` exactly once only after
+its whole body reaches the opposite sidewalk. Never reject a valid composite
+direction, and never leave a valid pedestrian permanently at the curb.
 
 Notify Ralph only when an evaluator-issued traveler visibly reaches its finish
 line:
@@ -46,9 +86,19 @@ Report cars and pedestrians that have entered the evaluated world until their
 whole body clears the finish boundary. Use the same footprint and position
 that drive the rendering; omit shadows, labels and decorative outlines.
 Ralph timestamps observations and derives oriented-footprint contact. A
-complete trace with zero reported car/car or car/pedestrian overlaps earns the
-automated collision score; any reported overlap fails that score. Do not report
-demo travelers, candidate clocks, counters, topology or a parallel event log.
+complete trace receives an automated safety score: zero reported car/car or
+car/pedestrian overlaps is the 100-point reference case, and each distinct
+collision pair lowers the score. Incomplete or missing body evidence is
+unscorable. Do not hide, omit, or falsify bodies to improve the score. Do not
+report demo travelers (IDs such as `demo-0` or `demo-ped-0`), candidate clocks,
+counters, topology or a parallel event log. `observe()` must contain only
+currently active evaluator-issued travelers; filter out every demo entity.
+Never call `RalphGates.carFinished`, `RalphGates.pedestrianFinished`, or
+`RalphGates.observe` for a demo entity. The safest implementation has no moving
+demo entities at all. If optional demo mode exists, keep its entities in a
+separate collection and guard all three Ralph calls by collection membership,
+not merely by an ID prefix. Only the two arrival callbacks create evaluator
+entities; demo completion and demo observation remain entirely internal.
 Page reload is the evaluation reset.
 
 Ralph owns arrival timing, completion timestamps, IDs, load, backlog and
@@ -60,6 +110,69 @@ The load starts gently, increases until the design stops keeping pace, and then
 stops so recovery can be observed. The exact scored schedule and thresholds are
 not public inputs. Ralph records the same live run it monitors; reported
 finishes must agree with visible behavior.
+
+The following are hard geometry invariants, including for the attractive demo
+traffic. Every vehicle's rendered oriented body must remain on the roadway and
+inside its assigned lane or a continuous, legal turn corridor from entrance to
+exit. A turn may change heading, but may not teleport, cut across buildings,
+sidewalks, grass, or the opposite side of the junction. Keep the vehicle body,
+not only its center point, inside the legal corridor; use the same coordinates
+for rendering and `observe()`. A vehicle path must begin at its requested outer
+entrance gate and end beyond its requested outer exit gate, with enough length
+for the whole body to clear the finish boundary. Never use a path that starts
+at the center of the junction or ends inside it; never wait forever at a demo
+signal. Evaluator travelers must continue through a simple legal route and
+call the requested finish method once their body clears the outer boundary.
+
+Collision avoidance must use physical geometry and shared traffic state, but
+keep the controller simple and live. Do not build pairwise route-conflict
+logic, do not compare JavaScript route-object identity, and do not make a
+traffic-light phase the only permission to move. A reliable baseline is:
+
+1. Put every evaluator car in one FIFO queue and keep its body moving toward
+   its requested entrance while it waits outside the junction.
+2. Maintain one `junctionBusy` reservation. Only the queue head may enter the
+   central conflict zone; hold later cars before the entrance. Release the
+   reservation as soon as that car's whole body clears the requested outer
+   exit, then admit the next queued car. This guarantees progress and avoids
+   deadlock across crossing routes.
+3. Put valid evaluator pedestrians in a FIFO queue. Permit the queue head to
+   cross when no car occupies the central conflict zone; while it is active,
+   cars stop before its crosswalk. When it reaches the opposite sidewalk,
+   finish it and admit the next pedestrian or car. A waiting pedestrian must
+   never prevent the car reservation from being released.
+
+Use safe rear gaps for cars in the same queue, and keep every reported body
+footprint separated when possible. Prefer a slower complete trip over a
+throughput optimization that can deadlock or overlap. Signals may communicate
+the state visually, but the FIFO reservations above are the liveness control.
+
+Every pedestrian must remain on a sidewalk or in its requested crosswalk. A
+pedestrian may enter the road only through that crosswalk, must travel across
+the designated crossing in the requested direction, and must finish on the
+opposite sidewalk. Do not apply random lateral offsets that place a pedestrian
+outside the sidewalk/crosswalk bounds. Do not use off-road or free-floating
+demo entities to make the scene look busy.
+
+Use one compact, complete, self-contained `index.html` as the artifact; prefer
+a simple 2D canvas implementation and keep it under 16,000 bytes. For this
+task, liveness and correct evaluator service come before elaborate signal
+logic, route geometry, or polish. Before your single final write, mentally
+check that the page has no undefined variables or startup exceptions,
+registers the exact gate methods before animation begins, preserves IDs
+unchanged, reports no demo IDs, and uses paths from outer gate to outer gate.
+Guard every Ralph API call so demo entities can never reach it. Use
+strict-mode-safe JavaScript: never declare or assign variables named `eval` or
+`arguments`, and call `.at()` only on an actual array (ordinary indexing such
+as `path[i]` is safer). Prefer a small explicit route function and numeric
+progress values over a large route library. Normalize each callback object
+before route math: verify `entersFrom`, `exitsTo`, `crossing`, and `direction`
+are present in their allowed sets, split pedestrian directions at `"-to-"`,
+and never index a direction table with an undefined key. Initialize every
+position field before the first frame; never read an uninitialized `startx`,
+`starty`, path, or waypoint. Do not create planning notes, helper scripts,
+alternate entrypoints, or exploratory files; do not spend the response
+narrating or testing instead of writing the requested artifact.
 
 After each attempt Ralph runs the small unscored schedule in
 scenario-pack.json to verify offline loading, callback registration, arrival

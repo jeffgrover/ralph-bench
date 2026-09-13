@@ -619,6 +619,11 @@ def _execute_one(
         str(staged.workspace),
         str(client_executable),
         loop=experiment.client_options.loop,
+        provider=(
+            str(provider_settings["native_name"])
+            if isinstance(provider_settings.get("native_name"), str)
+            else None
+        ),
     )
     native_environment = _native_process_environment(
         scoped_home=staged.scoped_home,

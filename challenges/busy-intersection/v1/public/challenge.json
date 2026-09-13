@@ -38,8 +38,10 @@
         "maximum_gap_ms": 100
       },
       "collision_scoring": {
-        "required_reported_collisions": 0,
-        "coverage": "complete"
+        "formula": "100 * 0.5^collision_count",
+        "zero_collision_score": 100,
+        "coverage": "complete",
+        "incomplete": "unscorable"
       }
     }
   },
@@ -51,7 +53,7 @@
     "backlog growth",
     "load-to-failure and cooldown recovery",
     "browser runtime and blocked network evidence",
-    "reported-body trace coverage and collision score"
+    "reported-body trace coverage and automated safety score"
   ],
   "human_review": [
     "visible agreement with finish notifications",

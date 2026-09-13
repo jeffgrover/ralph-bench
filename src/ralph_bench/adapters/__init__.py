@@ -2,6 +2,7 @@
 
 from .chatgpt import ChatGPTProviderAdapter
 from .codex import CodexHarnessAdapter
+from .llama_swap import LlamaSwapProviderAdapter
 from .lmstudio import LMStudioProviderAdapter
 from .codex_execution import (
     CodexAttemptExecutor,
@@ -67,6 +68,7 @@ __all__ = [
     "HarnessExecutionContext",
     "InvocationPlan",
     "LunaModelAdapter",
+    "LlamaSwapProviderAdapter",
     "LMStudioProviderAdapter",
     "ModelAdapter",
     "ModelBinding",

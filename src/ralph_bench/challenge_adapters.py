@@ -149,9 +149,10 @@ def _browser_repair_detail(assertion_id: str) -> str:
             "crossings and notify Ralph at visible finish."
         ),
         "collision-free": (
-            "Prevent every car/car and car/pedestrian footprint overlap while "
+            "Minimize car/car and car/pedestrian footprint overlap while "
             "preserving continuous motion and visible finish notifications. "
-            "Keep the body trace complete for every evaluator-issued traveler "
+            "The complete body trace produces a graduated safety score, so "
+            "keep it truthful and complete for every evaluator-issued traveler "
             "from arrival until its body clears the finish boundary."
         ),
         "cooldown-recovery": (

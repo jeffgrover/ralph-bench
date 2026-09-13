@@ -7,6 +7,7 @@ from typing import Any
 
 from .chatgpt import ChatGPTProviderAdapter
 from .codex import CodexHarnessAdapter
+from .llama_swap import LlamaSwapProviderAdapter
 from .lmstudio import LMStudioProviderAdapter
 from .pi import PiHarnessAdapter
 from .contracts import HarnessAdapter, ModelAdapter, ProviderAdapter
@@ -55,11 +56,13 @@ def built_in_registry(
     *,
     codex: CodexHarnessAdapter | None = None,
     pi: PiHarnessAdapter | None = None,
+    llama_swap: LlamaSwapProviderAdapter | None = None,
     lmstudio: LMStudioProviderAdapter | None = None,
 ) -> AdapterRegistry:
     harness = codex or CodexHarnessAdapter()
     pi_harness = pi or PiHarnessAdapter()
     provider = ChatGPTProviderAdapter()
+    swap_provider = llama_swap or LlamaSwapProviderAdapter()
     local_provider = lmstudio or LMStudioProviderAdapter()
     luna = LunaModelAdapter()
     terra = TerraModelAdapter()
@@ -73,6 +76,7 @@ def built_in_registry(
         },
         {
             provider.descriptor.adapter_id: provider,
+            swap_provider.descriptor.adapter_id: swap_provider,
             local_provider.descriptor.adapter_id: local_provider,
         },
         {

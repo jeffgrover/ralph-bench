@@ -9,6 +9,7 @@ from ralph_bench.adapters import built_in_registry, resolve_sut
 from ralph_bench.adapters.contracts import CostCapabilities, ModelOffer, ProbeContext, ProbeResult, ProcessResult
 from ralph_bench.adapters.codex import CodexHarnessAdapter
 from ralph_bench.adapters.chatgpt import ChatGPTProviderAdapter
+from ralph_bench.adapters.llama_swap import LlamaSwapProviderAdapter, _HttpResult
 from ralph_bench.adapters.lmstudio import LMStudioProviderAdapter
 from ralph_bench.adapters.pi import PiHarnessAdapter
 from ralph_bench.adapters.resolver import ResolutionError
@@ -150,6 +151,62 @@ class AdapterTests(unittest.TestCase):
             self.assertEqual(plan.tool_policy, "standard")
             controlled = PiHarnessAdapter(extension_root=root).plan("candidate", loop="controlled")
             self.assertEqual(controlled.tool_policy, "calibration")
+            swap_plan = PiHarnessAdapter(extension_root=root).plan(
+                "candidate", "none", "workspace-write", "/tmp/workspace",
+                provider="local-b70",
+            )
+            provider_index = swap_plan.argv.index("--provider")
+            self.assertEqual(swap_plan.argv[provider_index + 1], "local-b70")
+
+    def test_llama_swap_verifies_proxy_and_advertised_models_without_model_invocation(self):
+        calls: list[tuple[str, ...]] = []
+
+        def process(argv, _timeout):
+            calls.append(argv)
+            return ProcessResult(0, stderr="version: 207 (fixture)\n")
+
+        def http(method, url, _timeout):
+            self.assertEqual(method, "GET")
+            if url.endswith("/health"):
+                return _HttpResult(200, "OK")
+            if url.endswith("/v1/models"):
+                return _HttpResult(200, '{"data":[{"id":"qwen3.8-27b-think"}]}')
+            if url.endswith("/running"):
+                return _HttpResult(200, '{"models":[]}')
+            return _HttpResult(404)
+
+        adapter = LlamaSwapProviderAdapter(
+            executable="/opt/llama-swap",
+            process_runner=process,
+            http_runner=http,
+        )
+        context = ProbeContext(
+            process_runner=process,
+            metadata={
+                "provider_endpoint": "http://127.0.0.1:8080/v1",
+                "provider_executable": "/opt/llama-swap",
+            },
+        )
+        probe = adapter.detect(context)
+        self.assertTrue(probe.available)
+        self.assertEqual(probe.version, "207 (fixture)")
+        self.assertEqual(adapter.discover_models(context)[0].provider_model_id, "qwen3.8-27b-think")
+        preparation = adapter.prepare("qwen3.8-27b-think", context)
+        self.assertTrue(preparation.readiness.available)
+        self.assertTrue(preparation.readiness.evidence["lazy_model_load"])
+        self.assertEqual(preparation.readiness.evidence["provider_mutation"], "none")
+        self.assertEqual(preparation.cleanup().status, "not-applicable")
+        self.assertEqual(calls, [("/opt/llama-swap", "-version")])
+
+    def test_llama_swap_connection_settings_use_local_b70(self):
+        adapter = LlamaSwapProviderAdapter(executable="/opt/llama-swap")
+        settings = adapter.connection_settings(
+            ProbeContext(metadata={"provider_endpoint": "http://127.0.0.1:8080/v1"})
+        )
+        self.assertEqual(settings["native_name"], "local-b70")
+        self.assertEqual(settings["base_url"], "http://127.0.0.1:8080/v1")
+        self.assertEqual(settings["api_key"], "sk-local")
+        self.assertEqual(settings["max_tokens"], 32768)
 
     def test_lmstudio_refresh_and_readiness_use_bounded_cli_evidence(self):
         calls: list[tuple[str, ...]] = []
